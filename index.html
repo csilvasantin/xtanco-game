@@ -681,6 +681,39 @@ function doAction(id){
       showEv(T().upgradeMsg,P.neon1);addFloat(W/2,H/2-40,'UPGRADE!',P.neon1);
     }
   }
+  // Visit actions
+  if(id==='visitCom'){
+    G.fame=Math.min(100,G.fame+12);G.satisfaction=Math.min(100,G.satisfaction+5);
+    showEv('🧑‍💼 Comercial: +12 fama, nuevos productos!','#448844');
+    addFloat(W/2,H/2-40,'+FAMA','#44aa44');uiOpen=false;return;
+  }
+  if(id==='visitTec'){
+    G.satisfaction=Math.min(100,G.satisfaction+15);
+    for(const p of G.prods) p.stock=Math.min(p.max,p.stock+Math.floor(p.max*0.3));
+    showEv('🔧 Técnico: equipos revisados, +15 satisfacción','#4488aa');
+    addFloat(W/2,H/2-40,'+SERVICIO','#4488cc');uiOpen=false;return;
+  }
+  if(id==='visitDel'){
+    const bonus=500+Math.floor(Math.random()*500);
+    G.money+=bonus;G.fame=Math.min(100,G.fame+8);
+    showEv('🏛 Delegación: subvención €'+bonus+', +8 fama','#aa8844');
+    addFloat(W/2,H/2-40,'+€'+bonus,'#ccaa44');uiOpen=false;return;
+  }
+  if(id==='visitGC'){
+    const hiCnt=G.staff.filter(s=>s.hired).length;
+    const avgStk=G.prods.reduce((a,p)=>a+(p.stock/p.max),0)/G.prods.length;
+    if(hiCnt>=1&&avgStk>0.3){
+      G.satisfaction=Math.min(100,G.satisfaction+10);
+      showEv('👮 Guardia Civil: inspección superada! +10 sat','#448844');
+      addFloat(W/2,H/2-40,'✓ OK','#44aa44');
+    } else {
+      const fine=400+Math.floor(Math.random()*600);
+      G.money-=fine;G.satisfaction=Math.max(10,G.satisfaction-10);
+      showEv('👮 Guardia Civil: multa -€'+fine,'#aa4444');
+      addFloat(W/2,H/2-40,'-€'+fine,'#cc4444');
+    }
+    uiOpen=false;return;
+  }
   if(id==='menu'){uiOpen=!uiOpen;return;}
   if(id==='closeUI'){uiOpen=false;return;}
   if(id==='save'){saveGame();showEv('💾 Saved!','#88aa55');return;}
@@ -2374,25 +2407,36 @@ function tabStock(py){
 }
 
 function tabStore(py){
-  // Advert buttons
-  tx('— '+T().advert+' —',UI.x+UI.w/2,py+10,P.uiT3,8,'center');
-  CFG.ADVERT.forEach((a,i)=>{
-    mkBtn('adv'+i,UI.x+5,py+16+i*30,UI.w-10,22,a.label+' +'+a.fame+' €'+a.cost,P.neon2,G.money>=a.cost);
+  // Visit action buttons
+  tx('— VISITAS —',UI.x+UI.w/2,py+10,P.uiT3,8,'center');
+  const visits=[
+    {id:'visitCom',label:'🧑‍💼 Visita Comercial',col:'#2a6a2a',ok:true},
+    {id:'visitTec',label:'🔧 Visita Técnico',col:'#2a4a6a',ok:true},
+    {id:'visitDel',label:'🏛 Visita Delegación',col:'#5a4a2a',ok:true},
+    {id:'visitGC',label:'👮 Visita Guardia Civil',col:'#4a2a2a',ok:true},
+  ];
+  visits.forEach((v,i)=>{
+    const vy=py+16+i*28;
+    r(UI.x+5,vy,UI.w-10,22,v.col);rx(UI.x+5,vy,UI.w-10,22,'#8a8a6a',1);
+    r(UI.x+5,vy,UI.w-10,2,'#ffffff18');
+    tx(v.label,UI.x+UI.w/2,vy+15,'#e0d8c0',8,'center');
+    BTNS[v.id]={x:UI.x+5,y:vy,w:UI.w-10,h:22};
   });
-  nl(UI.x+4,py+108,UI.x+UI.w-4,py+108,P.gray,1);
+  cx.strokeStyle='#c0b898';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(UI.x+4,py+132.5);cx.lineTo(UI.x+UI.w-4,py+132.5);cx.stroke();
   // Store upgrade
-  tx('— '+T().upgrade+' —',UI.x+UI.w/2,py+120,P.uiT3,8,'center');
+  tx('— '+T().upgrade+' —',UI.x+UI.w/2,py+144,P.uiT3,8,'center');
   if(G.storeLevel<2){
-    tx(T().loanInfo,UI.x+UI.w/2,py+132,P.uiT3,7,'center');
-    mkBtn('upgrade',UI.x+5,py+138,UI.w-10,24,'LVL 2  €'+CFG.UPGRADE_COST,P.neon1,G.money>=CFG.UPGRADE_COST);
+    mkBtn('upgrade',UI.x+5,py+152,UI.w-10,22,'LVL 2  €'+CFG.UPGRADE_COST,'#5a4a30',G.money>=CFG.UPGRADE_COST);
   } else {
-    glow(P.neon1,6);tx('★ LVL 2 ACTIVO',UI.x+UI.w/2,py+148,P.neon1,9,'center');nog();
+    tx('★ LVL 2 ACTIVO',UI.x+UI.w/2,py+162,'#6a8a4a',8,'center');
   }
-  nl(UI.x+4,py+170,UI.x+UI.w-4,py+170,P.gray,1);
+  cx.strokeStyle='#c0b898';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(UI.x+4,py+180.5);cx.lineTo(UI.x+UI.w-4,py+180.5);cx.stroke();
   // Salary summary
-  tx(T().salary,UI.x+5,py+182,P.uiT3,7);
+  tx(T().salary,UI.x+5,py+192,P.uiT3,7);
   const total=G.staff.filter(s=>s.hired).reduce((a,s)=>a+CFG.SALARY[s.role]*s.level,0);
-  glow(P.red,4);tx('€'+total,UI.x+5,py+195,P.red,13);nog();
+  tx('€'+total,UI.x+5,py+205,'#cc5555',12);
   // Minimap (isometric diamond)
   const mm={x:UI.x+5,y:py+212,w:UI.w-10,h:70};
   r(mm.x,mm.y,mm.w,mm.h,P.bg);rx(mm.x,mm.y,mm.w,mm.h,P.neon1,1);
