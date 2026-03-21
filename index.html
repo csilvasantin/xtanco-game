@@ -1382,12 +1382,13 @@ function drawLED(){
 
 // ── TFT SCREEN 42" on left wall (Altadis digital signage) ────
 function drawTFTScreen(){
-  // Position: below LED banner on left wall
-  const tp1=toIso(0,1.8);
-  const tp2=toIso(0,4.2);
-  const tftYoff=50; // well below LED
-  const tftY1=tp1.y-ISO.wallH+tftYoff;
-  const scrW=55; // screen width (vertical on wall = height of content)
+  // Position: below LED, touching the floor
+  const tp1=toIso(0,1.5);
+  const tp2=toIso(0,4.5);
+  // Calculate Y so screen bottom touches the wall base
+  const wallBaseY=tp1.y; // wall meets floor here
+  const scrW=55;
+  const tftY1=wallBaseY-scrW; // bottom of screen = floor level
   cx.save();
   // Clip to left wall
   const wallClipPts=[];
@@ -1416,7 +1417,7 @@ function drawTFTScreen(){
   // so text reads vertically from bottom to top
   cx.save();
   cx.translate(scrLen/2,scrW/2); // center of screen
-  cx.rotate(-Math.PI/2);         // rotate -90°
+  cx.rotate(-Math.PI);            // rotate -180° (90° more)
   // Now drawing in rotated space: x goes "up", y goes "right"
   // Available space: width=scrW, height=scrLen (swapped)
   const tw=scrW, th=scrLen;
