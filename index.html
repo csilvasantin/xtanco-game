@@ -43,6 +43,64 @@ cv.addEventListener('touchstart',e=>{
   cv.dispatchEvent(new MouseEvent('click',{clientX:t.clientX,clientY:t.clientY}));
 },{passive:false});
 
+// ── ELGATO KEY LIGHT INTEGRATION ─────────────────────────────
+const ELGATO={
+  ip:'192.168.0.109',
+  port:9123,
+  // Proxy runs locally to avoid CORS/mixed-content issues
+  proxyPort:9124,
+  get proxyUrl(){return `http://localhost:${this.proxyPort}`;},
+  get directUrl(){return `http://${this.ip}:${this.port}/elgato/lights`;},
+};
+let elgatoState={on:false,busy:false,notify:0,error:false};
+
+async function toggleStudioLight(){
+  if(elgatoState.busy) return;
+  elgatoState.busy=true;
+  elgatoState.error=false;
+  try{
+    // Try proxy first, fallback to direct (works if running locally)
+    const baseUrl=ELGATO.proxyUrl;
+    // GET current state
+    const res=await fetch(baseUrl+'/elgato/lights',{signal:AbortSignal.timeout(2000)});
+    const data=await res.json();
+    const currentOn=data.lights&&data.lights[0]?data.lights[0].on:0;
+    // Toggle
+    const newOn=currentOn?0:1;
+    await fetch(baseUrl+'/elgato/lights',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({numberOfLights:1,lights:[{on:newOn}]}),
+      signal:AbortSignal.timeout(2000),
+    });
+    elgatoState.on=!!newOn;
+    elgatoState.notify=90;
+    console.log(`[Elgato] Light toggled: ${newOn?'ON':'OFF'}`);
+  }catch(e){
+    // Try direct URL as fallback (works when served from localhost HTTP)
+    try{
+      const res=await fetch(ELGATO.directUrl,{signal:AbortSignal.timeout(2000)});
+      const data=await res.json();
+      const currentOn=data.lights&&data.lights[0]?data.lights[0].on:0;
+      const newOn=currentOn?0:1;
+      await fetch(ELGATO.directUrl,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({numberOfLights:1,lights:[{on:newOn}]}),
+        signal:AbortSignal.timeout(2000),
+      });
+      elgatoState.on=!!newOn;
+      elgatoState.notify=90;
+      console.log(`[Elgato] Light toggled (direct): ${newOn?'ON':'OFF'}`);
+    }catch(e2){
+      elgatoState.error=true;
+      elgatoState.notify=90;
+      console.warn('[Elgato] Could not reach light:',e2.message);
+    }
+  }
+  elgatoState.busy=false;
+}
+
 // ── CONFIG ────────────────────────────────────────────────────
 const CFG={
   WEEK_TICKS:480, WEEKS_PER_YEAR:8, TOTAL_YEARS:5,
@@ -490,6 +548,8 @@ document.addEventListener('keydown',e=>{
     if(e.code==='Digit2'){activeTab=1;uiOpen=true;}
     if(e.code==='Digit3'){activeTab=2;uiOpen=true;}
     if(e.code==='Digit4'){activeTab=3;uiOpen=true;}
+    // L = toggle Elgato studio light
+    if(e.code==='KeyL'){toggleStudioLight();}
     // Q/A/O/P move the manager — prevent default for those
     if(e.code==='KeyQ'||e.code==='KeyA'||e.code==='KeyO'||e.code==='KeyP'){
       e.preventDefault();
@@ -2036,6 +2096,26 @@ function drawEvent(){
   tx('  '+G.eventMsg,ex+ew/2,ey+17,'#f0e8c8',10,'center');
 }
 
+// ── ELGATO LIGHT NOTIFICATION ─────────────────────────────────
+function drawElgatoNotify(){
+  if(elgatoState.notify<=0) return;
+  elgatoState.notify--;
+  const alpha=Math.min(1,elgatoState.notify/25);
+  cx.globalAlpha=alpha;
+  const nw=180,nh=32,nx=W/2-nw/2,ny=SHOP.y+50;
+  if(elgatoState.error){
+    r(nx,ny,nw,nh,'#4a1a1aee');rx(nx,ny,nw,nh,'#cc4444',1.5);
+    tx('💡 Lámpara no disponible',W/2,ny+20,'#ff8888',9,'center');
+  } else {
+    const col=elgatoState.on?'#1a4a1a':'#1a1a3a';
+    const border=elgatoState.on?'#44ee44':'#6688cc';
+    const icon=elgatoState.on?'💡 Luz ENCENDIDA':'🌙 Luz APAGADA';
+    r(nx,ny,nw,nh,col+'ee');rx(nx,ny,nw,nh,border,1.5);
+    tx(icon,W/2,ny+20,elgatoState.on?'#88ff88':'#aabbee',10,'center');
+  }
+  cx.globalAlpha=1;
+}
+
 // ── DRAW BOTTOM BAR (GDS style: Yr Sales | Yr Profit | Status | Menu) ──
 function drawBottomBar(){
   const bh=30, by=H-bh;
@@ -2546,7 +2626,7 @@ function loop(){
   // GAME
   updateGame();
   r(0,0,W,H,P.bg);
-  drawCityBg();drawShop();drawShopChars();drawFloats();drawEvent();drawHUD();drawBottomBar();drawUI();
+  drawCityBg();drawShop();drawShopChars();drawFloats();drawEvent();drawElgatoNotify();drawHUD();drawBottomBar();drawUI();
 }
 loop();
 </script>
