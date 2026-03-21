@@ -314,8 +314,8 @@ function initGame(){
   // Staff from model — convert grid positions to isometric screen coords
   // Staff positions on the iso grid based on their role
   const staffGridPos=[
-    {col:2,row:1},{col:5,row:1},{col:7,row:2},{col:7,row:5},
-    {col:5,row:3},{col:2,row:3},{col:3,row:5},{col:8,row:3},
+    {col:2,row:2},{col:6,row:1},{col:9,row:2},{col:9,row:5},
+    {col:6,row:4},{col:3,row:4},{col:4,row:6},{col:10,row:3},
   ];
   G.staff=M.staffInit.map((s,i)=>{
     const gp=staffGridPos[i%staffGridPos.length];
@@ -643,7 +643,7 @@ function spawnCust(){
   const ci=Math.floor(Math.random()*6);
   // Spawn at door position in iso grid, target random browsing spot
   const doorIso=toIso(ISO.doorCol,ISO.doorRow);
-  const tCol=2+Math.random()*5|0, tRow=2+Math.random()*5|0;
+  const tCol=2+Math.random()*7|0, tRow=2+Math.random()*5|0;
   const tIso=toIso(tCol,tRow);
   G.custs.push({
     x:doorIso.x,y:doorIso.y,
@@ -668,12 +668,17 @@ const SHOP={x:8,y:44,w:630,h:452};
 const UI={x:640,w:160};
 
 // ── ISOMETRIC ENGINE ─────────────────────────────────────────
+// ISO config: fill SHOP area (630x452, starting at y=44)
+// Diamond width = (cols+rows)*tileW/2, height = (cols+rows)*tileH/2
+// With 12 cols, 8 rows: diamond = 20*tileW/2 wide, 20*tileH/2 tall
+// tileW=62, tileH=31 → diamond = 620w x 310h → fits 630w nicely
+// Wall takes ~100px top, floor diamond starts below wall
 const ISO={
-  tileW:56,tileH:28, // tile dimensions (2:1 ratio)
-  cols:10,rows:8,     // grid size
-  ox:310,oy:68,       // origin offset (top of diamond)
-  wallH:120,          // wall height in pixels
-  doorCol:9,doorRow:4,// door position
+  tileW:62,tileH:31, // tile dimensions (2:1 ratio)
+  cols:12,rows:8,     // grid size (wider)
+  ox:316,oy:98,       // origin: top of diamond (centered in SHOP.w, below wall)
+  wallH:100,          // wall height in pixels
+  doorCol:11,doorRow:4,// door position (right edge)
 };
 // Cart→Iso: convert grid (col,row) to screen pixel
 function toIso(col,row){
@@ -924,52 +929,52 @@ function drawShop(){
     }
   }
 
-  // ── BACK WALL (isometric) ──
-  const wallTL=toIso(0,0);
-  const wallTR=toIso(ISO.cols,0);
-  const wallBL=toIso(0,0);
-  // Back wall - left side
+  // ── BACK WALL (isometric, follows top edge of diamond) ──
+  // Back wall runs along the top-right edge: from (0,0) to (cols,0)
+  // Each tile along row=0 defines the wall baseline
+  const wallPts=[];
+  for(let c=0;c<=ISO.cols;c++) wallPts.push(toIso(c,0));
+  // Draw back wall as polygon
   cx.beginPath();
-  cx.moveTo(wallTL.x,wallTL.y);
-  cx.lineTo(wallTL.x,wallTL.y-ISO.wallH);
-  cx.lineTo(wallTR.x,wallTR.y-ISO.wallH);
-  cx.lineTo(wallTR.x,wallTR.y);
+  cx.moveTo(wallPts[0].x,wallPts[0].y);
+  for(let i=1;i<wallPts.length;i++) cx.lineTo(wallPts[i].x,wallPts[i].y);
+  // Top edge (raised by wallH)
+  for(let i=wallPts.length-1;i>=0;i--) cx.lineTo(wallPts[i].x,wallPts[i].y-ISO.wallH);
   cx.closePath();
   cx.fillStyle='#0e1428';cx.fill();
-  // Wall texture: horizontal lines
-  cx.globalAlpha=0.08;
-  for(let wy=wallTL.y-ISO.wallH;wy<wallTL.y;wy+=12){
-    cx.strokeStyle='#2244aa';cx.lineWidth=0.5;
-    cx.beginPath();cx.moveTo(wallTL.x,wy);
-    const yoff=(wy-wallTL.y+ISO.wallH)/ISO.wallH;
-    cx.lineTo(wallTR.x,wallTR.y-ISO.wallH+yoff*ISO.wallH);
+  // Wall texture lines (follow the iso angle)
+  cx.globalAlpha=0.06;
+  for(let h=10;h<ISO.wallH;h+=14){
+    cx.strokeStyle='#2244aa';cx.lineWidth=0.5;cx.beginPath();
+    cx.moveTo(wallPts[0].x,wallPts[0].y-h);
+    for(let i=1;i<wallPts.length;i++) cx.lineTo(wallPts[i].x,wallPts[i].y-h);
     cx.stroke();
   }
   cx.globalAlpha=1;
   // Wall neon border top
-  glow(P.neon2,8);
-  cx.strokeStyle=P.neon2;cx.lineWidth=2;
-  cx.beginPath();cx.moveTo(wallTL.x,wallTL.y-ISO.wallH);cx.lineTo(wallTR.x,wallTR.y-ISO.wallH);cx.stroke();
-  nog();
+  glow(P.neon2,8);cx.strokeStyle=P.neon2;cx.lineWidth=2;cx.beginPath();
+  cx.moveTo(wallPts[0].x,wallPts[0].y-ISO.wallH);
+  for(let i=1;i<wallPts.length;i++) cx.lineTo(wallPts[i].x,wallPts[i].y-ISO.wallH);
+  cx.stroke();nog();
 
-  // Left wall
-  const wallBotL=toIso(0,ISO.rows);
+  // ── LEFT WALL (follows top-left edge: from (0,0) to (0,rows)) ──
+  const lwPts=[];
+  for(let rr=0;rr<=ISO.rows;rr++) lwPts.push(toIso(0,rr));
   cx.beginPath();
-  cx.moveTo(wallTL.x,wallTL.y);
-  cx.lineTo(wallTL.x,wallTL.y-ISO.wallH);
-  cx.lineTo(wallBotL.x,wallBotL.y-ISO.wallH);
-  cx.lineTo(wallBotL.x,wallBotL.y);
+  cx.moveTo(lwPts[0].x,lwPts[0].y);
+  for(let i=1;i<lwPts.length;i++) cx.lineTo(lwPts[i].x,lwPts[i].y);
+  for(let i=lwPts.length-1;i>=0;i--) cx.lineTo(lwPts[i].x,lwPts[i].y-ISO.wallH);
   cx.closePath();
   cx.fillStyle='#0a0f20';cx.fill();
   // Left wall neon
-  glow(P.neon1,5);
-  cx.strokeStyle=P.neon1;cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(wallTL.x,wallTL.y-ISO.wallH);cx.lineTo(wallBotL.x,wallBotL.y-ISO.wallH);cx.stroke();
-  nog();
+  glow(P.neon1,5);cx.strokeStyle=P.neon1;cx.lineWidth=1;cx.beginPath();
+  cx.moveTo(lwPts[0].x,lwPts[0].y-ISO.wallH);
+  for(let i=1;i<lwPts.length;i++) cx.lineTo(lwPts[i].x,lwPts[i].y-ISO.wallH);
+  cx.stroke();nog();
 
   // ── SIGN on back wall ──
-  const signP=toIso(3,0);
-  const signP2=toIso(7,0);
+  const signP=toIso(4,0);
+  const signP2=toIso(9,0);
   const signY=signP.y-ISO.wallH+25;
   const signCol=MODELS[activeModel].neon;
   r(signP.x,signY,(signP2.x-signP.x),22,'#140024');
@@ -987,19 +992,20 @@ function drawShop(){
   // Furniture positions in grid
   // Counter at (1,1) size 3x1
   entities.push({type:'counter',col:1,row:1,depth:2});
-  // Shelves at (4,0) size 2x3
-  entities.push({type:'shelves',col:4,row:0,depth:4});
-  // Lottery at (7,1)
-  entities.push({type:'lottery',col:7,row:1,depth:8});
-  // Manager desk at (7,4)
-  entities.push({type:'manager',col:7,row:4,depth:11});
-  // Door at (9,4)
-  entities.push({type:'door',col:ISO.doorCol,row:ISO.doorRow,depth:13});
+  // Shelves at (5,0) size 2x3
+  entities.push({type:'shelves',col:5,row:0,depth:5});
+  // Lottery at (8,1)
+  entities.push({type:'lottery',col:8,row:1,depth:9});
+  // Manager desk at (9,5)
+  entities.push({type:'manager',col:9,row:5,depth:14});
+  // Door at right edge
+  entities.push({type:'door',col:ISO.doorCol,row:ISO.doorRow,depth:15});
   // Decorations
   entities.push({type:'plant',col:0,row:0,depth:0});
   entities.push({type:'plant',col:0,row:7,depth:7});
-  entities.push({type:'vending',col:8,row:0,depth:8});
-  entities.push({type:'rug',col:2,row:3,depth:5});
+  entities.push({type:'plant',col:3,row:7,depth:10});
+  entities.push({type:'vending',col:10,row:0,depth:10});
+  entities.push({type:'rug',col:3,row:3,depth:6});
 
   // Staff
   for(const s of G.staff){
@@ -1036,7 +1042,7 @@ function drawShop(){
 // ── LED DISPLAY (on wall) ────────────────────────────────────
 function drawLED(){
   const ledP1=toIso(1,0);
-  const ledP2=toIso(9,0);
+  const ledP2=toIso(11,0);
   const ly=ledP1.y-ISO.wallH+52;
   const lw=ledP2.x-ledP1.x;
   const lx=ledP1.x;
