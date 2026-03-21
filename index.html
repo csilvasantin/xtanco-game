@@ -52,19 +52,22 @@ const ELGATO={
 let elgatoState={on:false,busy:false,notify:0,error:false,skyRed:false};
 
 async function elgatoFetch(path,opts){
-  // Try all possible URLs in order
-  const urls=[
-    `http://localhost:${ELGATO.proxyPort}${path}`,  // local proxy
-    `http://127.0.0.1:${ELGATO.proxyPort}${path}`,  // alt proxy
-    `http://${ELGATO.ip}:${ELGATO.port}${path}`,    // direct (only works HTTP→HTTP)
-  ];
+  // When served from the proxy (localhost:9124), use same origin
+  // When served from GitHub Pages, try proxy URLs
+  const isLocal=location.hostname==='localhost'||location.hostname==='127.0.0.1';
+  const urls=isLocal
+    ? [location.origin+path]  // same origin — no CORS issues
+    : [
+        `http://localhost:${ELGATO.proxyPort}${path}`,
+        `http://127.0.0.1:${ELGATO.proxyPort}${path}`,
+      ];
   for(const url of urls){
     try{
-      const res=await fetch(url,{...opts,signal:AbortSignal.timeout(1500)});
+      const res=await fetch(url,{...opts,signal:AbortSignal.timeout(2000)});
       if(res.ok) return await res.json();
     }catch(e){continue;}
   }
-  throw new Error('All endpoints unreachable');
+  throw new Error('Proxy unreachable — run: node elgato-proxy.js');
 }
 
 async function toggleStudioLight(){
