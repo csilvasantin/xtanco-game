@@ -50,6 +50,7 @@ const ELGATO={
   proxyPort:9124,
 };
 let elgatoState={on:false,busy:false,notify:0,error:false,skyRed:false};
+let monitorAlert={active:false,timer:0,msg:'',color:''}; // monitor screen alert state
 
 async function elgatoFetch(path,opts){
   // When served from the proxy (localhost:9124), use same origin
@@ -355,7 +356,7 @@ let ledOffset=0;
 // ── LAYOUT EDITOR ────────────────────────────────────────────
 // Furniture layout — editable positions
 const DEFAULT_LAYOUT=[
-  {id:'counter',type:'counter',col:1,row:1,sx:1,sy:1,label:'Mostrador'},
+  {id:'counter',type:'counter',col:1,row:1,sx:1,sy:1,label:'Mostrador+Caja+PC'},
   {id:'shelves',type:'shelves',col:3,row:0,sx:1,sy:1,label:'Estantería'},
   {id:'wineRack',type:'wineRack',col:6,row:0,sx:1,sy:1,label:'Botellero'},
   {id:'lottery',type:'lottery',col:9,row:0,sx:1,sy:1,label:'Lotería'},
@@ -365,8 +366,6 @@ const DEFAULT_LAYOUT=[
   {id:'plant1',type:'plant',col:0,row:0,sx:1,sy:1,label:'Planta 1'},
   {id:'plant3',type:'plant',col:0,row:5,sx:1,sy:1,label:'Planta 2'},
   {id:'rug',type:'rug',col:3,row:2,sx:1,sy:1,label:'Alfombra'},
-  {id:'cashRegister',type:'cashRegister',col:1,row:1,sx:1,sy:1,label:'Caja registr.'},
-  {id:'monitor',type:'monitor',col:1,row:2,sx:1,sy:1,label:'Monitor PC'},
   {id:'floorLamp',type:'floorLamp',col:0,row:1,sx:1,sy:1,label:'Lámpara pie'},
   {id:'led',type:'led',col:0,row:0,sx:1,sy:1,label:'LED Banner'},
 ];
@@ -421,7 +420,7 @@ function screenToIso(sx,sy){
 const FURNITURE_SIZE={
   counter:[1,2], shelves:[1,2], wineRack:[2,1], lottery:[2,1],
   vending:[1,1], magazines:[2,1], manager:[2,1], plant:[1,1],
-  floorLamp:[1,1], rug:[2,2], cashRegister:[1,1], monitor:[1,1],
+  floorLamp:[1,1], rug:[2,2],
 };
 
 // Check if a tile is blocked by furniture
@@ -688,7 +687,9 @@ function doAction(id){
   if(id==='visitCom'){
     G.fame=Math.min(100,G.fame+12);G.satisfaction=Math.min(100,G.satisfaction+5);
     showEv('🧑‍💼 Comercial: +12 fama, nuevos productos!','#448844');
-    addFloat(W/2,H/2-40,'+FAMA','#44aa44');uiOpen=false;return;
+    addFloat(W/2,H/2-40,'+FAMA','#44aa44');
+    monitorAlert={active:true,timer:300,msg:'VISITA COMERCIAL',color:'#cc2222'};
+    uiOpen=false;return;
   }
   if(id==='visitTec'){
     G.satisfaction=Math.min(100,G.satisfaction+15);
@@ -960,6 +961,8 @@ function updateGame(){
 
   if(G.eventTimer>0) G.eventTimer--;
   if(G.doorOpen>0) G.doorOpen--;
+  if(monitorAlert.timer>0) monitorAlert.timer--;
+  else monitorAlert.active=false;
 
   // Week end
   if(G.weekTimer>=CFG.WEEK_TICKS){G.weekTimer=0;endWeek();}
@@ -1700,8 +1703,6 @@ function drawShop(){
       case 'manager': drawScaled(e,drawIsoManager); break;
       case 'plant': drawScaled(e,drawIsoPlant); break;
       case 'floorLamp': drawScaled(e,drawIsoFloorLamp); break;
-      case 'cashRegister': drawScaled(e,drawIsoCashRegister); break;
-      case 'monitor': drawScaled(e,drawIsoMonitor); break;
       case 'vending': drawScaled(e,drawIsoVending); break;
       case 'wineRack': drawScaled(e,drawIsoWineRack); break;
       case 'magazines': drawScaled(e,drawIsoMagazineRack); break;
@@ -1834,15 +1835,59 @@ function drawWallClock(){
 // ── ISOMETRIC FURNITURE ──────────────────────────────────────
 
 function drawIsoCounter(col,row){
-  // Wooden counter: 1 tile wide, 2 deep, 16px tall (clean, no register on top)
+  // ── PACK: Counter + Cash Register + Monitor ──
+  // Counter base: 1 tile wide, 2 deep, 16px tall
   drawIsoBlock(col,row,1,2,16,P.furnitureLight,P.furnitureDark,P.furniture,null);
-  // Products displayed along counter
   const p=toIso(col+0.5,row+1);
+
+  // Products on counter surface
   for(let i=0;i<Math.min(3,G.prods.length);i++){
     const pp=toIso(col+0.2,row+0.3+i*0.6);
     r(pp.x-2,pp.y-20,5,6,G.prods[i].color);
     r(pp.x-2,pp.y-20,5,1,'#ffffff44');
   }
+
+  // ── Cash Register (on counter, left side) ──
+  const cr=toIso(col+0.3,row+0.3);
+  // Register body
+  r(cr.x-8,cr.y-26,16,10,'#ddd8c8');
+  rx(cr.x-8,cr.y-26,16,10,'#aaa090',1);
+  r(cr.x-8,cr.y-26,16,2,'#eee8d8');
+  // LCD screen
+  r(cr.x-6,cr.y-24,10,5,'#1a3a1a');
+  const moneyTxt=G.money|0>9999?'€'+((G.money/1000|0))+'K':'€'+(G.money|0);
+  tx(moneyTxt,cr.x-5,cr.y-20,'#55cc55',5);
+  // Buttons
+  r(cr.x+5,cr.y-23,3,3,'#888');
+  r(cr.x+5,cr.y-19,3,3,'#cc4444');
+  // Cash drawer
+  r(cr.x-7,cr.y-16,14,2,'#c8c0a8');
+  r(cr.x-1,cr.y-15,3,1,'#888');
+
+  // ── PC Monitor (on counter, right side) ──
+  const mo=toIso(col+0.7,row+1.5);
+  // Stand
+  r(mo.x-5,mo.y-14,10,3,'#555');
+  r(mo.x-1,mo.y-17,3,4,'#666');
+  // Monitor frame
+  r(mo.x-11,mo.y-34,22,18,'#2a2a2a');
+  rx(mo.x-11,mo.y-34,22,18,'#1a1a1a',1);
+  // Screen — changes color on alert
+  if(monitorAlert.active){
+    const flash=Math.sin(monitorAlert.timer*0.15)>0;
+    r(mo.x-9,mo.y-32,18,14,flash?monitorAlert.color:'#3a0808');
+    tx(monitorAlert.msg,mo.x,mo.y-24,'#ffffff',5,'center');
+    // Pulsing border
+    rx(mo.x-9,mo.y-32,18,14,monitorAlert.color,1.5);
+  } else {
+    r(mo.x-9,mo.y-32,18,14,'#1a3050');
+    tx('XTANCO',mo.x,mo.y-26,'#88bbdd',6,'center');
+    if(Math.floor(tt/30)%2===0) r(mo.x-4,mo.y-21,6,1,'#66aacc');
+  }
+  // Power LED
+  r(mo.x+7,mo.y-17,2,2,monitorAlert.active?'#cc2222':'#44cc44');
+
+  // Label
   tx(T().staffLabel[0],p.x,p.y-28,'#5a4a30',6,'center');
 }
 
