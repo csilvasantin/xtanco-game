@@ -1284,7 +1284,7 @@ function drawShop(){
 
   // Furniture positions in grid
   // Furniture against walls
-  entities.push({type:'counter',col:0,row:2,depth:isoDepth(0,3)});    // left wall, in front of TFT
+  entities.push({type:'counter',col:1,row:1,depth:isoDepth(1,4)});    // below TFT, rotated 90°
   entities.push({type:'shelves',col:3,row:0,depth:isoDepth(3,2)});    // back wall
   entities.push({type:'wineRack',col:6,row:0,depth:isoDepth(6,1)});   // back wall
   entities.push({type:'lottery',col:9,row:0,depth:isoDepth(9,1)});    // back wall, right corner
@@ -1383,12 +1383,12 @@ function drawLED(){
 
 // ── TFT SCREEN 42" on left wall (Altadis digital signage) ────
 function drawTFTScreen(){
-  // Position: centered under LED banner, touching the floor
-  const tp1=toIso(0,1.2);
-  const tp2=toIso(0,4.8);
+  // Position: centered under LED banner, reduced 40%
+  const tp1=toIso(0,2);
+  const tp2=toIso(0,4);
   // Calculate Y so screen bottom touches the wall base
   const wallBaseY=tp1.y; // wall meets floor here
-  const scrW=55;
+  const scrW=35; // reduced 40% (was 55)
   const tftY1=wallBaseY-scrW; // bottom of screen = floor level
   cx.save();
   // Clip to left wall
@@ -1482,22 +1482,22 @@ function drawTFTScreen(){
 // ── ISOMETRIC FURNITURE ──────────────────────────────────────
 
 function drawIsoCounter(col,row){
-  // Wooden counter: 3 tiles wide, 1 deep
-  drawIsoBlock(col,row,3,1,24,P.furnitureLight,P.furnitureDark,P.furniture,null);
-  // Cash register on top (cream colored)
-  const p=toIso(col+1,row);
+  // Wooden counter: 1 tile wide, 3 deep (rotated 90°)
+  drawIsoBlock(col,row,1,3,24,P.furnitureLight,P.furnitureDark,P.furniture,null);
+  // Cash register on top
+  const p=toIso(col+0.5,row+1.5);
   r(p.x-10,p.y-32,20,10,'#ddd8c8');rx(p.x-10,p.y-32,20,10,'#aaa090',1);
   // Screen with money
   r(p.x-8,p.y-30,12,6,'#224422');
   tx('€'+(G.money|0>9999?((G.money/1000|0)+'K'):(G.money|0)),p.x-7,p.y-25,'#66cc66',6);
-  // Products displayed on counter
+  // Products displayed along counter depth
   for(let i=0;i<Math.min(4,G.prods.length);i++){
-    const pp=toIso(col+0.4+i*0.55,row-0.15);
+    const pp=toIso(col+0.2,row+0.3+i*0.6);
     r(pp.x-3,pp.y-28,6,8,G.prods[i].color);
     r(pp.x-3,pp.y-28,6,2,'#ffffff44');
   }
   // Label
-  tx(T().staffLabel[0],toIso(col+1.5,row+0.5).x,toIso(col+1.5,row).y-38,'#5a4a30',7,'center');
+  tx(T().staffLabel[0],p.x,p.y-38,'#5a4a30',7,'center');
 }
 
 function drawIsoShelves(col,row){
