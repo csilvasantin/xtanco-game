@@ -364,6 +364,7 @@ const DEFAULT_LAYOUT=[
   {id:'plant3',type:'plant',col:0,row:5,sx:1,sy:1,label:'Planta 3'},
   {id:'plant4',type:'plant',col:7,row:5,sx:1,sy:1,label:'Planta 4'},
   {id:'rug',type:'rug',col:3,row:2,sx:1,sy:1,label:'Alfombra'},
+  {id:'floorLamp',type:'floorLamp',col:0,row:1,sx:1,sy:1,label:'Lámpara pie'},
   {id:'led',type:'led',col:0,row:0,sx:1,sy:1,label:'LED Banner'},
   {id:'tft',type:'tft',col:0,row:2,sx:1,sy:1,label:'Pantalla TFT'},
 ];
@@ -1555,6 +1556,7 @@ function drawShop(){
       case 'lottery': drawScaled(e,drawIsoLottery); break;
       case 'manager': drawScaled(e,drawIsoManager); break;
       case 'plant': drawScaled(e,drawIsoPlant); break;
+      case 'floorLamp': drawScaled(e,drawIsoFloorLamp); break;
       case 'vending': drawScaled(e,drawIsoVending); break;
       case 'wineRack': drawScaled(e,drawIsoWineRack); break;
       case 'magazines': drawScaled(e,drawIsoMagazineRack); break;
@@ -1889,6 +1891,33 @@ function drawIsoDoor(col,row){
 
 // ── DECORATION ───────────────────────────────────────────────
 
+function drawIsoFloorLamp(col,row){
+  const p=toIso(col,row);
+  drawIsoShadow(p.x,p.y+4,6,3);
+  // Base (round dark)
+  cx.beginPath();cx.ellipse(p.x,p.y+2,6,3,0,0,Math.PI*2);
+  cx.fillStyle='#3a3028';cx.fill();
+  // Pole (thin, tall)
+  r(p.x-1,p.y-50,2,52,'#5a5040');
+  r(p.x,p.y-50,1,52,'#6a6050'); // highlight
+  // Lampshade (cone/trapezoid)
+  cx.beginPath();
+  cx.moveTo(p.x-10,p.y-48);
+  cx.lineTo(p.x+10,p.y-48);
+  cx.lineTo(p.x+6,p.y-60);
+  cx.lineTo(p.x-6,p.y-60);
+  cx.closePath();
+  cx.fillStyle='#e8d8a8';cx.fill();
+  cx.strokeStyle='#c8b888';cx.lineWidth=0.8;cx.stroke();
+  // Light glow
+  cx.globalAlpha=0.12;
+  cx.beginPath();cx.ellipse(p.x,p.y-20,14,30,0,0,Math.PI*2);
+  cx.fillStyle='#ffee88';cx.fill();
+  cx.globalAlpha=1;
+  // Top rim
+  r(p.x-6,p.y-61,12,2,'#c8b888');
+}
+
 function drawIsoPlant(col,row){
   const p=toIso(col,row);
   drawIsoShadow(p.x,p.y+4,7,3);
@@ -2042,23 +2071,9 @@ function drawIsoStaff(s){
 
 // ── DRAW CUSTOMERS (ISOMETRIC) ───────────────────────────────
 function drawIsoCust(c){
-  cx.save();
-  if(c.dir===-1){cx.translate(c.x+10,0);cx.scale(-1,1);cx.translate(-c.x,0);}
-  drawIsoShadow(c.x+5,c.y+20,6,2.5);
-  const lk=c.fr===0?0:1;
-  // Legs
-  r(c.x+2,c.y+12,3,6+lk,P.pants);r(c.x+6,c.y+12,3,6-lk,P.pants);
-  // Shoes
-  r(c.x+1,c.y+17+lk,4,2,P.shoes);r(c.x+6,c.y+17-lk,4,2,P.shoes);
-  // Body
-  r(c.x+1,c.y+5,9,8,c.col);
-  // Head
-  r(c.x+0,c.y-2,11,9,P.skin);
-  // Hair
-  r(c.x+0,c.y-5,11,5,P.hair[c.hair]);
-  // Eyes
-  r(c.x+2,c.y+1,2,2,P.black);r(c.x+7,c.y+1,2,2,P.black);
-  cx.restore();
+  // Same size as staff — use chibi() with customer's color as shirt
+  const shirtIdx=P.shirts.indexOf(c.col)>=0?P.shirts.indexOf(c.col):Math.abs(c.hair)%P.shirts.length;
+  chibi(c.x,c.y,c.dir||1,shirtIdx,c.hair%P.hair.length,c.fr,false,tt);
 }
 
 // Legacy compat: drawShopChars is now handled inside drawShop via entity sorting
