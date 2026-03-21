@@ -1289,6 +1289,8 @@ function drawShop(){
   entities.push({type:'plant',col:0,row:5,depth:isoDepth(0,6)});
   entities.push({type:'plant',col:4,row:5,depth:isoDepth(4,6)});
   entities.push({type:'vending',col:10,row:0,depth:isoDepth(10,1)});
+  entities.push({type:'wineRack',col:2,row:0,depth:isoDepth(2,1)});
+  entities.push({type:'magazines',col:6,row:4,depth:isoDepth(6,5)});
 
   // Staff — use their actual screen Y position for depth
   for(const s of G.staff){
@@ -1313,6 +1315,8 @@ function drawShop(){
       // door is now drawn on the right wall, not as a floor entity
       case 'plant': drawIsoPlant(e.col,e.row); break;
       case 'vending': drawIsoVending(e.col,e.row); break;
+      case 'wineRack': drawIsoWineRack(e.col,e.row); break;
+      case 'magazines': drawIsoMagazineRack(e.col,e.row); break;
       case 'rug': drawIsoRug(e.col,e.row); break;
       case 'staff': drawIsoStaff(e.data); break;
       case 'cust': drawIsoCust(e.data); break;
@@ -1519,6 +1523,73 @@ function drawIsoRug(col,row){
   drawIsoTile(col,row,'#aa6633',null);
   drawIsoTile(col+1,row+1,'#aa6633',null);
   cx.globalAlpha=1;
+}
+
+// ── WINE RACK (botellero de vinos) ───────────────────────────
+function drawIsoWineRack(col,row){
+  // Wooden rack: 2 wide, 1 deep, 48px tall
+  drawIsoBlock(col,row,2,1,48,P.furnitureLight,P.furnitureDark,P.furniture,null);
+  const p=toIso(col+1,row+0.5);
+  // Shelf dividers
+  for(let lv=0;lv<4;lv++){
+    const sy=p.y-10-lv*10;
+    cx.strokeStyle=P.furnitureLight;cx.lineWidth=0.8;
+    cx.beginPath();cx.moveTo(p.x-16,sy);cx.lineTo(p.x+16,sy);cx.stroke();
+  }
+  // Bottles (lying horizontal, colored)
+  const bottleColors=['#660022','#880033','#550028','#772244','#993355','#440018','#aa2244','#661133'];
+  for(let lv=0;lv<4;lv++){
+    const numB=3+lv%2;
+    for(let i=0;i<numB;i++){
+      const bx=p.x-14+i*8, by=p.y-14-lv*10;
+      const bc=bottleColors[(lv*3+i)%bottleColors.length];
+      // Bottle body (horizontal)
+      r(bx,by,7,4,bc);
+      // Bottle neck
+      r(bx+7,by+1,3,2,bc);
+      // Cap/foil
+      r(bx+10,by+1,1,2,'#ccaa44');
+      // Glass highlight
+      r(bx+1,by,2,1,'#ffffff33');
+    }
+  }
+  // Label on front
+  r(p.x-10,p.y-52,20,7,'#f0e8d0');
+  tx('VINOS',p.x,p.y-47,'#5a2020',6,'center');
+}
+
+// ── VENDING MACHINE (máquina expendedora) ────────────────────
+// (already exists as drawIsoVending — keeping it)
+
+// ── MAGAZINE RACK (revistero) ────────────────────────────────
+function drawIsoMagazineRack(col,row){
+  // Metal/wood rack: 2 wide, 1 deep, 40px tall
+  drawIsoBlock(col,row,2,1,40,'#c8c0b0','#8a8478','#a09890',null);
+  const p=toIso(col+1,row+0.5);
+  // Magazine slots (angled display)
+  const magColors=['#dd3333','#3366cc','#33aa55','#dd8822','#cc33aa','#4488aa','#ddcc22'];
+  for(let row2=0;row2<3;row2++){
+    const ry=p.y-14-row2*10;
+    const numMags=4;
+    for(let i=0;i<numMags;i++){
+      const mx=p.x-15+i*8;
+      const mc=magColors[(row2*4+i)%magColors.length];
+      // Magazine cover (slightly angled/overlapping)
+      r(mx,ry-6,7,8,mc);
+      // White page edge at bottom
+      r(mx,ry+1,7,1,'#f0eee8');
+      // Title bar on cover
+      r(mx+1,ry-5,5,2,'#ffffff55');
+      // Small image block on cover
+      r(mx+1,ry-2,5,3,'#00000022');
+    }
+    // Shelf lip
+    cx.strokeStyle='#9a9488';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(p.x-17,ry+2);cx.lineTo(p.x+17,ry+2);cx.stroke();
+  }
+  // Top label
+  r(p.x-12,p.y-44,24,7,'#f0e8d0');
+  tx('PRENSA',p.x,p.y-39,'#3a3a5a',6,'center');
 }
 
 // ── DRAW STAFF (ISOMETRIC) ───────────────────────────────────
