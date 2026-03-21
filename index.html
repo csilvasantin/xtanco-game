@@ -754,29 +754,36 @@ function endWeek(){
 function updateGame(){
   tt++;G.weekTimer++;
 
-  // ── PLAYER CONTROL: move manager (staff[0]) with arrow keys ──
+  // ── PLAYER CONTROL: move manager with Q/A/O/P ──
+  // Collision: convert screen position to iso grid, reject if outside floor
   if(G.staff&&G.staff[0]&&G.staff[0].hired){
     const mgr=G.staff[0];
-    const spd=1.8; // movement speed in pixels per frame
+    const spd=1.8;
     let mx=0,my=0;
-    // Isometric movement: up=NW, down=SE, left=SW, right=NE
     // Q=up(NW), A=down(SE), O=left(SW), P=right(NE)
     if(keys['KeyQ']) {mx-=spd*0.7;my-=spd*0.35;}
     if(keys['KeyA']) {mx+=spd*0.7;my+=spd*0.35;}
     if(keys['KeyO']) {mx-=spd*0.7;my+=spd*0.35;}
     if(keys['KeyP']) {mx+=spd*0.7;my-=spd*0.35;}
     if(mx!==0||my!==0){
-      mgr.x+=mx;mgr.y+=my;
-      // Update facing direction
+      // Calculate new position
+      const newX=mgr.x+mx, newY=mgr.y+my;
+      // Convert feet position (center-bottom of sprite) to iso grid
+      const feetX=newX+7, feetY=newY+25;
+      const tile=screenToIso(feetX,feetY);
+      // Collision: must stay inside the floor diamond (with small margin)
+      const margin=0.3;
+      if(tile.col>=-margin && tile.col<=ISO.cols-1+margin &&
+         tile.row>=-margin && tile.row<=ISO.rows-1+margin){
+        mgr.x=newX;
+        mgr.y=newY;
+      }
+      // Update facing direction even if blocked
       mgr.dir=mx>0?1:-1;
       // Walking animation
       mgr.aTimer++;
       if(mgr.aTimer>6){mgr.aFrame=(mgr.aFrame+1)%2;mgr.aTimer=0;}
       mgr.isWalking=true;
-      // Clamp to shop boundaries
-      const minP=toIso(0,0), maxP=toIso(ISO.cols,ISO.rows);
-      mgr.x=Math.max(minP.x-ISO.tileW,Math.min(maxP.x,mgr.x));
-      mgr.y=Math.max(minP.y-40,Math.min(maxP.y,mgr.y));
     } else {
       mgr.isWalking=false;
     }
