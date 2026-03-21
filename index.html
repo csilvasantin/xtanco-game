@@ -1616,11 +1616,21 @@ function drawLED(scx,scy){
 }
 
 // ── WALL CLOCK (above LED on left wall) ──────────────────────
+// Cached clock time — only updates when minute changes
+let _clockH=0,_clockM=-1;
+function _updateClockTime(){
+  const now=new Date();
+  _clockH=now.getHours()%12;
+  _clockM=now.getMinutes();
+}
+_updateClockTime();
+setInterval(_updateClockTime,1000); // check every second, but hands only jump per minute
+
 function drawWallClock(){
   // Position: centered on left wall, above the LED banner
-  const cp=toIso(0,3); // center of left wall
+  const cp=toIso(0,3);
   const clockX=cp.x;
-  const clockY=cp.y-ISO.wallH+18; // near top of wall, above LED
+  const clockY=cp.y-ISO.wallH+20;
   const radius=14;
   cx.save();
   // Clip to left wall
@@ -1631,35 +1641,31 @@ function drawWallClock(){
   for(let i=1;i<wallClipPts.length;i++) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y-ISO.wallH);
   for(let i=wallClipPts.length-1;i>=0;i--) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y);
   cx.closePath();cx.clip();
-  // Clock face (white circle)
+  // Clock face
   cx.beginPath();cx.arc(clockX,clockY,radius+2,0,Math.PI*2);
-  cx.fillStyle='#3a3028';cx.fill(); // dark rim
+  cx.fillStyle='#3a3028';cx.fill();
   cx.beginPath();cx.arc(clockX,clockY,radius,0,Math.PI*2);
-  cx.fillStyle='#f8f4ee';cx.fill(); // white face
+  cx.fillStyle='#f8f4ee';cx.fill();
   cx.strokeStyle='#5a4a30';cx.lineWidth=1.5;cx.stroke();
   // Hour markers
-  for(let h=0;h<12;h++){
-    const a=h*Math.PI/6-Math.PI/2;
-    const mx1=clockX+Math.cos(a)*(radius-3);
-    const my1=clockY+Math.sin(a)*(radius-3);
-    const mx2=clockX+Math.cos(a)*(radius-1);
-    const my2=clockY+Math.sin(a)*(radius-1);
-    cx.strokeStyle=h%3===0?'#2a2018':'#8a7a60';
-    cx.lineWidth=h%3===0?1.5:0.8;
-    cx.beginPath();cx.moveTo(mx1,my1);cx.lineTo(mx2,my2);cx.stroke();
+  for(let i=0;i<12;i++){
+    const a=i*Math.PI/6-Math.PI/2;
+    const r1=radius-3, r2=radius-1;
+    cx.strokeStyle=i%3===0?'#2a2018':'#8a7a60';
+    cx.lineWidth=i%3===0?1.5:0.8;
+    cx.beginPath();
+    cx.moveTo(clockX+Math.cos(a)*r1,clockY+Math.sin(a)*r1);
+    cx.lineTo(clockX+Math.cos(a)*r2,clockY+Math.sin(a)*r2);
+    cx.stroke();
   }
-  // Real system time — updates every minute (no second hand)
-  const now=new Date();
-  const h=now.getHours()%12;
-  const m=now.getMinutes();
-  // Hour hand
-  const ha=h*Math.PI/6+m*Math.PI/360-Math.PI/2;
+  // Hour hand (cached, only moves each minute)
+  const ha=_clockH*Math.PI/6+_clockM*Math.PI/360-Math.PI/2;
   cx.strokeStyle='#2a1a08';cx.lineWidth=2;cx.lineCap='round';
   cx.beginPath();cx.moveTo(clockX,clockY);
   cx.lineTo(clockX+Math.cos(ha)*(radius*0.5),clockY+Math.sin(ha)*(radius*0.5));
   cx.stroke();
-  // Minute hand
-  const ma=m*Math.PI/30-Math.PI/2;
+  // Minute hand (cached, only moves each minute)
+  const ma=_clockM*Math.PI/30-Math.PI/2;
   cx.strokeStyle='#2a1a08';cx.lineWidth=1.2;
   cx.beginPath();cx.moveTo(clockX,clockY);
   cx.lineTo(clockX+Math.cos(ma)*(radius*0.75),clockY+Math.sin(ma)*(radius*0.75));
@@ -1679,10 +1685,11 @@ function drawTFTScreen(scx,scy){
   const halfSpan=0.8*scx;
   const tp1=toIso(0,center-halfSpan);
   const tp2=toIso(0,center+halfSpan);
-  // Lowered 40% total from center
+  // Position BELOW the LED banner with clear gap
+  // LED is at ledYoff=64 from ceiling + ~16px height = ends at ~80px from ceiling
   const scrW=Math.round(35*scy);
-  const wallMidY=tp1.y-ISO.wallH/2;
-  const tftY1=wallMidY-scrW/2+50;   // lowered 40%
+  const ledBottomY=tp1.y-ISO.wallH+64+20; // LED position + LED height + gap
+  const tftY1=ledBottomY+8; // 8px gap below LED
   cx.save();
   // Clip to left wall
   const wallClipPts=[];
