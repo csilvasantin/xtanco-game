@@ -283,10 +283,56 @@ let lang='es';
 const T=()=>LANGS[lang];
 
 // ── STATE ─────────────────────────────────────────────────────
-const S={MENU:'menu',MODEL_SEL:'modelSel',TUT:'tutorial',GAME:'game',PAUSE:'pause',YEAR_END:'yearEnd',GAME_END:'gameEnd'};
+const S={MENU:'menu',MODEL_SEL:'modelSel',TUT:'tutorial',GAME:'game',PAUSE:'pause',YEAR_END:'yearEnd',GAME_END:'gameEnd',EDITOR:'editor'};
 let state=S.MENU, menuSel=0, modelSel=0, tutPage=0;
 let tt=0;
 let ledOffset=0;
+
+// ── LAYOUT EDITOR ────────────────────────────────────────────
+// Furniture layout — editable positions
+const DEFAULT_LAYOUT=[
+  {id:'counter',type:'counter',col:1,row:1,label:'Mostrador'},
+  {id:'shelves',type:'shelves',col:3,row:0,label:'Estantería'},
+  {id:'wineRack',type:'wineRack',col:6,row:0,label:'Botellero'},
+  {id:'lottery',type:'lottery',col:9,row:0,label:'Lotería'},
+  {id:'vending',type:'vending',col:10,row:1,label:'Vending'},
+  {id:'magazines',type:'magazines',col:9,row:3,label:'Revistero'},
+  {id:'manager',type:'manager',col:9,row:5,label:'Escritorio'},
+  {id:'plant1',type:'plant',col:0,row:0,label:'Planta 1'},
+  {id:'plant2',type:'plant',col:11,row:0,label:'Planta 2'},
+  {id:'plant3',type:'plant',col:0,row:5,label:'Planta 3'},
+  {id:'plant4',type:'plant',col:7,row:5,label:'Planta 4'},
+  {id:'rug',type:'rug',col:3,row:2,label:'Alfombra'},
+];
+let shopLayout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
+let edSelIdx=-1; // selected furniture index in editor
+let edHoverTile=null; // {col,row} under mouse
+
+// Load saved layout
+function loadLayout(){
+  try{
+    const d=localStorage.getItem('xtanco_layout');
+    if(d){shopLayout=JSON.parse(d);return true;}
+  }catch(e){}
+  return false;
+}
+function saveLayout(){
+  try{localStorage.setItem('xtanco_layout',JSON.stringify(shopLayout));}catch(e){}
+}
+function resetLayout(){
+  shopLayout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
+  saveLayout();
+}
+loadLayout();
+
+// Convert screen coords to iso grid tile
+function screenToIso(sx,sy){
+  // Invert toIso: sx = ox + (col-row)*tw/2, sy = oy + (col+row)*th/2
+  const dx=sx-ISO.ox, dy=sy-ISO.oy;
+  const col=(dx/(ISO.tileW/2)+dy/(ISO.tileH/2))/2;
+  const row=(dy/(ISO.tileH/2)-dx/(ISO.tileW/2))/2;
+  return {col:Math.round(col),row:Math.round(row)};
+}
 
 // ── GAME STATE ────────────────────────────────────────────────
 let G={};
@@ -394,9 +440,23 @@ document.addEventListener('keydown',e=>{
     if(e.code==='Escape'||e.code==='Enter'||e.code==='Space'){state=S.GAME;}
     return;
   }
+  if(state===S.EDITOR){
+    if(e.code==='Escape'){if(edSelIdx>=0)edSelIdx=-1;else state=S.GAME;}
+    if(edSelIdx>=0&&edSelIdx<shopLayout.length){
+      const it=shopLayout[edSelIdx];
+      if(e.code==='ArrowUp'&&it.row>0) it.row--;
+      if(e.code==='ArrowDown'&&it.row<ISO.rows-1) it.row++;
+      if(e.code==='ArrowLeft'&&it.col>0) it.col--;
+      if(e.code==='ArrowRight'&&it.col<ISO.cols-1) it.col++;
+    }
+    if(e.code==='KeyS'){saveLayout();}
+    if(e.code==='KeyR'){resetLayout();edSelIdx=-1;}
+    return;
+  }
   if(state===S.GAME){
     if(e.code==='Escape'){if(uiOpen)uiOpen=false;else openPause();}
     if(e.code==='KeyM'){uiOpen=!uiOpen;}
+    if(e.code==='KeyE'){state=S.EDITOR;edSelIdx=-1;}
     if(e.code==='Digit1'){activeTab=0;uiOpen=true;}
     if(e.code==='Digit2'){activeTab=1;uiOpen=true;}
     if(e.code==='Digit3'){activeTab=2;uiOpen=true;}
@@ -421,10 +481,35 @@ cv.addEventListener('click',e=>{
   if(state===S.PAUSE){state=S.GAME;return;}
   if(state===S.YEAR_END&&G.yearEndAnim>80){advanceYear();return;}
   if(state===S.GAME_END){state=S.MENU;menuSel=0;return;}
-  if(state!==S.GAME) return;
-  const r=cv.getBoundingClientRect();
-  const mx=(e.clientX-r.left)*(W/r.width)|0, my=(e.clientY-r.top)*(H/r.height)|0;
+  if(state!==S.GAME&&state!==S.EDITOR) return;
+  const r2=cv.getBoundingClientRect();
+  const mx=(e.clientX-r2.left)*(W/r2.width)|0, my=(e.clientY-r2.top)*(H/r2.height)|0;
+  // Check buttons first
   for(const[id,b] of Object.entries(BTNS)){if(mx>=b.x&&mx<b.x+b.w&&my>=b.y&&my<b.y+b.h){doAction(id);return;}}
+  // Editor: click on tile to move selected item, or click on item to select
+  if(state===S.EDITOR){
+    const tile=screenToIso(mx,my);
+    if(tile.col>=0&&tile.col<ISO.cols&&tile.row>=0&&tile.row<ISO.rows){
+      // If item selected, move it to clicked tile
+      if(edSelIdx>=0&&edSelIdx<shopLayout.length){
+        shopLayout[edSelIdx].col=tile.col;
+        shopLayout[edSelIdx].row=tile.row;
+      } else {
+        // Try to select item at this tile
+        for(let i=0;i<shopLayout.length;i++){
+          if(shopLayout[i].col===tile.col&&shopLayout[i].row===tile.row){edSelIdx=i;return;}
+        }
+      }
+    }
+    return;
+  }
+});
+// Mouse move for editor hover
+cv.addEventListener('mousemove',e=>{
+  if(state!==S.EDITOR) return;
+  const r2=cv.getBoundingClientRect();
+  const mx=(e.clientX-r2.left)*(W/r2.width)|0, my=(e.clientY-r2.top)*(H/r2.height)|0;
+  edHoverTile=screenToIso(mx,my);
 });
 
 // ── ACTIONS ───────────────────────────────────────────────────
@@ -473,6 +558,19 @@ function doAction(id){
   if(id==='menu'){uiOpen=!uiOpen;return;}
   if(id==='closeUI'){uiOpen=false;return;}
   if(id==='save'){saveGame();showEv('💾 Saved!','#88aa55');return;}
+  if(id==='editor'){state=S.EDITOR;edSelIdx=-1;return;}
+  // Editor actions
+  if(id.startsWith('edsel')){edSelIdx=parseInt(id.slice(5));return;}
+  if(id==='edSave'){saveLayout();showEv('💾 Layout guardado!','#88aa55');return;}
+  if(id==='edReset'){resetLayout();edSelIdx=-1;return;}
+  if(id==='edExit'){state=S.GAME;return;}
+  if(edSelIdx>=0&&edSelIdx<shopLayout.length){
+    const it=shopLayout[edSelIdx];
+    if(id==='edUp'&&it.row>0){it.row--;return;}
+    if(id==='edDown'&&it.row<ISO.rows-1){it.row++;return;}
+    if(id==='edLeft'&&it.col>0){it.col--;return;}
+    if(id==='edRight'&&it.col<ISO.cols-1){it.col++;return;}
+  }
 }
 
 function showEv(msg,col){G.eventMsg=msg;G.eventTimer=160;G.eventColor=col||P.neon1;}
@@ -1279,22 +1377,11 @@ function drawShop(){
     return p.y; // screen Y = depth for isometric sorting
   }
 
-  // Rug first (flat on floor, always behind everything)
-  entities.push({type:'rug',col:3,row:2,depth:-999});
-
-  // Furniture positions in grid
-  // Furniture against walls
-  entities.push({type:'counter',col:1,row:1,depth:isoDepth(1,4)});    // below TFT, rotated 90°
-  entities.push({type:'shelves',col:3,row:0,depth:isoDepth(3,2)});    // back wall
-  entities.push({type:'wineRack',col:6,row:0,depth:isoDepth(6,1)});   // back wall
-  entities.push({type:'lottery',col:9,row:0,depth:isoDepth(9,1)});    // back wall, right corner
-  entities.push({type:'vending',col:10,row:1,depth:isoDepth(10,2)});  // right wall
-  entities.push({type:'magazines',col:9,row:3,depth:isoDepth(9,4)});  // right wall
-  entities.push({type:'manager',col:9,row:5,depth:isoDepth(9,6)});    // right wall, near door
-  entities.push({type:'plant',col:0,row:0,depth:isoDepth(0,1)});      // corner: back-left
-  entities.push({type:'plant',col:11,row:0,depth:isoDepth(11,1)});    // corner: back-right
-  entities.push({type:'plant',col:0,row:5,depth:isoDepth(0,6)});      // corner: front-left
-  entities.push({type:'plant',col:7,row:5,depth:isoDepth(7,6)});      // corner: front-right
+  // Furniture from editable layout
+  for(const item of shopLayout){
+    const d=item.type==='rug'?-999:isoDepth(item.col,item.row+1);
+    entities.push({type:item.type,col:item.col,row:item.row,depth:d,layoutId:item.id});
+  }
 
   // Staff — use their actual screen Y position for depth
   for(const s of G.staff){
@@ -1857,6 +1944,11 @@ function drawBottomBar(){
   r(menX,by+4,46,22,'#3a2a18');rx(menX,by+4,46,22,'#5a4830',1);
   tx('Menu',menX+23,by+19,'#c0b898',9,'center');
   BTNS['menu']={x:menX,y:by+4,w:46,h:22};
+  // Editor button
+  const edX=menX-54;
+  r(edX,by+4,50,22,'#2a2a3a');rx(edX,by+4,50,22,'#5a5a7a',1);
+  tx('✏️ Edit',edX+25,by+19,'#aaaacc',8,'center');
+  BTNS['editor']={x:edX,y:by+4,w:50,h:22};
 }
 
 // ── DRAW UI PANEL ─────────────────────────────────────────────
@@ -2133,6 +2225,98 @@ function drawGameEnd(){
 }
 
 // ── MAIN LOOP ─────────────────────────────────────────────────
+// ── EDITOR MODE ──────────────────────────────────────────────
+function drawEditor(){
+  // Draw shop as background
+  drawCityBg();drawShop();drawShopChars();
+  // Grid overlay
+  cx.globalAlpha=0.15;
+  for(let row=0;row<ISO.rows;row++){
+    for(let col=0;col<ISO.cols;col++){
+      drawIsoTile(col,row,'transparent','#ffffff');
+    }
+  }
+  cx.globalAlpha=1;
+  // Highlight hovered tile
+  if(edHoverTile&&edHoverTile.col>=0&&edHoverTile.col<ISO.cols&&edHoverTile.row>=0&&edHoverTile.row<ISO.rows){
+    cx.globalAlpha=0.3;
+    drawIsoTile(edHoverTile.col,edHoverTile.row,'#44ff44',null);
+    cx.globalAlpha=1;
+    // Show tile coords
+    const hp=toIso(edHoverTile.col,edHoverTile.row);
+    tx(edHoverTile.col+','+edHoverTile.row,hp.x,hp.y+ISO.tileH/2+4,'#fff',7,'center');
+  }
+  // Highlight selected item
+  if(edSelIdx>=0&&edSelIdx<shopLayout.length){
+    const item=shopLayout[edSelIdx];
+    cx.globalAlpha=0.4;
+    drawIsoTile(item.col,item.row,'#ffcc00',null);
+    cx.globalAlpha=1;
+    const sp=toIso(item.col,item.row);
+    // Selection indicator
+    glow('#ffcc00',10);
+    cx.strokeStyle='#ffcc00';cx.lineWidth=2;
+    cx.beginPath();
+    cx.arc(sp.x,sp.y+ISO.tileH/2,12,0,Math.PI*2);
+    cx.stroke();nog();
+  }
+  // Top bar
+  r(0,0,W,28,'#2a1e10');
+  tx('EDITOR DE LAYOUT — Click mueble para seleccionar, click tile para mover',10,18,'#ffdd66',9);
+  // Bottom panel: list of items + buttons
+  const panH=80;
+  r(0,H-panH,W,panH,'#2a1e10e8');
+  cx.strokeStyle='#4a3820';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(0,H-panH+0.5);cx.lineTo(W,H-panH+0.5);cx.stroke();
+  // Item list (scrollable row)
+  const itemW=62;
+  for(let i=0;i<shopLayout.length;i++){
+    const ix=8+i*(itemW+4);
+    if(ix>W-100) break;
+    const sel=i===edSelIdx;
+    r(ix,H-panH+6,itemW,34,sel?'#4a3a20':'#3a2a18');
+    rx(ix,H-panH+6,itemW,34,sel?'#ffcc00':'#5a4830',sel?2:1);
+    tx(shopLayout[i].label,ix+itemW/2,H-panH+18,sel?'#ffcc00':'#c0b898',7,'center');
+    tx('('+shopLayout[i].col+','+shopLayout[i].row+')',ix+itemW/2,H-panH+32,sel?'#ffdd88':'#8a7a60',6,'center');
+    BTNS['edsel'+i]={x:ix,y:H-panH+6,w:itemW,h:34};
+  }
+  // Buttons
+  const btnY=H-panH+46;
+  // Save button
+  r(8,btnY,60,26,'#2a5a2a');rx(8,btnY,60,26,'#44aa44',1);
+  tx('💾 Guardar',38,btnY+18,'#88ee88',8,'center');
+  BTNS['edSave']={x:8,y:btnY,w:60,h:26};
+  // Reset button
+  r(76,btnY,60,26,'#5a2a2a');rx(76,btnY,60,26,'#aa4444',1);
+  tx('↺ Reset',106,btnY+18,'#ee8888',8,'center');
+  BTNS['edReset']={x:76,y:btnY,w:60,h:26};
+  // Exit button
+  r(144,btnY,60,26,'#3a3a18');rx(144,btnY,60,26,'#aaaa44',1);
+  tx('✕ Salir',174,btnY+18,'#dddd88',8,'center');
+  BTNS['edExit']={x:144,y:btnY,w:60,h:26};
+  // Arrow buttons for fine positioning (if item selected)
+  if(edSelIdx>=0){
+    const ax=W-180;
+    tx(shopLayout[edSelIdx].label,ax+50,btnY-6,'#ffcc00',9,'center');
+    // Up (row-1)
+    r(ax+35,btnY,30,12,'#3a2a18');rx(ax+35,btnY,30,12,'#8a7a50',1);
+    tx('▲',ax+50,btnY+10,'#c0b898',9,'center');
+    BTNS['edUp']={x:ax+35,y:btnY,w:30,h:12};
+    // Down (row+1)
+    r(ax+35,btnY+14,30,12,'#3a2a18');rx(ax+35,btnY+14,30,12,'#8a7a50',1);
+    tx('▼',ax+50,btnY+24,'#c0b898',9,'center');
+    BTNS['edDown']={x:ax+35,y:btnY+14,w:30,h:12};
+    // Left (col-1)
+    r(ax+5,btnY+7,28,12,'#3a2a18');rx(ax+5,btnY+7,28,12,'#8a7a50',1);
+    tx('◀',ax+19,btnY+17,'#c0b898',9,'center');
+    BTNS['edLeft']={x:ax+5,y:btnY+7,w:28,h:12};
+    // Right (col+1)
+    r(ax+67,btnY+7,28,12,'#3a2a18');rx(ax+67,btnY+7,28,12,'#8a7a50',1);
+    tx('▶',ax+81,btnY+17,'#c0b898',9,'center');
+    BTNS['edRight']={x:ax+67,y:btnY+7,w:28,h:12};
+  }
+}
+
 function loop(){
   requestAnimationFrame(loop);
   tt++;
@@ -2142,6 +2326,7 @@ function loop(){
   if(state===S.TUT){drawTutorial();return;}
   if(state===S.YEAR_END){drawYearEnd();return;}
   if(state===S.GAME_END){drawGameEnd();return;}
+  if(state===S.EDITOR){drawEditor();return;}
   if(state===S.PAUSE){
     r(0,0,W,H,P.bg);drawCityBg();drawShop();drawShopChars();drawHUD();drawBottomBar();drawUI();
     drawPause();return;
