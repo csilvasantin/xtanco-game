@@ -75,35 +75,31 @@ async function toggleStudioLight(){
   if(elgatoState.busy) return;
   elgatoState.busy=true;
   elgatoState.error=false;
+  // Always toggle visual state immediately (responsive)
+  const newOn=!elgatoState.on;
+  elgatoState.on=newOn;
+  elgatoState.skyRed=newOn;
+  elgatoState.notify=120;
+  // Play sound
   try{
-    // GET current state
-    const data=await elgatoFetch('/elgato/lights',{});
-    const currentOn=data.lights&&data.lights[0]?data.lights[0].on:0;
-    const newOn=currentOn?0:1;
-    // PUT toggle
+    const ac=new(window.AudioContext||window.webkitAudioContext)();
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.type='sine';o.frequency.value=newOn?660:440;
+    g.gain.setValueAtTime(0.12,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01,ac.currentTime+0.2);
+    o.connect(g);g.connect(ac.destination);
+    o.start();o.stop(ac.currentTime+0.2);
+  }catch(e){}
+  // Try to also toggle the real Elgato lamp (non-blocking)
+  try{
     await elgatoFetch('/elgato/lights',{
       method:'PUT',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({numberOfLights:1,lights:[{on:newOn}]}),
+      body:JSON.stringify({numberOfLights:1,lights:[{on:newOn?1:0}]}),
     });
-    elgatoState.on=!!newOn;
-    elgatoState.skyRed=!!newOn; // red sky when light is ON
-    elgatoState.notify=120;
-    console.log(`[Elgato] Light: ${newOn?'ON':'OFF'}`);
-    // Play confirmation sound
-    try{
-      const ac=new(window.AudioContext||window.webkitAudioContext)();
-      const o=ac.createOscillator(),g=ac.createGain();
-      o.type='sine';o.frequency.value=newOn?660:440;
-      g.gain.setValueAtTime(0.12,ac.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.01,ac.currentTime+0.2);
-      o.connect(g);g.connect(ac.destination);
-      o.start();o.stop(ac.currentTime+0.2);
-    }catch(e){}
+    console.log(`[Elgato] Real light: ${newOn?'ON':'OFF'}`);
   }catch(e){
-    elgatoState.error=true;
-    elgatoState.notify=120;
-    console.warn('[Elgato] Error:',e.message);
+    console.log('[Elgato] Real light unavailable (game lamp still works)');
   }
   elgatoState.busy=false;
 }
@@ -723,6 +719,7 @@ function doAction(id){
     }
     uiOpen=false;return;
   }
+  if(id==='lampToggle'){toggleStudioLight();return;}
   if(id==='menu'){uiOpen=!uiOpen;return;}
   if(id==='closeUI'){uiOpen=false;return;}
   if(id==='save'){saveGame();showEv('💾 Saved!','#88aa55');return;}
@@ -2025,29 +2022,41 @@ function drawIsoDoor(col,row){
 
 function drawIsoFloorLamp(col,row){
   const p=toIso(col,row);
+  const isOn=elgatoState.on;
   drawIsoShadow(p.x,p.y+4,6,3);
   // Base (round dark)
   cx.beginPath();cx.ellipse(p.x,p.y+2,6,3,0,0,Math.PI*2);
   cx.fillStyle='#3a3028';cx.fill();
-  // Pole (thin, tall)
+  // Pole
   r(p.x-1,p.y-50,2,52,'#5a5040');
-  r(p.x,p.y-50,1,52,'#6a6050'); // highlight
-  // Lampshade (cone/trapezoid)
+  r(p.x,p.y-50,1,52,'#6a6050');
+  // Lampshade
   cx.beginPath();
   cx.moveTo(p.x-10,p.y-48);
   cx.lineTo(p.x+10,p.y-48);
   cx.lineTo(p.x+6,p.y-60);
   cx.lineTo(p.x-6,p.y-60);
   cx.closePath();
-  cx.fillStyle='#e8d8a8';cx.fill();
-  cx.strokeStyle='#c8b888';cx.lineWidth=0.8;cx.stroke();
-  // Light glow
-  cx.globalAlpha=0.12;
-  cx.beginPath();cx.ellipse(p.x,p.y-20,14,30,0,0,Math.PI*2);
-  cx.fillStyle='#ffee88';cx.fill();
-  cx.globalAlpha=1;
+  cx.fillStyle=isOn?'#fff8d0':'#a8a088';cx.fill();
+  cx.strokeStyle=isOn?'#ddcc88':'#888070';cx.lineWidth=0.8;cx.stroke();
+  // Light glow (only when ON)
+  if(isOn){
+    cx.globalAlpha=0.15+0.03*Math.sin(tt*0.05);
+    cx.beginPath();cx.ellipse(p.x,p.y-20,16,35,0,0,Math.PI*2);
+    cx.fillStyle='#ffee66';cx.fill();
+    cx.globalAlpha=1;
+    // Bulb glow
+    cx.beginPath();cx.arc(p.x,p.y-52,3,0,Math.PI*2);
+    cx.fillStyle='#ffee88';cx.fill();
+  } else {
+    // Dim bulb
+    cx.beginPath();cx.arc(p.x,p.y-52,2,0,Math.PI*2);
+    cx.fillStyle='#888070';cx.fill();
+  }
   // Top rim
-  r(p.x-6,p.y-61,12,2,'#c8b888');
+  r(p.x-6,p.y-61,12,2,isOn?'#ddcc88':'#888070');
+  // Clickable area — register as button
+  BTNS['lampToggle']={x:p.x-12,y:p.y-62,w:24,h:66};
 }
 
 function drawIsoPlant(col,row){
