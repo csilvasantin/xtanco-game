@@ -407,11 +407,36 @@ loadLayout();
 
 // Convert screen coords to iso grid tile
 function screenToIso(sx,sy){
-  // Invert toIso: sx = ox + (col-row)*tw/2, sy = oy + (col+row)*th/2
   const dx=sx-ISO.ox, dy=sy-ISO.oy;
   const col=(dx/(ISO.tileW/2)+dy/(ISO.tileH/2))/2;
   const row=(dy/(ISO.tileH/2)-dx/(ISO.tileW/2))/2;
   return {col:Math.round(col),row:Math.round(row)};
+}
+
+// Furniture footprint sizes (in tiles: [width, depth])
+const FURNITURE_SIZE={
+  counter:[1,2], shelves:[1,2], wineRack:[2,1], lottery:[2,1],
+  vending:[1,1], magazines:[2,1], manager:[2,1], plant:[1,1],
+  floorLamp:[1,1], rug:[2,2],
+};
+
+// Check if a tile is blocked by furniture
+function isTileBlocked(col,row){
+  const c=Math.round(col), r=Math.round(row);
+  for(const item of shopLayout){
+    if(item.type==='rug'||item.type==='led'||item.type==='tft') continue; // walkable
+    const sz=FURNITURE_SIZE[item.type]||[1,1];
+    if(c>=item.col && c<item.col+sz[0] && r>=item.row && r<item.row+sz[1]) return true;
+  }
+  return false;
+}
+
+// Full walkability check: on floor grid AND not blocked by furniture
+function canWalkTo(screenX,screenY){
+  const tile=screenToIso(screenX,screenY);
+  if(tile.col<0||tile.col>=ISO.cols||tile.row<0||tile.row>=ISO.rows) return false;
+  if(isTileBlocked(tile.col,tile.row)) return false;
+  return true;
 }
 
 // ── GAME STATE ────────────────────────────────────────────────
@@ -769,12 +794,9 @@ function updateGame(){
     if(mx!==0||my!==0){
       // Calculate new position
       const newX=mgr.x+mx, newY=mgr.y+my;
-      // Convert feet position (center-bottom of sprite) to iso grid
+      // Collision: check feet position against floor + furniture
       const feetX=newX+7, feetY=newY+25;
-      const tile=screenToIso(feetX,feetY);
-      // Collision: must stay strictly on the floor grid tiles
-      if(tile.col>=0 && tile.col<ISO.cols &&
-         tile.row>=0 && tile.row<ISO.rows){
+      if(canWalkTo(feetX,feetY)){
         mgr.x=newX;
         mgr.y=newY;
       }
@@ -857,14 +879,22 @@ function updateGame(){
     if(c.st==='walk'){
       const dx=c.tx-c.x,dy=c.ty-c.y,d=Math.sqrt(dx*dx+dy*dy);
       if(d<3){c.st='browse';c.timer=60+Math.random()*80;}
-      else{c.x+=dx/d*1.3;c.y+=dy/d*1.3;c.dir=dx<0?-1:1;}
+      else{
+        const nx=c.x+dx/d*1.3, ny=c.y+dy/d*1.3;
+        if(canWalkTo(nx+5,ny+20)){c.x=nx;c.y=ny;c.dir=dx<0?-1:1;}
+        else{c.st='browse';c.timer=30+Math.random()*40;} // blocked→stop and browse
+      }
     } else if(c.st==='browse'){
       c.timer--;if(c.timer<=0){const dp=toIso(ISO.cols,3);c.st='leave';c.tx=dp.x;c.ty=dp.y-40;G.doorOpen=60;}
     } else if(c.st==='leave'){
       const dx=c.tx-c.x,dy=c.ty-c.y,d=Math.sqrt(dx*dx+dy*dy);
-      if(d<30&&G.doorOpen<30) G.doorOpen=40; // open door as customer approaches
+      if(d<30&&G.doorOpen<30) G.doorOpen=40;
       if(d<3) G.custs.splice(i,1);
-      else{c.x+=dx/d*1.6;c.y+=dy/d*1.6;c.dir=dx<0?-1:1;}
+      else{
+        const nx=c.x+dx/d*1.6, ny=c.y+dy/d*1.6;
+        if(canWalkTo(nx+5,ny+20)){c.x=nx;c.y=ny;c.dir=dx<0?-1:1;}
+        else{c.x+=dx/d*0.5;c.y+=dy/d*0.5;c.dir=dx<0?-1:1;} // slide around when leaving
+      }
     }
   }
 
@@ -885,9 +915,14 @@ function updateGame(){
 function spawnCust(){
   if(G.custs.length>=7) return;
   const ci=Math.floor(Math.random()*6);
-  // Spawn at door on right wall (between row 2-4)
+  // Spawn at door, target a walkable tile
   const doorIso=toIso(ISO.cols,3);
-  const tCol=2+Math.random()*6|0, tRow=1+Math.random()*4|0;
+  let tCol,tRow,attempts=0;
+  do{
+    tCol=2+Math.random()*6|0;
+    tRow=1+Math.random()*4|0;
+    attempts++;
+  }while(isTileBlocked(tCol,tRow)&&attempts<20);
   const tIso=toIso(tCol,tRow);
   G.custs.push({
     x:doorIso.x,y:doorIso.y-40,
