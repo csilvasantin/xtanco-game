@@ -383,7 +383,7 @@ function initGame(){
   // Staff from model — convert grid positions to isometric screen coords
   // Staff positions on the iso grid based on their role
   const staffGridPos=[
-    {col:2,row:1},{col:5,row:1},{col:8,row:1},{col:8,row:4},
+    {col:1,row:0},{col:5,row:1},{col:8,row:1},{col:8,row:4},  // [0]=behind counter
     {col:5,row:3},{col:2,row:3},{col:4,row:5},{col:10,row:2},
   ];
   G.staff=M.staffInit.map((s,i)=>{
@@ -489,9 +489,9 @@ document.addEventListener('keydown',e=>{
     if(e.code==='Digit2'){activeTab=1;uiOpen=true;}
     if(e.code==='Digit3'){activeTab=2;uiOpen=true;}
     if(e.code==='Digit4'){activeTab=3;uiOpen=true;}
-    // Arrow keys move the manager (staff[0]) — mark as held
-    if(e.code==='ArrowUp'||e.code==='ArrowDown'||e.code==='ArrowLeft'||e.code==='ArrowRight'){
-      e.preventDefault(); // prevent page scroll
+    // Q/A/O/P move the manager — prevent default for those
+    if(e.code==='KeyQ'||e.code==='KeyA'||e.code==='KeyO'||e.code==='KeyP'){
+      e.preventDefault();
     }
   }
 });
@@ -696,10 +696,11 @@ function updateGame(){
     const spd=1.8; // movement speed in pixels per frame
     let mx=0,my=0;
     // Isometric movement: up=NW, down=SE, left=SW, right=NE
-    if(keys['ArrowUp'])   {mx-=spd*0.7;my-=spd*0.35;}
-    if(keys['ArrowDown']) {mx+=spd*0.7;my+=spd*0.35;}
-    if(keys['ArrowLeft']) {mx-=spd*0.7;my+=spd*0.35;}
-    if(keys['ArrowRight']){mx+=spd*0.7;my-=spd*0.35;}
+    // Q=up(NW), A=down(SE), O=left(SW), P=right(NE)
+    if(keys['KeyQ']) {mx-=spd*0.7;my-=spd*0.35;}
+    if(keys['KeyA']) {mx+=spd*0.7;my+=spd*0.35;}
+    if(keys['KeyO']) {mx-=spd*0.7;my+=spd*0.35;}
+    if(keys['KeyP']) {mx+=spd*0.7;my-=spd*0.35;}
     if(mx!==0||my!==0){
       mgr.x+=mx;mgr.y+=my;
       // Update facing direction
@@ -1412,7 +1413,8 @@ function drawShop(){
   tx('OPEN',doorCx,doorCy,'#4a3018',8,'center');
 
 
-  // ── LED DISPLAY + TFT SCREEN (from layout) ──
+  // ── CLOCK + LED + TFT on left wall ──
+  drawWallClock();
   const ledItem=shopLayout.find(i=>i.id==='led');
   const tftItem=shopLayout.find(i=>i.id==='tft');
   if(ledItem) drawLED(ledItem.sx||1,ledItem.sy||1);
@@ -1533,6 +1535,71 @@ function drawLED(scx,scy){
   cx.restore();
 }
 
+// ── WALL CLOCK (above LED on left wall) ──────────────────────
+function drawWallClock(){
+  // Position: centered on left wall, above the LED banner
+  const cp=toIso(0,3); // center of left wall
+  const clockX=cp.x;
+  const clockY=cp.y-ISO.wallH+18; // near top of wall, above LED
+  const radius=14;
+  cx.save();
+  // Clip to left wall
+  const wallClipPts=[];
+  for(let rr=0;rr<=ISO.rows;rr++) wallClipPts.push(toIso(0,rr));
+  cx.beginPath();
+  cx.moveTo(wallClipPts[0].x,wallClipPts[0].y-ISO.wallH);
+  for(let i=1;i<wallClipPts.length;i++) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y-ISO.wallH);
+  for(let i=wallClipPts.length-1;i>=0;i--) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y);
+  cx.closePath();cx.clip();
+  // Clock face (white circle)
+  cx.beginPath();cx.arc(clockX,clockY,radius+2,0,Math.PI*2);
+  cx.fillStyle='#3a3028';cx.fill(); // dark rim
+  cx.beginPath();cx.arc(clockX,clockY,radius,0,Math.PI*2);
+  cx.fillStyle='#f8f4ee';cx.fill(); // white face
+  cx.strokeStyle='#5a4a30';cx.lineWidth=1.5;cx.stroke();
+  // Hour markers
+  for(let h=0;h<12;h++){
+    const a=h*Math.PI/6-Math.PI/2;
+    const mx1=clockX+Math.cos(a)*(radius-3);
+    const my1=clockY+Math.sin(a)*(radius-3);
+    const mx2=clockX+Math.cos(a)*(radius-1);
+    const my2=clockY+Math.sin(a)*(radius-1);
+    cx.strokeStyle=h%3===0?'#2a2018':'#8a7a60';
+    cx.lineWidth=h%3===0?1.5:0.8;
+    cx.beginPath();cx.moveTo(mx1,my1);cx.lineTo(mx2,my2);cx.stroke();
+  }
+  // Calculate time from game ticks (1 game week = 1 real day cycle)
+  // weekTimer goes 0→WEEK_TICKS, map to 0→12 hours
+  const gameHours=G?(G.weekTimer/CFG.WEEK_TICKS)*12+8:12; // start at 8am
+  const gameMins=(gameHours%1)*60;
+  const h=gameHours%12;
+  const m=gameMins;
+  // Hour hand
+  const ha=h*Math.PI/6+m*Math.PI/360-Math.PI/2;
+  cx.strokeStyle='#2a1a08';cx.lineWidth=2;cx.lineCap='round';
+  cx.beginPath();cx.moveTo(clockX,clockY);
+  cx.lineTo(clockX+Math.cos(ha)*(radius*0.5),clockY+Math.sin(ha)*(radius*0.5));
+  cx.stroke();
+  // Minute hand
+  const ma=m*Math.PI/30-Math.PI/2;
+  cx.strokeStyle='#2a1a08';cx.lineWidth=1.2;
+  cx.beginPath();cx.moveTo(clockX,clockY);
+  cx.lineTo(clockX+Math.cos(ma)*(radius*0.75),clockY+Math.sin(ma)*(radius*0.75));
+  cx.stroke();
+  // Second hand (thin, red, ticks with game frames)
+  const sec=(tt%360)/360*60;
+  const sa=sec*Math.PI/30-Math.PI/2;
+  cx.strokeStyle='#cc3322';cx.lineWidth=0.6;
+  cx.beginPath();cx.moveTo(clockX,clockY);
+  cx.lineTo(clockX+Math.cos(sa)*(radius*0.8),clockY+Math.sin(sa)*(radius*0.8));
+  cx.stroke();
+  // Center pin
+  cx.beginPath();cx.arc(clockX,clockY,1.5,0,Math.PI*2);
+  cx.fillStyle='#2a1a08';cx.fill();
+  cx.lineCap='butt';
+  cx.restore();
+}
+
 // ── TFT SCREEN 42" on left wall (Altadis digital signage) ────
 function drawTFTScreen(scx,scy){
   scx=scx||1;scy=scy||1;
@@ -1541,10 +1608,10 @@ function drawTFTScreen(scx,scy){
   const halfSpan=0.8*scx;
   const tp1=toIso(0,center-halfSpan);
   const tp2=toIso(0,center+halfSpan);
-  // Below LED, lower on wall
-  const wallTopY=tp1.y-ISO.wallH+65;
-  const scrW=Math.round(35*scy); // sy controls screen height
-  const tftY1=wallTopY;
+  // Centered vertically on wall
+  const scrW=Math.round(35*scy);
+  const wallMidY=tp1.y-ISO.wallH/2; // vertical center of wall
+  const tftY1=wallMidY-scrW/2+10;   // centered, nudged down slightly
   cx.save();
   // Clip to left wall
   const wallClipPts=[];
