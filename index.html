@@ -1648,12 +1648,10 @@ function drawWallClock(){
     cx.lineWidth=h%3===0?1.5:0.8;
     cx.beginPath();cx.moveTo(mx1,my1);cx.lineTo(mx2,my2);cx.stroke();
   }
-  // Calculate time from game ticks (1 game week = 1 real day cycle)
-  // weekTimer goes 0→WEEK_TICKS, map to 0→12 hours
-  const gameHours=G?(G.weekTimer/CFG.WEEK_TICKS)*12+8:12; // start at 8am
-  const gameMins=(gameHours%1)*60;
-  const h=gameHours%12;
-  const m=gameMins;
+  // Real system time — updates every minute (no second hand)
+  const now=new Date();
+  const h=now.getHours()%12;
+  const m=now.getMinutes();
   // Hour hand
   const ha=h*Math.PI/6+m*Math.PI/360-Math.PI/2;
   cx.strokeStyle='#2a1a08';cx.lineWidth=2;cx.lineCap='round';
@@ -1665,13 +1663,6 @@ function drawWallClock(){
   cx.strokeStyle='#2a1a08';cx.lineWidth=1.2;
   cx.beginPath();cx.moveTo(clockX,clockY);
   cx.lineTo(clockX+Math.cos(ma)*(radius*0.75),clockY+Math.sin(ma)*(radius*0.75));
-  cx.stroke();
-  // Second hand (thin, red, ticks with game frames)
-  const sec=(tt%360)/360*60;
-  const sa=sec*Math.PI/30-Math.PI/2;
-  cx.strokeStyle='#cc3322';cx.lineWidth=0.6;
-  cx.beginPath();cx.moveTo(clockX,clockY);
-  cx.lineTo(clockX+Math.cos(sa)*(radius*0.8),clockY+Math.sin(sa)*(radius*0.8));
   cx.stroke();
   // Center pin
   cx.beginPath();cx.arc(clockX,clockY,1.5,0,Math.PI*2);
@@ -1688,10 +1679,10 @@ function drawTFTScreen(scx,scy){
   const halfSpan=0.8*scx;
   const tp1=toIso(0,center-halfSpan);
   const tp2=toIso(0,center+halfSpan);
-  // Lowered 20%, below center of wall
+  // Lowered 40% total from center
   const scrW=Math.round(35*scy);
   const wallMidY=tp1.y-ISO.wallH/2;
-  const tftY1=wallMidY-scrW/2+30;   // lowered 20%
+  const tftY1=wallMidY-scrW/2+50;   // lowered 40%
   cx.save();
   // Clip to left wall
   const wallClipPts=[];
