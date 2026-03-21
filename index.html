@@ -915,6 +915,99 @@ function drawTutorial(){
   cx.globalAlpha=.3;tx('(CLICK / ENTER / →)',W/2,by+bh+20,P.gray,8,'center');cx.globalAlpha=1;
 }
 
+// ── CITY BACKGROUND (visible through windows & above walls) ──
+// Pre-generate city buildings
+const CITY_BUILDINGS=[];
+for(let i=0;i<22;i++){
+  CITY_BUILDINGS.push({
+    x:i*42-20,
+    w:28+Math.random()*18|0,
+    h:50+Math.random()*110|0,
+    col:`hsl(${210+Math.random()*30|0},${15+Math.random()*20|0}%,${55+Math.random()*20|0}%)`,
+    colD:`hsl(${210+Math.random()*30|0},${15+Math.random()*20|0}%,${45+Math.random()*15|0}%)`,
+    windows:3+Math.random()*5|0,
+    winRows:2+Math.random()*6|0,
+  });
+}
+
+function drawCityBg(){
+  const skyTop=SHOP.y;
+  const skyH=ISO.wallH+30;
+  // Sky gradient
+  const skyGrad=cx.createLinearGradient(0,skyTop,0,skyTop+skyH);
+  skyGrad.addColorStop(0,'#5a99cc');
+  skyGrad.addColorStop(0.5,'#7ab8dd');
+  skyGrad.addColorStop(1,'#a8d4ee');
+  cx.fillStyle=skyGrad;
+  cx.fillRect(0,skyTop,W,skyH);
+
+  // Distant clouds
+  cx.fillStyle='#c8e4f8';
+  const ct=tt*0.15;
+  for(let i=0;i<5;i++){
+    const cx2=((i*180+ct)%1000)-50;
+    const cy2=skyTop+15+i*12;
+    cx.beginPath();cx.arc(cx2,cy2,12+i*2,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(cx2+16,cy2-3,9+i,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(cx2+28,cy2+1,10+i,0,Math.PI*2);cx.fill();
+  }
+
+  // Far buildings (small, blueish)
+  const farY=skyTop+skyH-20;
+  for(let i=0;i<30;i++){
+    const bx=i*30-10, bh=15+Math.random()*25|0, bw=20+Math.random()*12|0;
+    cx.fillStyle=`hsl(215,20%,${65+i%3*5}%)`;
+    cx.fillRect(bx,farY-bh,bw,bh);
+  }
+
+  // Main buildings (behind the shop)
+  const baseY=skyTop+skyH;
+  for(const b of CITY_BUILDINGS){
+    // Building body
+    cx.fillStyle=b.col;
+    cx.fillRect(b.x,baseY-b.h,b.w,b.h);
+    // Right face (darker for depth)
+    cx.fillStyle=b.colD;
+    cx.fillRect(b.x+b.w-4,baseY-b.h,4,b.h);
+    // Roof line
+    cx.fillStyle='#4a6a8a';
+    cx.fillRect(b.x-1,baseY-b.h-2,b.w+2,3);
+    // Windows grid
+    const winW=4, winH=5, winGap=3;
+    const cols=Math.min(b.windows, Math.floor((b.w-6)/(winW+winGap)));
+    const rows=Math.min(b.winRows, Math.floor((b.h-10)/(winH+winGap+2)));
+    for(let wy=0;wy<rows;wy++){
+      for(let wx=0;wx<cols;wx++){
+        const lit=Math.sin(tt*0.005+b.x+wx*3+wy*7)>0.2;
+        cx.fillStyle=lit?'#eedd88':'#7899aa';
+        cx.fillRect(b.x+4+wx*(winW+winGap), baseY-b.h+8+wy*(winH+winGap+2), winW, winH);
+      }
+    }
+  }
+
+  // Street/ground line
+  cx.fillStyle='#6a7a6a';
+  cx.fillRect(0,baseY,W,6);
+  cx.fillStyle='#5a6a5a';
+  cx.fillRect(0,baseY+6,W,3);
+  // Sidewalk
+  cx.fillStyle='#b0aa98';
+  cx.fillRect(0,baseY+9,W,4);
+
+  // Trees on sidewalk
+  for(let i=0;i<8;i++){
+    const tx2=i*110+30;
+    // Trunk
+    cx.fillStyle='#6a5030';
+    cx.fillRect(tx2,baseY-8,3,12);
+    // Foliage
+    cx.fillStyle='#44884a';
+    cx.beginPath();cx.arc(tx2+1,baseY-14,8,0,Math.PI*2);cx.fill();
+    cx.fillStyle='#55aa55';
+    cx.beginPath();cx.arc(tx2+4,baseY-17,6,0,Math.PI*2);cx.fill();
+  }
+}
+
 // ── DRAW SHOP (ISOMETRIC — Kairosoft warm style) ─────────────
 function drawShop(){
   // Clip to shop area
@@ -969,41 +1062,76 @@ function drawShop(){
   for(let i=1;i<wallPts.length;i++) cx.lineTo(wallPts[i].x,wallPts[i].y-ISO.wallH);
   cx.stroke();
 
-  // ── LARGE WINDOWS on back wall (Game Dev Story style — BIG) ──
+  // ── LARGE WINDOWS — show city through them (GDS style) ──
   const winCols=[1.5,5,8.5];
   for(const wc of winCols){
     const wp1=toIso(wc,0), wp2=toIso(wc+2,0);
     const wy=wp1.y-ISO.wallH+12;
     const wwid=wp2.x-wp1.x, whei=ISO.wallH-35;
-    // Window frame (white)
-    r(wp1.x-2,wy-2,wwid+4,whei+4,'#e8e4dc');
-    // Sky gradient (blue at top → lighter at bottom)
+    // Window frame outer (white wood)
+    r(wp1.x-3,wy-3,wwid+6,whei+6,'#e8e4dc');
+    // The city is already drawn behind — just cut a "hole" by NOT painting wall here
+    // But since wall is already painted, we redraw the city bg clipped to window
+    cx.save();
+    cx.beginPath();cx.rect(wp1.x,wy,wwid,whei);cx.clip();
+    // Sky in window
     const skyGrad=cx.createLinearGradient(0,wy,0,wy+whei);
-    skyGrad.addColorStop(0,'#6aacdd');
-    skyGrad.addColorStop(0.4,'#88ccee');
-    skyGrad.addColorStop(1,'#bbddff');
+    skyGrad.addColorStop(0,'#5a99cc');
+    skyGrad.addColorStop(0.5,'#7ab8dd');
+    skyGrad.addColorStop(1,'#a8d4ee');
     cx.fillStyle=skyGrad;cx.fillRect(wp1.x,wy,wwid,whei);
-    // Clouds
-    cx.fillStyle='#ddeeff';
-    const cloudY=wy+whei*0.2;
-    const cloudX=wp1.x+10+Math.sin(tt*0.003+wc)*8;
-    cx.beginPath();cx.arc(cloudX,cloudY,8,0,Math.PI*2);cx.fill();
-    cx.beginPath();cx.arc(cloudX+10,cloudY-2,6,0,Math.PI*2);cx.fill();
-    cx.beginPath();cx.arc(cloudX+18,cloudY+1,7,0,Math.PI*2);cx.fill();
-    // Second cloud
-    const c2x=wp1.x+wwid-20+Math.sin(tt*0.002+wc*2)*5;
-    cx.beginPath();cx.arc(c2x,cloudY+12,5,0,Math.PI*2);cx.fill();
-    cx.beginPath();cx.arc(c2x+8,cloudY+10,6,0,Math.PI*2);cx.fill();
+    // Buildings visible through window (parallax offset per window)
+    const parallax=(wc-5)*8;
+    for(const b of CITY_BUILDINGS){
+      const bx=b.x+parallax;
+      if(bx+b.w<wp1.x||bx>wp1.x+wwid) continue;
+      const bBaseY=wy+whei;
+      cx.fillStyle=b.col;
+      cx.fillRect(bx,bBaseY-b.h*0.6,b.w*0.8,b.h*0.6);
+      cx.fillStyle=b.colD;
+      cx.fillRect(bx+b.w*0.8-3,bBaseY-b.h*0.6,3,b.h*0.6);
+      // Roof
+      cx.fillStyle='#5a7a9a';
+      cx.fillRect(bx-1,bBaseY-b.h*0.6-2,b.w*0.8+2,2);
+      // Window lights in buildings
+      const wCols=Math.min(3,Math.floor((b.w*0.8-4)/6));
+      const wRows=Math.min(4,Math.floor((b.h*0.6-6)/8));
+      for(let wr=0;wr<wRows;wr++){
+        for(let wcc=0;wcc<wCols;wcc++){
+          const lit=Math.sin(tt*0.004+bx+wcc*5+wr*9)>0.15;
+          cx.fillStyle=lit?'#eecc66':'#6a8899';
+          cx.fillRect(bx+3+wcc*6, bBaseY-b.h*0.6+5+wr*8, 4, 5);
+        }
+      }
+    }
+    // Trees visible at base of buildings
+    for(let ti=0;ti<2;ti++){
+      const treeX=wp1.x+15+ti*(wwid-30)+parallax*0.5;
+      if(treeX>wp1.x&&treeX<wp1.x+wwid-8){
+        cx.fillStyle='#5a7a4a';
+        cx.beginPath();cx.arc(treeX,wy+whei-8,5,0,Math.PI*2);cx.fill();
+        cx.fillStyle='#4a6a3a';
+        cx.fillRect(treeX-1,wy+whei-4,2,6);
+      }
+    }
+    // Clouds drifting
+    cx.fillStyle='#d0e8f8';
+    const cOff=((tt*0.12+wc*60)%200)-30;
+    cx.beginPath();cx.arc(wp1.x+cOff,wy+18,7,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(wp1.x+cOff+10,wy+15,5,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(wp1.x+cOff+18,wy+17,6,0,Math.PI*2);cx.fill();
+    cx.restore();
     // Window crossbars (white wooden)
-    cx.strokeStyle='#d8d4cc';cx.lineWidth=2;
+    cx.strokeStyle='#d0ccbc';cx.lineWidth=2.5;
     cx.beginPath();
     cx.moveTo(wp1.x+wwid/2,wy);cx.lineTo(wp1.x+wwid/2,wy+whei);
     cx.moveTo(wp1.x,wy+whei*0.45);cx.lineTo(wp1.x+wwid,wy+whei*0.45);
     cx.stroke();
-    // Frame border (subtle)
-    rx(wp1.x-2,wy-2,wwid+4,whei+4,'#a09878',1.5);
-    // Window sill
-    r(wp1.x-4,wy+whei+2,wwid+8,4,'#c8c0a8');
+    // Frame border
+    rx(wp1.x-3,wy-3,wwid+6,whei+6,'#9a8a68',1.5);
+    // Window sill (protruding ledge)
+    r(wp1.x-5,wy+whei+3,wwid+10,5,'#c8c0a8');
+    rx(wp1.x-5,wy+whei+3,wwid+10,5,'#a09878',0.5);
   }
 
   // ── LEFT WALL (slightly darker, Kairosoft style) ──
@@ -1739,13 +1867,13 @@ function loop(){
   if(state===S.YEAR_END){drawYearEnd();return;}
   if(state===S.GAME_END){drawGameEnd();return;}
   if(state===S.PAUSE){
-    r(0,0,W,H,P.bg);drawShop();drawShopChars();drawHUD();drawBottomBar();drawUI();
+    r(0,0,W,H,P.bg);drawCityBg();drawShop();drawShopChars();drawHUD();drawBottomBar();drawUI();
     drawPause();return;
   }
   // GAME
   updateGame();
   r(0,0,W,H,P.bg);
-  drawShop();drawShopChars();drawFloats();drawEvent();drawHUD();drawBottomBar();drawUI();
+  drawCityBg();drawShop();drawShopChars();drawFloats();drawEvent();drawHUD();drawBottomBar();drawUI();
 }
 loop();
 </script>
