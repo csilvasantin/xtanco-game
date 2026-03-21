@@ -2,6 +2,119 @@
 
 ---
 
+## [v2.0] — 2026-03-21
+
+### Rediseño isométrico completo + Editor de layout + Integraciones IoT
+
+**Sesión épica de desarrollo:** el juego ha pasado de vista plana 2D a un motor isométrico completo inspirado en Game Dev Story (Kairosoft), con editor visual, integración hardware real y ciudad envolvente.
+
+---
+
+### Motor isométrico
+
+- Nuevo motor isométrico con tiles 2:1 (78x34px), grid 12x6
+- Funciones core: `toIso()`, `drawIsoTile()`, `drawIsoBlock()`, `screenToIso()`
+- Perspectiva Kairosoft: paredes altas (~40% de la vista), suelo con ángulo pronunciado
+- Zona de juego a ancho completo (800px) — sin panel lateral permanente
+- Depth sorting por posición Y en pantalla (painter's algorithm)
+
+### Estilo visual Kairosoft
+
+- Paleta cálida: paredes crema/beige, suelo moqueta, muebles de madera
+- Ventanas con cielo azul, nubes animadas y edificios de ciudad visibles
+- Entorno urbano: ciudad isométrica detrás del estanco con edificios 3D
+- Puerta de cristal en pared derecha que se abre/cierra con el tráfico de clientes
+- Reloj de pared analógico con hora real del sistema (se mueve cada minuto)
+- Banner LED scrolling en pared izquierda con datos en vivo
+
+### Muebles del Xtanco
+
+| Mueble | Descripción |
+|--------|-------------|
+| Mostrador | Madera, 1x2 tiles, caja registradora con pantalla |
+| Estanterías | Madera, 1x2, 4 niveles de productos coloridos |
+| Botellero de vinos | 4 niveles de botellas tinto/burdeos tumbadas |
+| Terminal lotería | Mesa con monitor digital de números |
+| Máquina vending XT-3K | Cuerpo blanco/gris con productos visibles |
+| Revistero | Expositor metálico 3 niveles de revistas coloridas |
+| Escritorio manager | Mesa verde con laptop y silla de oficina |
+| Lámpara de pie | Base oscura, poste madera, pantalla cono crema con halo |
+| 4 Plantas | Macetas terracota con follaje verde animado |
+| Alfombra | Tapete de bienvenida (pisable, sin colisión) |
+
+### Editor de layout visual
+
+- Acceso: botón ✏️ Edit o tecla E
+- Grid isométrico visible con coordenadas por tile
+- Click para seleccionar → click en tile para mover
+- Flechas para ajuste fino de posición
+- Controles de tamaño independientes: Ancho X (−/+) y Alto Y (−/+)
+- Shift+flechas para resize por teclado
+- Botón 🗑 Eliminar (o tecla Delete/Backspace)
+- Botón + Añadir para recuperar objetos eliminados
+- 💾 Guardar con sonido de confirmación (doble beep) y notificación visual verde
+- ↺ Reset para restaurar layout por defecto
+- Todo persiste en localStorage entre sesiones
+
+### Sistema de colisiones
+
+- Mapa de dureza por mueble (FURNITURE_SIZE define el footprint en tiles)
+- `isTileBlocked()` verifica si un tile está ocupado
+- `canWalkTo()` combina límites del suelo + colisión con muebles
+- Store manager no puede atravesar paredes ni muebles
+- Clientes: si se bloquean con un mueble → se paran a mirar (browse)
+- Clientes saliendo: se deslizan alrededor de obstáculos
+
+### Control del Store Manager
+
+- Teclas Q/A/O/P para movimiento isométrico:
+  - Q = Noroeste, A = Sureste, O = Suroeste, P = Noreste
+- Posición inicial: centro de la tienda (col:5, row:3)
+- Flecha naranja pulsante ▼ sobre la cabeza como indicador
+- Nombre en naranja para distinguirlo del personal
+- Animación de caminar y giro automático de dirección
+
+### Selección de modelo Xtanco
+
+- 4 modelos: Generic (normal), Good (fácil), Better (difícil), Best (experto)
+- Pantalla de selección con tarjetas 2x2
+- Cada modelo tiene: staff, productos, capital, targets y dificultad diferentes
+- Configuración dinámica: CFG se actualiza según el modelo elegido
+
+### UI estilo Game Dev Story
+
+- Barra superior compacta (28px): Año/Semana, dinero, progreso objetivo
+- Barra inferior (30px): Save, Yr Sales, Yr Profit, Satisfacción, Clientes, Edit, Menu
+- Panel de gestión como overlay (toggle con Menu o tecla M)
+- 4 pestañas: Ventas / Personal / Stock / Local (teclas 1-4)
+
+### Integración Elgato Key Light
+
+- Tecla L alterna la lámpara real del estudio (Elgato Key Light Air)
+- Proxy Node.js local (`elgato-proxy.js`) para evitar CORS
+- El cielo del juego se pone ROJO cuando la luz está encendida
+- Sonido de confirmación + notificación visual
+- Manejo de errores silencioso — el juego nunca se congela
+- Config: `ELGATO.ip`, `ELGATO.port`, `ELGATO.proxyPort`
+
+### Documentación para IA
+
+- `CODEX.md`: documentación completa de 700+ líneas pensada para que otra IA (Codex, GPT, Claude) pueda entender y extender el proyecto
+- Cubre: arquitectura, motor isométrico, estados, modelos, layout, colisiones, rendering, entidades, controles, muebles, UI, integraciones, constantes, inputs
+
+### Responsive + Touch
+
+- Canvas escala a pantalla completa manteniendo aspect ratio 8:5
+- Soporte táctil para móvil (touch → click)
+- Meta tags no-cache para servir siempre la última versión
+
+### Deploy
+
+- GitHub Pages: https://csilvasantin.github.io/xtanco-game/
+- Para jugar con lámpara Elgato: `node elgato-proxy.js` + localhost
+
+---
+
 ## [v0.3] — 2026-03-21
 
 ### Rediseño completo: estilo Game Dev Story (Kairosoft)
@@ -120,13 +233,18 @@ Tabaco, Vapes, Lotería, Prensa, Chuches, Recarga móvil
 
 ## Roadmap
 
-| Versión | Objetivo |
-|---------|----------|
-| v0.4 | NPCs con IA mejorada, colas en caja |
-| v0.5 | Xtanco Good — planta pequeña específica |
-| v0.6 | Xtanco Better — planta mediana con zona lounge |
-| v0.7 | Xtanco Best — flagship, múltiples zonas |
-| v1.0 | Datos en tiempo real via API, modo editor de planta |
+| Versión | Objetivo | Estado |
+|---------|----------|--------|
+| v0.1 | Prototipo plataformas Mario | ✅ |
+| v0.2 | Menú idioma ES/EN | ✅ |
+| v0.3 | Rediseño Game Dev Story | ✅ |
+| v1.0-beta | Bucle completo 5 años | ✅ |
+| v2.0 | Motor isométrico + editor + IoT | ✅ |
+| v2.1 | Interacción manager-muebles (vender, reponer) | 🔜 |
+| v2.2 | Diálogos con clientes al acercarse | 🔜 |
+| v2.3 | Muebles Altadis específicos (góndolas, vitrinas) | 🔜 |
+| v2.4 | Sonido ambiente + música chiptune | 🔜 |
+| v3.0 | Datos en tiempo real via API | 🔜 |
 
 ---
 
