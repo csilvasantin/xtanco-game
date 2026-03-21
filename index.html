@@ -92,6 +92,7 @@ const LANGS={
     gameEndRanks:['Kiosco de Barrio','Estanco Conocido','Estanco Popular','Estanco Referente','Xtanco Legendario'],
     gameEndRestart:'PULSA ENTER PARA REINICIAR',
     upgradeMsg:'¡Local mejorado a nivel 2!',loanInfo:'(+nivel local = +capacidad)',
+    ledMsgs:['★ ADMIRA ★','BIENVENIDO AL XTANCO GENERIC','TU ESTANCO DEL FUTURO','CALIDAD Y SERVICIO','ADMIRA — LA RED DE ESTANCOS DIGITALES','VISITA TODOS NUESTROS XTANCOS','ADMIRA GOOD  ·  ADMIRA BETTER  ·  ADMIRA BEST'],
   },
   en:{
     menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.0',
@@ -129,6 +130,7 @@ const LANGS={
     gameEndRanks:['Neighbourhood Kiosk','Known Tobacconist','Popular Shop','Reference Store','Legendary Xtanco'],
     gameEndRestart:'PRESS ENTER TO RESTART',
     upgradeMsg:'Store upgraded to level 2!',loanInfo:'(+store level = +capacity)',
+    ledMsgs:['★ ADMIRA ★','WELCOME TO XTANCO GENERIC','YOUR TOBACCO SHOP OF THE FUTURE','QUALITY AND SERVICE','ADMIRA — THE DIGITAL SHOP NETWORK','VISIT ALL OUR XTANCO STORES','ADMIRA GOOD  ·  ADMIRA BETTER  ·  ADMIRA BEST'],
   },
 };
 let lang='es';
@@ -138,6 +140,7 @@ const T=()=>LANGS[lang];
 const S={MENU:'menu',TUT:'tutorial',GAME:'game',PAUSE:'pause',YEAR_END:'yearEnd',GAME_END:'gameEnd'};
 let state=S.MENU, menuSel=0, tutPage=0;
 let tt=0;
+let ledOffset=0;
 
 // ── GAME STATE ────────────────────────────────────────────────
 let G={};
@@ -591,8 +594,60 @@ function drawShop(){
   if(G.storeLevel>=2){
     glow(P.neonB,8);tx('★ LVL 2',460,SHOP.y+33,P.neonB,9,'left');nog();
   }
+  // LED display
+  drawLED();
   // Elements
   drawCounter();drawShelves();drawLotteryDesk();drawManagerDesk();drawDoor();
+}
+
+function drawLED(){
+  const lx=SHOP.x+8, ly=SHOP.y+46, lw=SHOP.w-16, lh=20;
+  // Panel body
+  r(lx,ly,lw,lh,'#0a0500');
+  rx(lx,ly,lw,lh,'#443300',1);
+  // Dot grid (LED texture)
+  cx.globalAlpha=0.09;
+  for(let dx=lx+3;dx<lx+lw-2;dx+=5)
+    for(let dy=ly+3;dy<ly+lh-2;dy+=5)
+      r(dx,dy,2,2,'#ffaa00');
+  cx.globalAlpha=1;
+  // Build scrolling message: static messages + live data
+  const msgs=T().ledMsgs;
+  const liveData=state===S.GAME||state===S.PAUSE
+    ? `  ◈  ${T().customers}: ${G?G.customersToday:0}  ◈  ${T().satisfaction}: ${G?(G.satisfaction|0):0}%  ◈  ${T().fame}: ${G?(G.fame|0):0}%  ◈  `
+    : '  ◈  ';
+  const fullMsg=msgs.join('   ◆   ')+liveData;
+  // Measure text width
+  cx.font='bold 11px monospace';
+  const msgW=cx.measureText(fullMsg).width;
+  // Advance scroll
+  ledOffset=(ledOffset+0.9)%(msgW+lw);
+  // Clip & draw scrolling text
+  cx.save();
+  cx.beginPath();cx.rect(lx+3,ly+1,lw-6,lh-2);cx.clip();
+  const scrollX=lx+lw-(ledOffset%(msgW+lw));
+  // Glow pulse
+  const pulse=0.7+0.3*Math.sin(tt*0.04);
+  glow('#ffaa00',6*pulse);
+  cx.fillStyle=`rgba(255,${160+(80*pulse)|0},0,1)`;
+  cx.font='bold 11px monospace';
+  cx.textAlign='left';
+  cx.fillText(fullMsg,scrollX,ly+14);
+  // Draw again for seamless loop
+  cx.fillText(fullMsg,scrollX+msgW+lw*0.3,ly+14);
+  nog();
+  cx.restore();
+  // Frame neon line top/bottom
+  nl(lx,ly,lx+lw,ly,'#885500',1);
+  nl(lx,ly+lh,lx+lw,ly+lh,'#885500',1);
+  // ADMIRA logo badge on the left
+  r(lx,ly,52,lh,'#110800');
+  rx(lx,ly,52,lh,'#ffaa00',1);
+  glow('#ffaa00',8);
+  tx('ADMIRA',lx+26,ly+14,'#ffcc44',10,'center');
+  nog();
+  // Separator line after badge
+  nl(lx+52,ly,lx+52,ly+lh,'#885500',1);
 }
 
 function drawCounter(){
