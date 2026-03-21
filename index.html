@@ -771,10 +771,9 @@ function updateGame(){
       // Convert feet position (center-bottom of sprite) to iso grid
       const feetX=newX+7, feetY=newY+25;
       const tile=screenToIso(feetX,feetY);
-      // Collision: must stay inside the floor diamond (with small margin)
-      const margin=0.3;
-      if(tile.col>=-margin && tile.col<=ISO.cols-1+margin &&
-         tile.row>=-margin && tile.row<=ISO.rows-1+margin){
+      // Collision: must stay strictly on the floor grid tiles
+      if(tile.col>=0 && tile.col<ISO.cols &&
+         tile.row>=0 && tile.row<ISO.rows){
         mgr.x=newX;
         mgr.y=newY;
       }
@@ -1576,7 +1575,7 @@ function drawLED(scx,scy){
   const start=0.5+(5-span)/2;
   const lp1=toIso(0,start+span);
   const lp2=toIso(0,start);
-  const ledYoff=64; // lowered 20% from ceiling
+  const ledYoff=36; // closer to ceiling, above TFT
   const ledY1=lp1.y-ISO.wallH+ledYoff;
   const ledY2=lp2.y-ISO.wallH+ledYoff;
   const lh=Math.round(16*scy);
@@ -1692,11 +1691,11 @@ function drawTFTScreen(scx,scy){
   const halfSpan=0.8*scx;
   const tp1=toIso(0,center-halfSpan);
   const tp2=toIso(0,center+halfSpan);
-  // Position BELOW the LED banner with clear gap
-  // LED is at ledYoff=64 from ceiling + ~16px height = ends at ~80px from ceiling
+  // Position well BELOW the LED banner
+  // LED is at ledYoff=36 from ceiling + ~16px height = ends at ~52px from ceiling
   const scrW=Math.round(35*scy);
-  const ledBottomY=tp1.y-ISO.wallH+64+20; // LED position + LED height + gap
-  const tftY1=ledBottomY+8; // 8px gap below LED
+  const ledBottomY=tp1.y-ISO.wallH+36+20; // LED top + LED height
+  const tftY1=ledBottomY+16; // 16px gap below LED
   cx.save();
   // Clip to left wall
   const wallClipPts=[];
