@@ -2,6 +2,82 @@
 
 ---
 
+## [v2.1] — 2026-03-21
+
+### Interactividad, packs de muebles, visitas y lámpara inteligente
+
+**Sesión de refinamiento:** mejoras de gameplay, interactividad física y virtual, y sistema de visitas comerciales.
+
+---
+
+### Pack Mostrador + Caja Registradora + Monitor PC
+
+- Los tres elementos ahora son **un solo objeto movible** en el editor
+- Al mover el mostrador, la caja y el monitor se mueven juntos
+- Label unificado: "Mostrador+Caja+PC"
+- **Caja registradora**: LCD verde con dinero en tiempo real, botones, cajón de efectivo
+- **Monitor PC**: pantalla azul "XTANCO" con cursor parpadeante y LED de encendido
+
+### Sistema de visitas (pestaña LOCAL)
+
+Reemplaza el antiguo sistema de publicidad por 4 acciones con impacto real:
+
+| Visita | Efecto | Color monitor | Color botón |
+|--------|--------|--------------|-------------|
+| 🧑‍💼 **Comercial** | +12 fama, +5 satisfacción | 🟢 Verde | Verde |
+| 🔧 **Técnico** | +15 satisfacción, +30% stock | 🔵 Azul | Azul |
+| 🏛 **Delegación** | Subvención €500-1000, +8 fama | 🩷 Rosa | Rosa |
+| 👮 **Guardia Civil** | Inspección: OK→+10 sat / Multa €400-1000 | ⚫ Negro | Gris |
+
+- Cada visita cambia el **color del monitor** del mostrador durante 5 segundos
+- Pantalla parpadea con texto de la visita y borde del color correspondiente
+- Menú se cierra automáticamente tras cada acción
+
+### Lámpara de pie interactiva
+
+- **Click en la lámpara** para encender/apagar (o tecla L)
+- Dos estados visuales claramente distintos:
+  - 💡 **ON**: pantalla crema brillante, halo amarillo en el suelo, cono de luz vertical, bombilla radiante
+  - 🌑 **OFF**: pantalla gris oscuro, sin halo, bombilla apagada, todo oscuro
+- La lámpara **arranca encendida** por defecto
+- Si el proxy Elgato está activo → también controla la **luz física real**
+- Toggle visual instantáneo (no espera al proxy)
+- Sonido de confirmación en cada toggle
+
+### Mejoras del editor de layout
+
+- Botón **🗑 Eliminar** para borrar objetos (o tecla Delete/Backspace)
+- Botón **+ Añadir** para recuperar objetos eliminados
+- Layouts antiguos se limpian automáticamente (items obsoletos se eliminan)
+- Items nuevos se añaden automáticamente a layouts guardados
+
+### Elgato Key Light — conexión arreglada
+
+- **Causa raíz**: mixed content (HTTPS→HTTP bloqueado) + encoding JSON corrupto en Windows
+- **Solución**: proxy Node.js que sirve juego + API en el mismo puerto (localhost:9124)
+- JSON se parsea y re-stringify para evitar corrupción de encoding
+- Content-Length correcto en headers
+- Toggle visual siempre funciona, lámpara real es async en background
+
+### Pájaros en las ventanas
+
+- 🐦 Siluetas de pájaros que vuelan de ventana a ventana
+- **8 colores diferentes** que rotan en cada pasada
+- Solo visibles a través del cristal (clipeados a las ventanas)
+- Desaparecen detrás de las paredes entre ventanas
+- Alas batiendo, cabeza con pico naranja, ojo con pupila
+- Ciclo de 700 frames por pasada
+
+### Otros ajustes
+
+- 2 plantas eliminadas (quedan 2 en esquinas izquierdas)
+- Ventanas movidas 20% más cerca de la pared izquierda (cols 0.5, 4, 7.5)
+- Banner LED en pared izquierda a media altura
+- Hora punta e inspección solo en barra superior (sin carteles flotantes duplicados)
+- Notificación Elgato en barra superior (compacta, no flotante)
+
+---
+
 ## [v2.0] — 2026-03-21
 
 ### Rediseño isométrico completo + Editor de layout + Integraciones IoT

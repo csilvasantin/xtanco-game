@@ -706,6 +706,85 @@ The proxy runs on `localhost:9124` and forwards to the Elgato light at `192.168.
 | `SHOP` | object | Shop area rect `{x:0, y:28, w:800, h:442}` |
 | `UI` | object | UI panel position `{x:630, w:170}` |
 | `edSaveNotify` | number | Editor save notification countdown |
+| `monitorAlert` | object | Monitor screen alert `{active, timer, msg, color}` |
+| `_clockH`, `_clockM` | number | Cached real clock time (updated every second) |
+
+---
+
+## 23. Counter Pack System
+
+The counter, cash register, and PC monitor are rendered as a **single movable unit** inside `drawIsoCounter(col, row)`.
+
+### Components drawn inside the counter function:
+1. **Counter base**: `drawIsoBlock(col,row,1,2,16,...)` — wooden 1x2 block
+2. **Cash register** (left side): LCD screen showing `G.money`, buttons, cash drawer
+3. **PC monitor** (right side): dark frame, screen, stand, power LED
+
+### Monitor alert system (`monitorAlert`):
+- `monitorAlert.active` — boolean, is alert showing
+- `monitorAlert.timer` — countdown (300 frames = 5 seconds)
+- `monitorAlert.msg` — text shown on screen ("VISITA COMERCIAL", etc.)
+- `monitorAlert.color` — screen color during alert
+- Timer decremented in `updateGame()`, auto-deactivates at 0
+- When inactive, screen shows default blue "XTANCO" with blinking cursor
+
+---
+
+## 24. Visit System (replaces Advertising)
+
+Located in `tabStore(py)` — the LOCAL tab (tab 4).
+
+Four visit action buttons trigger gameplay effects + monitor color changes:
+
+| Visit ID | Label | Monitor Color | Gameplay Effect |
+|----------|-------|--------------|-----------------|
+| `visitCom` | Visita Comercial | `#22aa44` green | +12 fame, +5 satisfaction |
+| `visitTec` | Visita Técnico | `#2266cc` blue | +15 satisfaction, +30% all stock |
+| `visitDel` | Visita Delegación | `#cc44aa` pink | +€500-1000 subsidy, +8 fame |
+| `visitGC` | Visita Guardia Civil | `#111111` black | Pass: +10 sat / Fail: -€400-1000 fine |
+
+Button colors match their monitor alert color. Each action closes the UI overlay.
+
+---
+
+## 25. Interactive Floor Lamp
+
+`drawIsoFloorLamp(col, row)` renders a clickable lamp with two visual states.
+
+### States:
+- **ON** (`elgatoState.on === true`): bright cream shade, yellow floor glow halo (pulsing), vertical light cone, bright bulb (4px) with radiant glow (7px), golden rim
+- **OFF** (`elgatoState.on === false`): dark gray shade, no glow, dim bulb (2px), dark rim
+
+### Interaction:
+- Registers `BTNS['lampToggle']` covering the full lamp area (28x70px)
+- Click triggers `toggleStudioLight()` — same as pressing L
+- `toggleStudioLight()` toggles visual state immediately, then tries Elgato API async
+- Sound feedback: 660Hz (ON) / 440Hz (OFF)
+- Sky turns red when lamp is ON (`elgatoState.skyRed`)
+
+### Elgato connection flow:
+1. Toggle `elgatoState.on` immediately (visual)
+2. Play sound
+3. Try `PUT /elgato/lights` via proxy (non-blocking)
+4. If proxy fails, game lamp still works (log message only)
+
+---
+
+## 26. Bird Animation System
+
+Birds fly across the back wall, only visible through window glass.
+
+### Configuration:
+- `birdColors[]`: 8 colors cycling per pass (black, red, blue, yellow, green, purple, orange, teal)
+- `birdCycleLen`: 700 frames per full crossing
+- `birdCycleNum`: determines current bird color (`birdColors[cycleNum % 8]`)
+
+### Rendering:
+- Position calculated along back wall (col 0.5 → 10.5)
+- Sine wave bobbing for natural flight
+- Wing flap animation (3 frames)
+- Bird sprite: body ellipse, belly highlight, two wings, tail, head circle, orange beak, white eye with black pupil
+- **Clipped to each window rect** — bird disappears behind wall sections between windows
 
 ---
 
