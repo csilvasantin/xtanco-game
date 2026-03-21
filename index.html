@@ -319,8 +319,8 @@ function initGame(){
   // Staff from model — convert grid positions to isometric screen coords
   // Staff positions on the iso grid based on their role
   const staffGridPos=[
-    {col:2,row:2},{col:6,row:1},{col:9,row:2},{col:9,row:5},
-    {col:6,row:4},{col:3,row:4},{col:4,row:6},{col:10,row:3},
+    {col:2,row:1},{col:5,row:1},{col:7,row:1},{col:7,row:4},
+    {col:5,row:3},{col:2,row:3},{col:4,row:5},{col:8,row:2},
   ];
   G.staff=M.staffInit.map((s,i)=>{
     const gp=staffGridPos[i%staffGridPos.length];
@@ -648,7 +648,7 @@ function spawnCust(){
   const ci=Math.floor(Math.random()*6);
   // Spawn at door position in iso grid, target random browsing spot
   const doorIso=toIso(ISO.doorCol,ISO.doorRow);
-  const tCol=2+Math.random()*7|0, tRow=2+Math.random()*5|0;
+  const tCol=2+Math.random()*5|0, tRow=1+Math.random()*4|0;
   const tIso=toIso(tCol,tRow);
   G.custs.push({
     x:doorIso.x,y:doorIso.y,
@@ -673,20 +673,17 @@ const SHOP={x:8,y:44,w:630,h:452};
 const UI={x:640,w:160};
 
 // ── ISOMETRIC ENGINE ─────────────────────────────────────────
-// ISO config: calculated to perfectly fill SHOP area (630x452)
-// SHOP starts at y=44, area = 630w × 452h
-// Grid: 12 cols × 8 rows → sum = 20
-// tileW = 630×2/20 = 63 → diamond width = 630px (exact fit)
-// Wall = 100px, remaining floor height = 352px
-// tileH = 352×2/20 = 35.2 ≈ 35 → diamond height = 350px
-// ox = SHOP center X = 8 + 315 = 323
-// oy = SHOP.y + wallH = 44 + 100 = 144
+// Kairosoft-style: tall walls (~40%), steep floor angle, big characters
+// SHOP: x=8, y=44, w=630, h=452
+// Bottom bar takes 36px → usable h = 416
+// Wall = 170px top, floor diamond ~246px
+// Grid 10x6 → sum=16, tileW=78 → diam_w=624, tileH=30 → diam_h=240
 const ISO={
-  tileW:63,tileH:35,  // tiles fill width exactly, 2:1.8 ratio for better depth
-  cols:12,rows:8,      // grid size
-  ox:323,oy:144,       // origin: top of diamond, centered below wall
-  wallH:100,           // wall height in pixels
-  doorCol:11,doorRow:4,// door position (right edge)
+  tileW:78,tileH:30,   // wide tiles, steep angle like GDS
+  cols:10,rows:6,       // fewer rows = taller walls
+  ox:320,oy:214,        // pushed down for tall wall
+  wallH:170,            // ~40% of view = tall Kairosoft walls
+  doorCol:9,doorRow:3,  // door right side
 };
 // Cart→Iso: convert grid (col,row) to screen pixel
 function toIso(col,row){
@@ -919,29 +916,19 @@ function drawShop(){
   cx.save();
   cx.beginPath();cx.rect(SHOP.x,SHOP.y,SHOP.w,SHOP.h);cx.clip();
 
-  // ── FLOOR TILES (warm wood/tile) ──
+  // ── FLOOR (uniform carpet — Kairosoft style) ──
   for(let row=0;row<ISO.rows;row++){
     for(let col=0;col<ISO.cols;col++){
-      const dark=((col+row)%2===0);
-      let floorCol=dark?P.floorWood1:P.floorWood2;
-      // Rush glow on floor
+      // Subtle carpet texture with very slight variation
+      let floorCol=((col+row)%2===0)?'#b8b0a0':'#b4ac9c';
       if(G.rush.active){
-        const pulse=0.12+0.08*Math.sin(tt*.08);
-        floorCol=dark?`rgba(220,180,100,${0.85+pulse})`:`rgba(200,165,85,${0.85+pulse})`;
+        const pulse=0.05*Math.sin(tt*.08);
+        floorCol=((col+row)%2===0)?`rgba(200,170,110,${0.9+pulse})`:`rgba(195,165,105,${0.9+pulse})`;
       }
-      // Inspection glow
       if(G.inspect.active&&G.inspect.timer>100){
-        floorCol=dark?'#d0a0a0':'#c09090';
+        floorCol=((col+row)%2===0)?'#c8a8a8':'#c0a0a0';
       }
-      drawIsoTile(col,row,floorCol,'#b0a07808');
-      // Wood grain detail
-      if(col%3===0&&row%2===0){
-        const p=toIso(col,row);
-        cx.globalAlpha=0.06;
-        cx.strokeStyle='#806840';cx.lineWidth=0.5;
-        cx.beginPath();cx.moveTo(p.x-8,p.y+ISO.tileH/2);cx.lineTo(p.x+8,p.y+ISO.tileH/2);cx.stroke();
-        cx.globalAlpha=1;
-      }
+      drawIsoTile(col,row,floorCol,'#a8a09010');
     }
   }
 
@@ -977,28 +964,41 @@ function drawShop(){
   for(let i=1;i<wallPts.length;i++) cx.lineTo(wallPts[i].x,wallPts[i].y-ISO.wallH);
   cx.stroke();
 
-  // ── WINDOWS on back wall (Kairosoft style) ──
-  const winCols=[2,5,8];
+  // ── LARGE WINDOWS on back wall (Game Dev Story style — BIG) ──
+  const winCols=[1.5,4.5,7.5];
   for(const wc of winCols){
-    const wp1=toIso(wc,0), wp2=toIso(wc+1.5,0);
-    const wy=wp1.y-ISO.wallH+15;
-    const wwid=wp2.x-wp1.x, whei=35;
-    // Window frame
-    r(wp1.x,wy,wwid,whei,'#f8f4ee');
-    // Glass (light blue with sky reflection)
-    r(wp1.x+3,wy+3,wwid-6,whei-6,P.windowBlue);
-    // Sky gradient hint
-    cx.globalAlpha=0.3;
-    r(wp1.x+3,wy+3,wwid-6,(whei-6)/2,'#aaddff');
-    cx.globalAlpha=1;
-    // Window cross bars
-    cx.strokeStyle='#d0c8b0';cx.lineWidth=1.5;
+    const wp1=toIso(wc,0), wp2=toIso(wc+2,0);
+    const wy=wp1.y-ISO.wallH+12;
+    const wwid=wp2.x-wp1.x, whei=ISO.wallH-35;
+    // Window frame (white)
+    r(wp1.x-2,wy-2,wwid+4,whei+4,'#e8e4dc');
+    // Sky gradient (blue at top → lighter at bottom)
+    const skyGrad=cx.createLinearGradient(0,wy,0,wy+whei);
+    skyGrad.addColorStop(0,'#6aacdd');
+    skyGrad.addColorStop(0.4,'#88ccee');
+    skyGrad.addColorStop(1,'#bbddff');
+    cx.fillStyle=skyGrad;cx.fillRect(wp1.x,wy,wwid,whei);
+    // Clouds
+    cx.fillStyle='#ddeeff';
+    const cloudY=wy+whei*0.2;
+    const cloudX=wp1.x+10+Math.sin(tt*0.003+wc)*8;
+    cx.beginPath();cx.arc(cloudX,cloudY,8,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(cloudX+10,cloudY-2,6,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(cloudX+18,cloudY+1,7,0,Math.PI*2);cx.fill();
+    // Second cloud
+    const c2x=wp1.x+wwid-20+Math.sin(tt*0.002+wc*2)*5;
+    cx.beginPath();cx.arc(c2x,cloudY+12,5,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(c2x+8,cloudY+10,6,0,Math.PI*2);cx.fill();
+    // Window crossbars (white wooden)
+    cx.strokeStyle='#d8d4cc';cx.lineWidth=2;
     cx.beginPath();
-    cx.moveTo(wp1.x+wwid/2,wy+3);cx.lineTo(wp1.x+wwid/2,wy+whei-3);
-    cx.moveTo(wp1.x+3,wy+whei/2);cx.lineTo(wp1.x+wwid-3,wy+whei/2);
+    cx.moveTo(wp1.x+wwid/2,wy);cx.lineTo(wp1.x+wwid/2,wy+whei);
+    cx.moveTo(wp1.x,wy+whei*0.45);cx.lineTo(wp1.x+wwid,wy+whei*0.45);
     cx.stroke();
-    // Frame border
-    rx(wp1.x,wy,wwid,whei,'#8a7a5a',1.5);
+    // Frame border (subtle)
+    rx(wp1.x-2,wy-2,wwid+4,whei+4,'#a09878',1.5);
+    // Window sill
+    r(wp1.x-4,wy+whei+2,wwid+8,4,'#c8c0a8');
   }
 
   // ── LEFT WALL (slightly darker, Kairosoft style) ──
@@ -1023,10 +1023,10 @@ function drawShop(){
   for(let i=1;i<lwPts.length;i++) cx.lineTo(lwPts[i].x,lwPts[i].y-ISO.wallH);
   cx.stroke();
 
-  // ── SIGN on back wall (wooden board style) ──
-  const signP=toIso(4,0);
-  const signP2=toIso(9,0);
-  const signY=signP.y-ISO.wallH+12;
+  // ── SIGN on back wall (wooden board — below windows) ──
+  const signP=toIso(3,0);
+  const signP2=toIso(8,0);
+  const signY=signP.y-18;
   const signW=signP2.x-signP.x;
   // Wooden sign board
   r(signP.x-2,signY-2,signW+4,26,'#5a4020');
@@ -1046,22 +1046,21 @@ function drawShop(){
   const entities=[];
 
   // Furniture positions in grid
-  // Counter at (1,1) size 3x1
+  // Counter at (1,1) — main sales counter
   entities.push({type:'counter',col:1,row:1,depth:2});
-  // Shelves at (5,0) size 2x3
-  entities.push({type:'shelves',col:5,row:0,depth:5});
-  // Lottery at (8,1)
-  entities.push({type:'lottery',col:8,row:1,depth:9});
-  // Manager desk at (9,5)
-  entities.push({type:'manager',col:9,row:5,depth:14});
-  // Door at right edge
-  entities.push({type:'door',col:ISO.doorCol,row:ISO.doorRow,depth:15});
+  // Shelves at (4,0) — product shelves (tobacco, etc)
+  entities.push({type:'shelves',col:4,row:0,depth:4});
+  // Lottery at (7,1)
+  entities.push({type:'lottery',col:7,row:1,depth:8});
+  // Manager desk at (7,4)
+  entities.push({type:'manager',col:7,row:4,depth:11});
+  // Door at right side
+  entities.push({type:'door',col:ISO.doorCol,row:ISO.doorRow,depth:12});
   // Decorations
   entities.push({type:'plant',col:0,row:0,depth:0});
-  entities.push({type:'plant',col:0,row:7,depth:7});
-  entities.push({type:'plant',col:3,row:7,depth:10});
-  entities.push({type:'vending',col:10,row:0,depth:10});
-  entities.push({type:'rug',col:3,row:3,depth:6});
+  entities.push({type:'plant',col:0,row:5,depth:5});
+  entities.push({type:'vending',col:8,row:0,depth:8});
+  entities.push({type:'rug',col:3,row:2,depth:5});
 
   // Staff
   for(const s of G.staff){
@@ -1097,9 +1096,9 @@ function drawShop(){
 
 // ── LED DISPLAY (on wall) ────────────────────────────────────
 function drawLED(){
-  const ledP1=toIso(1,0);
-  const ledP2=toIso(11,0);
-  const ly=ledP1.y-ISO.wallH+52;
+  const ledP1=toIso(0.5,0);
+  const ledP2=toIso(9.5,0);
+  const ly=ledP1.y-30;
   const lw=ledP2.x-ledP1.x;
   const lx=ledP1.x;
   const lh=16;
@@ -1281,23 +1280,16 @@ function drawIsoVending(col,row){
 }
 
 function drawIsoRug(col,row){
-  // Warm welcome rug/carpet area (3x3 tiles)
-  cx.globalAlpha=0.25;
-  for(let dr=0;dr<3;dr++){
-    for(let dc=0;dc<3;dc++){
-      drawIsoTile(col+dc,row+dr,'#8a4428',null);
+  // Welcome mat area (2x2 tiles)
+  cx.globalAlpha=0.2;
+  for(let dr=0;dr<2;dr++){
+    for(let dc=0;dc<2;dc++){
+      drawIsoTile(col+dc,row+dr,'#8a5530',null);
     }
   }
-  cx.globalAlpha=1;
-  // Rug border pattern
-  cx.globalAlpha=0.15;
-  for(let dr=0;dr<3;dr++){
-    for(let dc=0;dc<3;dc++){
-      if(dr===0||dr===2||dc===0||dc===2){
-        drawIsoTile(col+dc,row+dr,'#aa6633',null);
-      }
-    }
-  }
+  cx.globalAlpha=0.12;
+  drawIsoTile(col,row,'#aa6633',null);
+  drawIsoTile(col+1,row+1,'#aa6633',null);
   cx.globalAlpha=1;
 }
 
@@ -1408,6 +1400,52 @@ function drawEvent(){
   const ew=280,eh=26,ex=SHOP.x+SHOP.w/2-ew/2,ey=SHOP.y+22;
   r(ex,ey,ew,eh,'#3a2818ee');rx(ex,ey,ew,eh,'#8a7a50',1);
   tx('  '+G.eventMsg,ex+ew/2,ey+17,'#f0e8c8',10,'center');
+}
+
+// ── DRAW BOTTOM BAR (Game Dev Story style) ───────────────────
+function drawBottomBar(){
+  const by=H-36, bh=36;
+  // Bar background (dark brown, like GDS)
+  r(0,by,W,bh,'#2a1e10');
+  cx.strokeStyle='#4a3820';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(0,by+0.5);cx.lineTo(W,by+0.5);cx.stroke();
+
+  // Left section: Save icon
+  const savX=12;
+  r(savX,by+6,50,24,'#3a2a18');rx(savX,by+6,50,24,'#5a4830',1);
+  r(savX,by+6,50,3,'#4a3a28');
+  tx('💾',savX+8,by+24,'#f0e8c8',12);tx('Save',savX+28,by+22,'#c0b898',8);
+
+  // Yr Sales
+  tx('Yr Sales',85,by+14,'#a09880',7);
+  tx('€'+(G.yearRevenue|0).toLocaleString(),85,by+28,'#ffdd66',10);
+
+  // Yr Profit
+  const profit=G.yearRevenue-G.staff.filter(s=>s.hired).reduce((a,s)=>a+CFG.SALARY[s.role]*s.level*G.week,0);
+  tx('Yr Profit',200,by+14,'#a09880',7);
+  const profCol=profit>=0?'#66cc66':'#cc6666';
+  tx((profit>=0?'':'')+'€'+(profit|0).toLocaleString(),200,by+28,profCol,10);
+
+  // Satisfaction bar (center)
+  tx('Satisfaction',330,by+14,'#a09880',7);
+  const satW=100;
+  r(330,by+18,satW,8,'#1a1208');
+  r(330,by+18,(satW*G.satisfaction/100)|0,8,G.satisfaction>70?'#55aa55':G.satisfaction>40?'#ccaa44':'#cc5555');
+  rx(330,by+18,satW,8,'#4a3820',1);
+  tx((G.satisfaction|0)+'%',433,by+28,'#c0b898',7);
+
+  // Progress bar (week/year)
+  const progW=80;
+  tx(T().yearLbl+' '+G.year+' '+T().weekLbl+' '+G.week,460,by+14,'#a09880',7);
+  r(460,by+18,progW,8,'#1a1208');
+  r(460,by+18,(progW*G.weekTimer/CFG.WEEK_TICKS)|0,8,'#55aa88');
+  rx(460,by+18,progW,8,'#4a3820',1);
+
+  // Right section: Menu button
+  const menX=SHOP.w-50;
+  r(menX,by+6,55,24,'#3a2a18');rx(menX,by+6,55,24,'#5a4830',1);
+  r(menX,by+6,55,3,'#4a3a28');
+  tx('Menu',menX+27,by+22,'#c0b898',9,'center');
 }
 
 // ── DRAW UI PANEL ─────────────────────────────────────────────
@@ -1689,13 +1727,13 @@ function loop(){
   if(state===S.GAME_END){drawGameEnd();return;}
   if(state===S.PAUSE){
     // draw game frozen behind
-    r(0,0,W,H,P.bg);drawShop();drawShopChars();drawHUD();drawUI();
+    r(0,0,W,H,P.bg);drawShop();drawShopChars();drawHUD();drawBottomBar();drawUI();
     drawPause();return;
   }
   // GAME
   updateGame();
   r(0,0,W,H,P.bg);
-  drawShop();drawShopChars();drawFloats();drawEvent();drawHUD();drawUI();
+  drawShop();drawShopChars();drawFloats();drawEvent();drawHUD();drawBottomBar();drawUI();
 }
 loop();
 </script>
