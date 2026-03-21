@@ -54,6 +54,100 @@ const P={
   white:'#ffffff',black:'#000000',rushGlow:'#ff8800',inspGlow:'#ff0044',
 };
 
+// ── MODELS ───────────────────────────────────────────────────
+const MODELS=[
+  { // 0 — GENERIC (actual)
+    id:'generic',neon:P.neon1,accent:'#00ffcc',
+    START_MONEY:3500,
+    YEAR_TARGETS:[2200,5800,12000,23000,40000],
+    SALE_PROB:0.055,SALE_BASE:3.5,
+    RUSH_CHANCE:0.0025,RUSH_DURATION:160,RUSH_MULT:2.4,
+    INSPECT_CHANCE:0.0006,
+    HIRE_COST:[500,400,450,1200],TRAIN_COST:[250,200,220,380],SALARY:[130,105,115,210],
+    RESTOCK_COST:150,UPGRADE_COST:4500,
+    ADVERT:[{cost:350,fame:8,label:'BÁSICA'},{cost:800,fame:22,label:'MEDIA'},{cost:1800,fame:50,label:'PREMIUM'}],
+    staffInit:[
+      {slot:0,x:165,y:195,hired:true, name:'ANA',   role:0},
+      {slot:1,x:295,y:195,hired:false,name:'JORGE', role:1},
+      {slot:2,x:425,y:195,hired:false,name:'LUCÍA', role:2},
+      {slot:3,x:295,y:305,hired:false,name:'MARCOS',role:3},
+    ],
+    prodsInit:[
+      {stock:80,max:100,price:8, factor:1.2},{stock:60,max:80, price:12,factor:0.9},
+      {stock:90,max:100,price:3, factor:1.5},{stock:70,max:100,price:2, factor:1.0},
+      {stock:50,max:80, price:1, factor:1.3},{stock:40,max:60, price:5, factor:0.8},
+    ],
+  },
+  { // 1 — GOOD (pequeño, fácil)
+    id:'good',neon:'#44ff44',accent:'#44ff44',
+    START_MONEY:2800,
+    YEAR_TARGETS:[1800,4200,8500,16000,28000],
+    SALE_PROB:0.06,SALE_BASE:3.0,
+    RUSH_CHANCE:0.003,RUSH_DURATION:180,RUSH_MULT:2.2,
+    INSPECT_CHANCE:0.0004,
+    HIRE_COST:[400,350],TRAIN_COST:[200,180],SALARY:[110,95],
+    RESTOCK_COST:120,UPGRADE_COST:3500,
+    ADVERT:[{cost:250,fame:10,label:'BÁSICA'},{cost:600,fame:25,label:'MEDIA'},{cost:1400,fame:48,label:'PREMIUM'}],
+    staffInit:[
+      {slot:0,x:165,y:195,hired:true, name:'MARTA', role:0},
+      {slot:1,x:295,y:195,hired:false,name:'PABLO', role:1},
+    ],
+    prodsInit:[
+      {stock:60,max:80, price:8, factor:1.3},{stock:50,max:70, price:10,factor:1.0},
+      {stock:70,max:90, price:3, factor:1.5},{stock:40,max:60, price:2, factor:1.1},
+    ],
+  },
+  { // 2 — BETTER (mediano, desafiante)
+    id:'better',neon:'#4488ff',accent:'#4488ff',
+    START_MONEY:4500,
+    YEAR_TARGETS:[3500,9000,18000,33000,55000],
+    SALE_PROB:0.05,SALE_BASE:3.8,
+    RUSH_CHANCE:0.002,RUSH_DURATION:140,RUSH_MULT:2.6,
+    INSPECT_CHANCE:0.0008,
+    HIRE_COST:[550,450,500,1300,600],TRAIN_COST:[280,230,250,400,260],SALARY:[140,115,125,220,130],
+    RESTOCK_COST:170,UPGRADE_COST:5000,
+    ADVERT:[{cost:400,fame:7,label:'BÁSICA'},{cost:900,fame:20,label:'MEDIA'},{cost:2000,fame:48,label:'PREMIUM'}],
+    staffInit:[
+      {slot:0,x:130,y:195,hired:true, name:'ELENA', role:0},
+      {slot:1,x:240,y:195,hired:false,name:'DIEGO', role:1},
+      {slot:2,x:350,y:195,hired:false,name:'SARA',  role:2},
+      {slot:3,x:240,y:305,hired:false,name:'RAÚL',  role:3},
+      {slot:4,x:460,y:195,hired:false,name:'INÉS',  role:1},
+    ],
+    prodsInit:[
+      {stock:90,max:120,price:8, factor:1.1},{stock:70,max:90, price:12,factor:0.9},
+      {stock:100,max:120,price:3,factor:1.4},{stock:80,max:100,price:2, factor:1.0},
+      {stock:60,max:80, price:1, factor:1.3},{stock:50,max:70, price:5, factor:0.8},
+    ],
+  },
+  { // 3 — BEST (flagship, difícil)
+    id:'best',neon:'#ffcc00',accent:'#ffcc00',
+    START_MONEY:6000,
+    YEAR_TARGETS:[5000,13000,26000,45000,80000],
+    SALE_PROB:0.045,SALE_BASE:4.2,
+    RUSH_CHANCE:0.002,RUSH_DURATION:120,RUSH_MULT:2.8,
+    INSPECT_CHANCE:0.001,
+    HIRE_COST:[600,500,550,1500,550,650],TRAIN_COST:[300,250,270,450,250,300],SALARY:[150,125,135,240,125,150],
+    RESTOCK_COST:200,UPGRADE_COST:6500,
+    ADVERT:[{cost:500,fame:6,label:'BÁSICA'},{cost:1100,fame:18,label:'MEDIA'},{cost:2500,fame:45,label:'PREMIUM'}],
+    staffInit:[
+      {slot:0,x:110,y:195,hired:true, name:'CARLOS',role:0},
+      {slot:1,x:210,y:195,hired:false,name:'LAURA', role:1},
+      {slot:2,x:310,y:195,hired:false,name:'SOFÍA', role:2},
+      {slot:3,x:210,y:305,hired:false,name:'PEDRO', role:3},
+      {slot:4,x:410,y:195,hired:false,name:'ALBA',  role:1},
+      {slot:5,x:510,y:195,hired:false,name:'HUGO',  role:0},
+    ],
+    prodsInit:[
+      {stock:100,max:140,price:9, factor:1.1},{stock:80,max:100,price:13,factor:0.9},
+      {stock:110,max:140,price:4, factor:1.4},{stock:90,max:120,price:2, factor:1.0},
+      {stock:70,max:100,price:1, factor:1.3},{stock:60,max:80, price:6, factor:0.8},
+      {stock:50,max:70, price:15,factor:0.7},{stock:40,max:60, price:3, factor:1.2},
+    ],
+  },
+];
+let activeModel=0;
+
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
@@ -73,7 +167,7 @@ const LANGS={
     restock:'REPONER',advert:'PUBLICIDAD',upgrade:'MEJORAR LOCAL',
     noStaff:'— VACANTE —',
     staffLabel:['CAJERO/A','REPOSITOR/A','LOTERÍA','ENCARGADO/A'],
-    prodLabel:['Tabaco','Vapes','Lotería','Prensa','Chuches','Recarga'],
+    prodLabel:['Tabaco','Vapes','Lotería','Prensa','Chuches','Recarga','Premium','Accesorios'],
     statLabel:['FUN','VENTAS','STOCK','ATENCIÓN'],
     revenue:'INGRESOS SEM.',expenses:'GASTOS SEM.',net:'NETO SEM.',
     salary:'SALARIOS/SEM.',weekLbl:'SEM',yearLbl:'AÑO',
@@ -93,6 +187,18 @@ const LANGS={
     gameEndRestart:'PULSA ENTER PARA REINICIAR',
     upgradeMsg:'¡Local mejorado a nivel 2!',loanInfo:'(+nivel local = +capacidad)',
     ledMsgs:['★ ADMIRA ★','BIENVENIDO AL XTANCO GENERIC','TU ESTANCO DEL FUTURO','CALIDAD Y SERVICIO','ADMIRA — LA RED DE ESTANCOS DIGITALES','VISITA TODOS NUESTROS XTANCOS','ADMIRA GOOD  ·  ADMIRA BETTER  ·  ADMIRA BEST'],
+    modelPick:'ELIGE TU XTANCO',
+    modelNames:['XTANCO GENERIC','XTANCO GOOD','XTANCO BETTER','XTANCO BEST'],
+    modelDescs:[
+      'El estanco base. 4 empleados, 6 productos.\nDificultad equilibrada para empezar.',
+      'Estanco pequeño y acogedor. 2 empleados, 4 productos.\nMás fácil — ideal para aprender.',
+      'Estanco mediano con más servicios. 5 empleados, 6 productos.\nMayor inversión, mayor recompensa.',
+      'El flagship premium. 6 empleados, 8 productos.\nMáxima dificultad — para expertos.',
+    ],
+    modelDiff:['★★★ NORMAL','★★ FÁCIL','★★★★ DIFÍCIL','★★★★★ EXPERTO'],
+    modelStaff:['4 empleados','2 empleados','5 empleados','6 empleados'],
+    modelProds:['6 productos','4 productos','6 productos','8 productos'],
+    modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
     menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.0',
@@ -111,7 +217,7 @@ const LANGS={
     restock:'RESTOCK',advert:'ADVERTISE',upgrade:'UPGRADE STORE',
     noStaff:'— VACANT —',
     staffLabel:['CASHIER','STOCKER','LOTTERY','MANAGER'],
-    prodLabel:['Tobacco','Vapes','Lottery','Press','Candy','Top-Up'],
+    prodLabel:['Tobacco','Vapes','Lottery','Press','Candy','Top-Up','Premium','Accessories'],
     statLabel:['FUN','SALES','STOCK','SERVICE'],
     revenue:'WEEK REVENUE',expenses:'WEEK EXPENSES',net:'WEEK NET',
     salary:'SALARIES/WK',weekLbl:'WK',yearLbl:'YR',
@@ -131,49 +237,65 @@ const LANGS={
     gameEndRestart:'PRESS ENTER TO RESTART',
     upgradeMsg:'Store upgraded to level 2!',loanInfo:'(+store level = +capacity)',
     ledMsgs:['★ ADMIRA ★','WELCOME TO XTANCO GENERIC','YOUR TOBACCO SHOP OF THE FUTURE','QUALITY AND SERVICE','ADMIRA — THE DIGITAL SHOP NETWORK','VISIT ALL OUR XTANCO STORES','ADMIRA GOOD  ·  ADMIRA BETTER  ·  ADMIRA BEST'],
+    modelPick:'CHOOSE YOUR XTANCO',
+    modelNames:['XTANCO GENERIC','XTANCO GOOD','XTANCO BETTER','XTANCO BEST'],
+    modelDescs:[
+      'The base shop. 4 staff, 6 products.\nBalanced difficulty to get started.',
+      'Small & cozy shop. 2 staff, 4 products.\nEasier — great for beginners.',
+      'Medium shop with more services. 5 staff, 6 products.\nHigher investment, higher reward.',
+      'The premium flagship. 6 staff, 8 products.\nMax difficulty — for experts only.',
+    ],
+    modelDiff:['★★★ NORMAL','★★ EASY','★★★★ HARD','★★★★★ EXPERT'],
+    modelStaff:['4 staff','2 staff','5 staff','6 staff'],
+    modelProds:['6 products','4 products','6 products','8 products'],
+    modelStart:['€3,500','€2,800','€4,500','€6,000'],
   },
 };
 let lang='es';
 const T=()=>LANGS[lang];
 
 // ── STATE ─────────────────────────────────────────────────────
-const S={MENU:'menu',TUT:'tutorial',GAME:'game',PAUSE:'pause',YEAR_END:'yearEnd',GAME_END:'gameEnd'};
-let state=S.MENU, menuSel=0, tutPage=0;
+const S={MENU:'menu',MODEL_SEL:'modelSel',TUT:'tutorial',GAME:'game',PAUSE:'pause',YEAR_END:'yearEnd',GAME_END:'gameEnd'};
+let state=S.MENU, menuSel=0, modelSel=0, tutPage=0;
 let tt=0;
 let ledOffset=0;
 
 // ── GAME STATE ────────────────────────────────────────────────
 let G={};
 function initGame(){
+  activeModel=modelSel;
+  const M=MODELS[activeModel];
+  // Apply model config to CFG
+  CFG.START_MONEY=M.START_MONEY;
+  CFG.YEAR_TARGETS=M.YEAR_TARGETS;
+  CFG.SALE_PROB=M.SALE_PROB;CFG.SALE_BASE=M.SALE_BASE;
+  CFG.RUSH_CHANCE=M.RUSH_CHANCE;CFG.RUSH_DURATION=M.RUSH_DURATION;CFG.RUSH_MULT=M.RUSH_MULT;
+  CFG.INSPECT_CHANCE=M.INSPECT_CHANCE;
+  CFG.HIRE_COST=M.HIRE_COST;CFG.TRAIN_COST=M.TRAIN_COST;CFG.SALARY=M.SALARY;
+  CFG.RESTOCK_COST=M.RESTOCK_COST;CFG.UPGRADE_COST=M.UPGRADE_COST;
+  CFG.ADVERT=M.ADVERT;
+
   G={
     money:CFG.START_MONEY, week:1, year:1, weekTimer:0,
     yearRevenue:0, weekRevenue:0, weekExpenses:0,
     satisfaction:65, fame:25, customersToday:0, totalCustomers:0,
     totalRevenue:0, totalScore:0, yearsCompleted:0,
     rush:{active:false,timer:0}, inspect:{active:false,timer:0,warned:false},
-    storeLevel:1, // 1 or 2
-    eventMsg:null, eventTimer:0, eventColor:P.neon1,
-    yearRating:null, yearBonus:0,   // for year-end screen
-    yearEndAnim:0,                   // animation tick
+    storeLevel:1,
+    eventMsg:null, eventTimer:0, eventColor:M.neon,
+    yearRating:null, yearBonus:0,
+    yearEndAnim:0,
     gameOverReason:null,
     pauseData:null,
   };
-  // Staff
-  G.staff=[
-    {slot:0,x:165,y:195,hired:true, name:'ANA',   role:0,level:1,energy:100,morale:80,busy:0,shirt:0,hair:0,bTimer:0,bIdx:0,aFrame:0,aTimer:0},
-    {slot:1,x:295,y:195,hired:false,name:'JORGE', role:1,level:1,energy:100,morale:80,busy:0,shirt:1,hair:1,bTimer:0,bIdx:2,aFrame:0,aTimer:0},
-    {slot:2,x:425,y:195,hired:false,name:'LUCÍA', role:2,level:1,energy:100,morale:80,busy:0,shirt:2,hair:2,bTimer:0,bIdx:3,aFrame:0,aTimer:0},
-    {slot:3,x:295,y:305,hired:false,name:'MARCOS',role:3,level:1,energy:100,morale:80,busy:0,shirt:3,hair:3,bTimer:0,bIdx:4,aFrame:0,aTimer:0},
-  ];
-  // Products
-  G.prods=[
-    {stock:80,max:100,price:8, factor:1.2,color:P.prods[0]},
-    {stock:60,max:80, price:12,factor:0.9,color:P.prods[1]},
-    {stock:90,max:100,price:3, factor:1.5,color:P.prods[2]},
-    {stock:70,max:100,price:2, factor:1.0,color:P.prods[3]},
-    {stock:50,max:80, price:1, factor:1.3,color:P.prods[4]},
-    {stock:40,max:60, price:5, factor:0.8,color:P.prods[5]},
-  ];
+  // Staff from model
+  G.staff=M.staffInit.map((s,i)=>({
+    ...s,level:1,energy:100,morale:80,busy:0,
+    shirt:i%P.shirts.length,hair:i%P.hair.length,
+    bTimer:0,bIdx:i%5,aFrame:0,aTimer:0,
+  }));
+  // Products from model
+  G.prods=M.prodsInit.map((p,i)=>({...p,color:P.prods[i%P.prods.length]}));
   // Customers
   G.custs=[];
   // Floating numbers
@@ -203,7 +325,16 @@ document.addEventListener('keydown',e=>{
   if(state===S.MENU){
     if(e.code==='ArrowLeft'||e.code==='ArrowUp')   menuSel=0;
     if(e.code==='ArrowRight'||e.code==='ArrowDown') menuSel=1;
-    if(e.code==='Enter'||e.code==='Space'){lang=menuSel===0?'es':'en';initGame();state=S.TUT;tutPage=0;}
+    if(e.code==='Enter'||e.code==='Space'){lang=menuSel===0?'es':'en';modelSel=0;state=S.MODEL_SEL;}
+    return;
+  }
+  if(state===S.MODEL_SEL){
+    if(e.code==='ArrowLeft')  modelSel=(modelSel+3)%4;
+    if(e.code==='ArrowRight') modelSel=(modelSel+1)%4;
+    if(e.code==='ArrowUp')    modelSel=(modelSel<2)?modelSel:modelSel-2;
+    if(e.code==='ArrowDown')  modelSel=(modelSel>=2)?modelSel:modelSel+2;
+    if(e.code==='Enter'||e.code==='Space'){initGame();state=S.TUT;tutPage=0;}
+    if(e.code==='Escape'){state=S.MENU;}
     return;
   }
   if(state===S.TUT){
@@ -235,6 +366,18 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('keyup',e=>{keys[e.code]=false;});
 cv.addEventListener('click',e=>{
+  if(state===S.MODEL_SEL){
+    const rr=cv.getBoundingClientRect();
+    const mx2=(e.clientX-rr.left)*(W/rr.width)|0, my2=(e.clientY-rr.top)*(H/rr.height)|0;
+    // Card grid: 2x2, centered
+    const cw2=210,ch2=170,gap2=18,gx=W/2-(cw2*2+gap2)/2,gy=H/2-ch2+10;
+    for(let i=0;i<4;i++){
+      const col2=i%2,row2=(i/2)|0;
+      const cx3=gx+col2*(cw2+gap2),cy3=gy+row2*(ch2+gap2);
+      if(mx2>=cx3&&mx2<cx3+cw2&&my2>=cy3&&my2<cy3+ch2){modelSel=i;initGame();state=S.TUT;tutPage=0;return;}
+    }
+    return;
+  }
   if(state===S.TUT){tutPage++;if(tutPage>=T().tut.length)state=S.GAME;return;}
   if(state===S.PAUSE){state=S.GAME;return;}
   if(state===S.YEAR_END&&G.yearEndAnim>80){advanceYear();return;}
@@ -537,6 +680,69 @@ function drawMenu(){
   for(let i=0;i<4;i++) chibi(W/2-60+i*40,oy+100,1,i,i,Math.floor(tt/12)%2,false,tt);
 }
 
+// ── DRAW MODEL SELECT ────────────────────────────────────────
+function drawModelSelect(){
+  r(0,0,W,H,P.bg);
+  // Background grid
+  cx.globalAlpha=0.12;
+  for(let x=0;x<W;x+=32){cx.strokeStyle=P.wall;cx.lineWidth=1;cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke();}
+  for(let y=0;y<H;y+=32){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke();}
+  cx.globalAlpha=1;
+  // Stars
+  for(const s of mStars){cx.globalAlpha=.08+.18*Math.sin(tt*.018+s.b*8);r(s.x,s.y,s.r,s.r,P.neon2);}
+  cx.globalAlpha=1;
+  nl(0,5,W,5,P.neon2,3);nl(0,H-5,W,H-5,P.neon1,3);
+  // Title
+  nt(T().modelPick,W/2,36,P.neon3,16);
+  nl(W/2-160,46,W/2+160,46,P.neon2,1);
+  // Card grid 2x2
+  const cw=210,ch=170,gap=18;
+  const gx=W/2-(cw*2+gap)/2, gy=62;
+  const modelNeons=[P.neon1,'#44ff44','#4488ff',P.neon3];
+  for(let i=0;i<4;i++){
+    const col=i%2,row=(i/2)|0;
+    const cx3=gx+col*(cw+gap), cy3=gy+row*(ch+gap);
+    const sel=i===modelSel;
+    const mc=modelNeons[i];
+    // Card bg
+    r(cx3,cy3,cw,ch,sel?'#0a1a20':'#060610');
+    if(sel){
+      glow(mc,16);rx(cx3,cy3,cw,ch,mc,2);nog();
+      // Selection arrow
+      nt('▶',cx3-16,cy3+ch/2+4,mc,14);
+    } else {
+      rx(cx3,cy3,cw,ch,P.gray,1);
+    }
+    // Model name header
+    r(cx3,cy3,cw,28,sel?mc+'22':'#0a0a18');
+    nl(cx3,cy3+28,cx3+cw,cy3+28,sel?mc:P.gray,1);
+    glow(mc,sel?10:0);tx(T().modelNames[i],cx3+cw/2,cy3+19,sel?mc:P.gray,11,'center');nog();
+    // Difficulty
+    tx(T().modelDiff[i],cx3+10,cy3+46,mc,8);
+    // Stats
+    tx(T().modelStaff[i],cx3+10,cy3+66,P.uiT2,8);
+    tx(T().modelProds[i],cx3+10,cy3+82,P.uiT2,8);
+    tx(T().modelStart[i],cx3+10,cy3+98,P.green,8);
+    // Description lines
+    const lines=T().modelDescs[i].split('\n');
+    for(let l=0;l<lines.length;l++){
+      tx(lines[l],cx3+10,cy3+118+l*14,P.uiT3,7);
+    }
+    // Mini chibis preview
+    const numC=MODELS[i].staffInit.length;
+    const startX=cx3+cw/2-(numC*16)/2;
+    for(let c=0;c<Math.min(numC,4);c++){
+      chibi(startX+c*16,cy3+ch-32,1,c%P.shirts.length,c%P.hair.length,Math.floor(tt/14)%2,false,tt,0.7);
+    }
+    if(numC>4) tx('+'+(numC-4),startX+64,cy3+ch-16,mc,7);
+  }
+  // Bottom hint
+  cx.globalAlpha=.4+.6*Math.abs(Math.sin(tt*.04));
+  nt(T().startBtn,W/2,H-20,P.neon3,9);
+  cx.globalAlpha=1;
+  cx.globalAlpha=.3;tx('← → ↑ ↓  +  ENTER',W/2,H-8,P.gray,8,'center');cx.globalAlpha=1;
+}
+
 // ── DRAW TUTORIAL ─────────────────────────────────────────────
 function drawTutorial(){
   r(0,0,W,H,P.bg);
@@ -589,8 +795,9 @@ function drawShop(){
   nl(SHOP.x,SHOP.y+10,SHOP.x+SHOP.w,SHOP.y+10,P.neon1,1);
   // Sign
   r(210,SHOP.y+15,220,26,'#140024');
-  glow(P.neon3,14);rx(212,SHOP.y+16,216,24,P.neon3,1);
-  tx('✦  XTANCO GENERIC  ✦',320,SHOP.y+33,P.neon3,13,'center');nog();
+  const signCol=MODELS[activeModel].neon;
+  glow(signCol,14);rx(212,SHOP.y+16,216,24,signCol,1);
+  tx('✦  '+T().modelNames[activeModel]+'  ✦',320,SHOP.y+33,signCol,13,'center');nog();
   if(G.storeLevel>=2){
     glow(P.neonB,8);tx('★ LVL 2',460,SHOP.y+33,P.neonB,9,'left');nog();
   }
@@ -868,10 +1075,11 @@ function tabSales(py){
 
 function tabStaff(py){
   const bw=UI.w-10;
-  for(let i=0;i<4;i++){
+  for(let i=0;i<G.staff.length;i++){
     const s=G.staff[i];
-    const ry=py+i*106;
-    r(UI.x+4,ry,bw,98,s.hired?P.uiH:'#090912');rx(UI.x+4,ry,bw,98,s.hired?P.neon1:P.gray,1);
+    const cardH=Math.min(98,Math.floor((H-py-8)/G.staff.length)-4);
+    const ry=py+i*(cardH+4);
+    r(UI.x+4,ry,bw,cardH,s.hired?P.uiH:'#090912');rx(UI.x+4,ry,bw,cardH,s.hired?P.neon1:P.gray,1);
     if(s.hired) chibi(UI.x+7,ry+32,-1,s.shirt,s.hair,s.aFrame,s.busy>0,tt,0.85);
     const ix=UI.x+30;
     tx(s.hired?s.name:T().noStaff,ix,ry+12,s.hired?P.white:P.gray,8);
@@ -890,9 +1098,10 @@ function tabStaff(py){
 }
 
 function tabStock(py){
-  for(let i=0;i<6;i++){
+  const stockCardH=Math.min(70,Math.floor((H-py-8)/G.prods.length)-2);
+  for(let i=0;i<G.prods.length;i++){
     const p=G.prods[i];
-    const ry=py+i*70;
+    const ry=py+i*stockCardH;
     const stk=p.stock/p.max;
     r(UI.x+4,ry,UI.w-8,62,P.uiB);rx(UI.x+4,ry,UI.w-8,62,stk<0.2?P.red:P.gray,1);
     r(UI.x+8,ry+4,12,12,p.color);
@@ -1057,6 +1266,7 @@ function loop(){
   tt++;
   cx.clearRect(0,0,W,H);
   if(state===S.MENU){drawMenu();return;}
+  if(state===S.MODEL_SEL){drawModelSelect();return;}
   if(state===S.TUT){drawTutorial();return;}
   if(state===S.YEAR_END){drawYearEnd();return;}
   if(state===S.GAME_END){drawGameEnd();return;}
