@@ -1,695 +1,865 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>XTANCO — Digital Twin</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0a0a1a;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      font-family: monospace;
-      overflow: hidden;
-    }
-    #hud {
-      color: #00ffcc;
-      font-size: 13px;
-      letter-spacing: 2px;
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      text-shadow: 0 0 8px #00ffcc;
-    }
-    canvas {
-      image-rendering: pixelated;
-      border: 2px solid #00ffcc;
-      box-shadow: 0 0 30px #00ffcc55, 0 0 60px #00ffcc22;
-    }
-    #controls {
-      color: #555;
-      font-size: 11px;
-      margin-top: 8px;
-      letter-spacing: 1px;
-    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:monospace;overflow:hidden}
+    canvas{image-rendering:pixelated;display:block}
   </style>
 </head>
 <body>
-  <div id="hud" id="hud">⬡ XTANCO GENERIC — DIGITAL TWIN v0.1 ⬡</div>
-  <canvas id="canvas" width="800" height="450"></canvas>
-  <div id="controls" id="controls"></div>
-
+<canvas id="c" width="800" height="500"></canvas>
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-ctx.imageSmoothingEnabled = false;
-const hudEl = document.getElementById('hud');
-const controlsEl = document.getElementById('controls');
+// ═══════════════════════════════════════════════════════════════
+//  XTANCO DIGITAL TWIN  —  Game Dev Story style
+// ═══════════════════════════════════════════════════════════════
+const cv = document.getElementById('c');
+const cx = cv.getContext('2d');
+cx.imageSmoothingEnabled = false;
+const W = 800, H = 500;
 
-// ─── I18N ─────────────────────────────────────────────────────────────────────
-const i18n = {
-  es: {
-    hud:          '⬡ XTANCO GENERIC — DIGITAL TWIN v0.1 ⬡',
-    controls:     '← → MOVER \u00a0|\u00a0 ↑ / ESPACIO SALTAR \u00a0|\u00a0 E INTERACTUAR',
-    minimap:      'PLANTA',
-    menuTitle:    'XTANCO',
-    menuSub:      'DIGITAL TWIN v0.1',
-    menuPrompt:   'SELECCIONA IDIOMA',
-    menuStart:    'PULSA ENTER PARA EMPEZAR',
-    langEs:       '🇪🇸  CASTELLANO',
-    langEn:       '🇬🇧  ENGLISH',
-    labels: {
-      counter:  'MOSTRADOR',
-      shelf:    'ESTANTERÍA',
-      machine:  'MÁQUINA VENDING',
-      sign:     'XTANCO GENERIC',
-      lottery:  'LOTERÍA',
-      door:     'SALIDA',
-    },
-    interact: {
-      counter:  ['MOSTRADOR DIGITAL', 'Gestión de ventas', 'Inventario en tiempo real', 'TPV integrado'],
-      shelf:    ['ESTANTERÍA SMART',   'Stock auto-sincronizado', 'Productos: 48 refs', 'Reposición automática'],
-      machine:  ['VENDING XT-3000',    'Pagos NFC/crypto', 'Temperatura: 18°C', 'Ocupación: 73%'],
-      lottery:  ['TERMINAL LOTERÍAS',  'Conexión SCR en vivo', 'Premios pendientes: 2', 'Validación QR activa'],
-      door:     ['ACCESO PRINCIPAL',   'Aforo: 4/12 personas', 'Sensor activo', 'Cámaras: ON'],
-    },
-    overlays: [
-      { key: 'stock',   text: 'STOCK: 94%' },
-      { key: 'ref',     text: 'REF: 48'    },
-      { key: 'occ',     text: 'OCC: 73%'   },
-      { key: 'active',  text: 'ACTIVO'     },
-    ],
-    counterScreen: ['VENTAS HOY', '€ 1.247,50', '▲ +12%'],
-    vendingScreen:  ['SELECT', 'PRODUCT'],
-    lotteryLabel:  'LOTERÍA',
-    exitLabel:     'EXIT',
-    interactKey:   'E',
-  },
-  en: {
-    hud:          '⬡ XTANCO GENERIC — DIGITAL TWIN v0.1 ⬡',
-    controls:     '← → MOVE \u00a0|\u00a0 ↑ / SPACE JUMP \u00a0|\u00a0 E INTERACT',
-    minimap:      'FLOOR PLAN',
-    menuTitle:    'XTANCO',
-    menuSub:      'DIGITAL TWIN v0.1',
-    menuPrompt:   'SELECT LANGUAGE',
-    menuStart:    'PRESS ENTER TO START',
-    langEs:       '🇪🇸  CASTELLANO',
-    langEn:       '🇬🇧  ENGLISH',
-    labels: {
-      counter:  'COUNTER',
-      shelf:    'SHELVES',
-      machine:  'VENDING MACHINE',
-      sign:     'XTANCO GENERIC',
-      lottery:  'LOTTERY',
-      door:     'EXIT',
-    },
-    interact: {
-      counter:  ['DIGITAL COUNTER',    'Sales management', 'Real-time inventory', 'Integrated POS'],
-      shelf:    ['SMART SHELVING',      'Auto-synced stock', 'Products: 48 refs', 'Auto-replenishment'],
-      machine:  ['VENDING XT-3000',     'NFC/crypto payments', 'Temperature: 18°C', 'Occupancy: 73%'],
-      lottery:  ['LOTTERY TERMINAL',    'Live SCR connection', 'Pending prizes: 2', 'Active QR validation'],
-      door:     ['MAIN ACCESS',         'Capacity: 4/12 people', 'Sensor active', 'Cameras: ON'],
-    },
-    overlays: [
-      { key: 'stock',   text: 'STOCK: 94%' },
-      { key: 'ref',     text: 'REF: 48'    },
-      { key: 'occ',     text: 'OCC: 73%'   },
-      { key: 'active',  text: 'ACTIVE'     },
-    ],
-    counterScreen: ['TODAY SALES', '€ 1,247.50', '▲ +12%'],
-    vendingScreen:  ['SELECT', 'PRODUCT'],
-    lotteryLabel:  'LOTTERY',
-    exitLabel:     'EXIT',
-    interactKey:   'E',
-  },
+// ── PALETTE ────────────────────────────────────────────────────
+const P = {
+  bg:      '#1a1a2e', wall:    '#16213e', floor:   '#0f3460',
+  floorL:  '#1a4a7a', tile1:   '#0d2d4a', tile2:   '#0a2540',
+  counter: '#2d1b69', counterT:'#4a2d9e', shelf:   '#1e3a5f',
+  shelfT:  '#2a5a8f', desk:    '#2d4a1e', deskT:   '#3d6a2e',
+  neon1:   '#00ffcc', neon2:   '#ff00aa', neon3:   '#ffcc00',
+  neonB:   '#00aaff', dim1:    '#005544', dim2:    '#660044',
+  ui:      '#0d0d1a', uiB:     '#1a1a33', uiH:     '#2a2a55',
+  uiT:     '#00ffcc', uiT2:    '#aaffee', uiT3:    '#667788',
+  btn:     '#1a2a1a', btnH:    '#00ff88', btnSel:  '#003322',
+  skin:    '#ffcc99', hair1:   '#3d2200', hair2:   '#ff6644',
+  hair3:   '#2244aa', hair4:   '#222222', shirt1:  '#4466ff',
+  shirt2:  '#ff4444', shirt3:  '#44aa44', shirt4:  '#aa44ff',
+  pants:   '#334455', shoes:   '#221100', cust1:   '#ff8844',
+  cust2:   '#44ffaa', cust3:   '#ff44aa', cust4:   '#aaff44',
+  prod1:   '#ff4444', prod2:   '#44aaff', prod3:   '#ffaa00',
+  prod4:   '#aa44ff', prod5:   '#ff88aa', prod6:   '#88ffaa',
+  green:   '#00ff44', red:     '#ff4444', yellow:  '#ffcc00',
+  white:   '#ffffff', black:   '#000000', gray:    '#445566',
 };
 
-// ─── STATE ────────────────────────────────────────────────────────────────────
-let state = 'menu';   // 'menu' | 'playing'
-let lang  = 'es';
-let menuSelected = 0; // 0 = es, 1 = en
-
-function t(key) { return i18n[lang][key]; }
-function tl(key) { return i18n[lang].labels[key]; }
-
-// ─── PALETTE ─────────────────────────────────────────────────────────────────
-const C = {
-  bg:       '#0d0d1f',
-  floor:    '#1a1a3a',
-  floorTop: '#2a2aff',
-  wall:     '#111128',
-  wallLine: '#1a1a40',
-  neon1:    '#00ffcc',
-  neon2:    '#ff00ff',
-  neon3:    '#ffcc00',
-  counter:  '#1e1e4a',
-  counterT: '#2e2e6a',
-  shelf:    '#16163a',
-  shelfT:   '#00ccff',
-  machine:  '#1a2a1a',
-  machineL: '#00ff88',
-  screen:   '#001a10',
-  glass:    '#003355',
-  glassH:   '#0077aa',
-  prod1:    '#ff4444',
-  prod2:    '#44aaff',
-  prod3:    '#ffaa00',
-  prod4:    '#aa44ff',
-  playerB:  '#00ccff',
-  playerS:  '#ffffff',
-  playerL:  '#ffcc00',
-  sign:     '#ff00ff',
-  dark:     '#050510',
+// ── I18N ───────────────────────────────────────────────────────
+const I = {
+  es:{
+    menuTitle:'XTANCO', menuSub:'SIMULADOR DE ESTANCO DIGITAL',
+    langPick:'SELECCIONA IDIOMA', startBtn:'PULSA ENTER PARA EMPEZAR',
+    langEs:'🇪🇸  CASTELLANO', langEn:'🇬🇧  ENGLISH',
+    tabs:['VENTAS','PERSONAL','STOCK','LOCAL'],
+    money:'CAJA', week:'SEMANA', year:'AÑO',
+    satisfaction:'SATISFACCIÓN', fame:'FAMA', customers:'CLIENTES HOY',
+    hireBtn:'CONTRATAR', trainBtn:'FORMAR', fireBtn:'DESPEDIR',
+    restockBtn:'REPONER', advertBtn:'PUBLICIDAD', upgradeBtn:'MEJORAR LOCAL',
+    staffLabel:['CAJERO/A','REPOSITOR/A','LOTERÍA','ENCARGADO/A'],
+    productLabel:['TABACO','VAPES','LOTERÍA','PRENSA','CHUCHES','RECARGA'],
+    statLabels:['FUN','VENTAS','STOCK','ATENCIÓN'],
+    eventMsgs:[
+      '¡Cola en la caja!','¡Stock bajo en tabaco!','¡Premio de lotería!',
+      '¡Cliente satisfecho!','¡Reposición completada!','¡Nueva contratación!',
+      '¡Semana récord!','¡Publicidad activa!','¡Local lleno!'
+    ],
+    bubble:['¡Trabajando!','¡Vendido!','¡Cobrando!','¡Reponiendo!','¡Validando!'],
+    noStaff:'— VACANTE —', revenue:'INGRESOS', expenses:'GASTOS',
+    net:'NETO', weekLabel:'SEM', yearLabel:'AÑO',
+  },
+  en:{
+    menuTitle:'XTANCO', menuSub:'DIGITAL TOBACCO SHOP SIMULATOR',
+    langPick:'SELECT LANGUAGE', startBtn:'PRESS ENTER TO START',
+    langEs:'🇪🇸  CASTELLANO', langEn:'🇬🇧  ENGLISH',
+    tabs:['SALES','STAFF','STOCK','STORE'],
+    money:'CASH', week:'WEEK', year:'YEAR',
+    satisfaction:'SATISFACTION', fame:'FAME', customers:'CUSTOMERS TODAY',
+    hireBtn:'HIRE', trainBtn:'TRAIN', fireBtn:'FIRE',
+    restockBtn:'RESTOCK', advertBtn:'ADVERTISE', upgradeBtn:'UPGRADE STORE',
+    staffLabel:['CASHIER','STOCKER','LOTTERY','MANAGER'],
+    productLabel:['TOBACCO','VAPES','LOTTERY','PRESS','CANDY','TOPUP'],
+    statLabels:['FUN','SALES','STOCK','SERVICE'],
+    eventMsgs:[
+      'Queue at register!','Low tobacco stock!','Lottery prize!',
+      'Happy customer!','Restock complete!','New hire!',
+      'Record week!','Ad campaign active!','Store packed!'
+    ],
+    bubble:['Working!','Sold!','Charging!','Restocking!','Validating!'],
+    noStaff:'— VACANT —', revenue:'REVENUE', expenses:'EXPENSES',
+    net:'NET', weekLabel:'WK', yearLabel:'YR',
+  }
 };
+let lang='es'; const T=()=>I[lang];
 
-// ─── WORLD ───────────────────────────────────────────────────────────────────
-const W = canvas.width;
-const H = canvas.height;
-const GROUND_Y = H - 60;
+// ── STATE ──────────────────────────────────────────────────────
+let state='menu'; // menu | game
+let menuSel=0, activeTab=0;
+let tt=0; // global tick
 
-const platforms = [
-  { x: 0,   y: GROUND_Y,       w: W,   h: 60 },
-  { x: 80,  y: GROUND_Y - 48,  w: 160, h: 48 },
-  { x: 320, y: GROUND_Y - 80,  w: 120, h: 12 },
-  { x: 320, y: GROUND_Y - 140, w: 120, h: 12 },
-  { x: 320, y: GROUND_Y - 200, w: 120, h: 12 },
-  { x: 550, y: GROUND_Y - 120, w: 200, h: 12 },
-  { x: 600, y: GROUND_Y - 48,  w: 80,  h: 48 },
+// ── GAME DATA ─────────────────────────────────────────────────
+const WEEK_TICKS = 420; // ticks per in-game week
+let money=5000, week=1, year=1;
+let satisfaction=60, fame=30, customersToday=0;
+let weekRevenue=0, weekExpenses=0;
+let weekTimer=0;
+let eventMsg=null, eventTimer=0;
+
+const staff = [
+  {slot:0, x:180, y:200, hired:true,  name:'ANA',    role:0, level:1, energy:100, busy:0, shirt:P.shirt1, hair:P.hair1, bubbleTimer:0, bubbleIdx:0, animFrame:0, animTimer:0},
+  {slot:1, x:310, y:200, hired:false, name:'JORGE',  role:1, level:1, energy:100, busy:0, shirt:P.shirt2, hair:P.hair2, bubbleTimer:0, bubbleIdx:1, animFrame:0, animTimer:0},
+  {slot:2, x:440, y:200, hired:false, name:'LUCÍA',  role:2, level:1, energy:100, busy:0, shirt:P.shirt3, hair:P.hair3, bubbleTimer:0, bubbleIdx:4, animFrame:0, animTimer:0},
+  {slot:3, x:310, y:310, hired:false, name:'MARCOS', role:3, level:1, energy:100, busy:0, shirt:P.shirt4, hair:P.hair4, bubbleTimer:0, bubbleIdx:0, animFrame:0, animTimer:0},
+];
+const HIRE_COST=[800,600,700,1500];
+const TRAIN_COST=[300,300,300,500];
+const SALARY=[400,350,380,700];
+
+const products=[
+  {id:0,stock:80,maxStock:100,price:8, salesRate:0.8,color:P.prod1},
+  {id:1,stock:60,maxStock:80, price:12,salesRate:0.5,color:P.prod2},
+  {id:2,stock:90,maxStock:100,price:3, salesRate:1.0,color:P.prod3},
+  {id:3,stock:70,maxStock:100,price:2, salesRate:0.6,color:P.prod4},
+  {id:4,stock:50,maxStock:80, price:1, salesRate:0.7,color:P.prod5},
+  {id:5,stock:40,maxStock:60, price:5, salesRate:0.4,color:P.prod6},
+];
+const RESTOCK_COST=200;
+const ADVERT_COST=500;
+
+// ── CUSTOMERS ─────────────────────────────────────────────────
+const customers=[];
+const CUST_COLORS=[P.cust1,P.cust2,P.cust3,P.cust4];
+function spawnCustomer(){
+  if(customers.length>=6) return;
+  customers.push({
+    x:600, y:390+Math.random()*20-10,
+    tx:180+Math.random()*300, ty:220+Math.random()*120,
+    state:'walking', timer:0, color:CUST_COLORS[Math.floor(Math.random()*4)],
+    hair:Object.values({a:P.hair1,b:P.hair2,c:P.hair3,d:P.hair4})[Math.floor(Math.random()*4)],
+    frame:0, fTimer:0, dir:-1, satisfied:Math.random()>0.2
+  });
+}
+
+// ── FLOATING NUMBERS ──────────────────────────────────────────
+const floats=[];
+function addFloat(x,y,txt,color){
+  floats.push({x,y,txt,color,life:60,vy:-0.7});
+}
+
+// ── PROGRESS BARS ─────────────────────────────────────────────
+const bars=[
+  {label:'FUN',    val:60,  color:P.neon1},
+  {label:'SALES',  val:45,  color:P.neon3},
+  {label:'STOCK',  val:72,  color:P.neonB},
+  {label:'SERVICE',val:55,  color:P.neon2},
 ];
 
-const objects = [
-  { type: 'counter', x: 80,  y: GROUND_Y - 48,  w: 160, h: 48,  color: C.neon1 },
-  { type: 'shelf',   x: 320, y: GROUND_Y - 200,  w: 120, h: 200, color: C.neon2 },
-  { type: 'machine', x: 600, y: GROUND_Y - 130,  w: 80,  h: 82,  color: C.machineL },
-  { type: 'sign',    x: 340, y: 30,               w: 120, h: 40,  color: C.neon3 },
-  { type: 'lottery', x: 480, y: GROUND_Y - 48,   w: 60,  h: 48,  color: C.neon3 },
-  { type: 'door',    x: 730, y: GROUND_Y - 100,  w: 40,  h: 100, color: C.neon1 },
-];
-
-// ─── PLAYER ──────────────────────────────────────────────────────────────────
-const player = {
-  x: 150, y: GROUND_Y - 32,
-  w: 14,  h: 22,
-  vx: 0, vy: 0,
-  onGround: false,
-  dir: 1, frame: 0, frameTimer: 0,
-  interactTarget: null,
-};
-
-// ─── INPUT ───────────────────────────────────────────────────────────────────
-const keys = {};
-document.addEventListener('keydown', e => {
-  keys[e.code] = true;
-
-  if (state === 'menu') {
-    if (e.code === 'ArrowUp'   || e.code === 'ArrowLeft')  menuSelected = 0;
-    if (e.code === 'ArrowDown' || e.code === 'ArrowRight') menuSelected = 1;
-    if (e.code === 'Enter' || e.code === 'Space') {
-      lang = menuSelected === 0 ? 'es' : 'en';
-      state = 'playing';
-      hudEl.textContent = t('hud');
-      controlsEl.textContent = t('controls');
+// ── INPUT ─────────────────────────────────────────────────────
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(state==='menu'){
+    if(e.code==='ArrowLeft'||e.code==='ArrowUp')   menuSel=0;
+    if(e.code==='ArrowRight'||e.code==='ArrowDown') menuSel=1;
+    if(e.code==='Enter'||e.code==='Space'){
+      lang=menuSel===0?'es':'en'; state='game';
     }
     return;
   }
-
-  if (e.code === 'KeyE' && player.interactTarget) {
-    showInteraction(player.interactTarget);
-  }
+  if(e.code==='Digit1') activeTab=0;
+  if(e.code==='Digit2') activeTab=1;
+  if(e.code==='Digit3') activeTab=2;
+  if(e.code==='Digit4') activeTab=3;
 });
-document.addEventListener('keyup', e => { keys[e.code] = false; });
+document.addEventListener('keyup',e=>{keys[e.code]=false});
 
-// ─── INTERACTION UI ───────────────────────────────────────────────────────────
-let interactionMsg  = null;
-let interactionTimer = 0;
+// mouse for buttons
+cv.addEventListener('click',e=>{
+  if(state!=='game') return;
+  const r=cv.getBoundingClientRect();
+  const mx=(e.clientX-r.left)*(W/r.width)|0;
+  const my=(e.clientY-r.top)*(H/r.height)|0;
+  handleClick(mx,my);
+});
 
-function showInteraction(obj) {
-  interactionMsg  = i18n[lang].interact[obj.type] || [tl(obj.type)];
-  interactionTimer = 180;
-}
-
-// ─── DRAW HELPERS ─────────────────────────────────────────────────────────────
-function rect(x, y, w, h, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(Math.round(x), Math.round(y), w, h);
-}
-
-function txt(str, x, y, color, size = 10, align = 'left') {
-  ctx.fillStyle = color;
-  ctx.font = `${size}px monospace`;
-  ctx.textAlign = align;
-  ctx.fillText(str, Math.round(x), Math.round(y));
-  ctx.textAlign = 'left';
-}
-
-function neonText(str, x, y, color, size = 12) {
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 10;
-  txt(str, x, y, color, size, 'center');
-  ctx.shadowBlur = 0;
-}
-
-function neonLine(x1, y1, x2, y2, color, width = 1) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 6;
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-}
-
-// ─── MENU ────────────────────────────────────────────────────────────────────
-let bgStars = [];
-for (let i = 0; i < 80; i++) {
-  bgStars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() > 0.8 ? 2 : 1, b: Math.random() });
-}
-
-function drawMenu(tt) {
-  // Background
-  rect(0, 0, W, H, C.dark);
-  ctx.globalAlpha = 0.3;
-  for (let x = 0; x < W; x += 32) {
-    ctx.strokeStyle = C.wallLine; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-  }
-  for (let y = 0; y < H; y += 32) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  // Stars
-  for (const s of bgStars) {
-    const alpha = 0.2 + 0.3 * Math.sin(tt * 0.02 + s.b * 10);
-    ctx.globalAlpha = alpha;
-    rect(s.x, s.y, s.r, s.r, C.neon1);
-    ctx.globalAlpha = 1;
-  }
-
-  // Ceiling / floor neon strips
-  neonLine(0, 4,    W, 4,    C.neon2, 3);
-  neonLine(0, H-4,  W, H-4,  C.neon1, 3);
-
-  // Title
-  const titleY = H / 2 - 80;
-  neonText(i18n.es.menuTitle, W / 2, titleY, C.neon3, 64);
-  neonText(i18n.es.menuSub,   W / 2, titleY + 44, C.neon1, 14);
-
-  // Divider
-  neonLine(W / 2 - 140, titleY + 58, W / 2 + 140, titleY + 58, C.neon2, 1);
-
-  // Prompt
-  const promptY = titleY + 85;
-  const flash = Math.sin(tt * 0.06) > 0;
-  ctx.globalAlpha = flash ? 1 : 0.5;
-  neonText(i18n[menuSelected === 0 ? 'es' : 'en'].menuPrompt, W / 2, promptY, C.neon2, 13);
-  ctx.globalAlpha = 1;
-
-  // Language options
-  const optY = promptY + 36;
-  const optW = 160, optH = 36, gap = 20;
-  const totalW = optW * 2 + gap;
-  const startX = W / 2 - totalW / 2;
-
-  const options = [
-    { label: i18n.es.langEs, sel: menuSelected === 0 },
-    { label: i18n.en.langEn, sel: menuSelected === 1 },
-  ];
-
-  options.forEach((opt, i) => {
-    const ox = startX + i * (optW + gap);
-    const col = opt.sel ? C.neon1 : '#334455';
-    const bg  = opt.sel ? '#001a12' : '#0a0a1a';
-
-    rect(ox, optY, optW, optH, bg);
-    ctx.strokeStyle = col;
-    ctx.lineWidth = opt.sel ? 2 : 1;
-    ctx.shadowColor = col;
-    ctx.shadowBlur = opt.sel ? 14 : 4;
-    ctx.strokeRect(ox + 0.5, optY + 0.5, optW - 1, optH - 1);
-    ctx.shadowBlur = 0;
-
-    neonText(opt.label, ox + optW / 2, optY + 23, opt.sel ? C.neon1 : '#667788', 13);
-
-    // Cursor arrow
-    if (opt.sel) {
-      neonText('▶', ox - 14, optY + 23, C.neon1, 12);
-    }
-  });
-
-  // Start prompt
-  const startAlpha = 0.4 + 0.6 * Math.abs(Math.sin(tt * 0.04));
-  ctx.globalAlpha = startAlpha;
-  neonText(i18n[menuSelected === 0 ? 'es' : 'en'].menuStart, W / 2, optY + 60, C.neon3, 10);
-  ctx.globalAlpha = 1;
-
-  // Arrow hint
-  ctx.globalAlpha = 0.35;
-  txt('← →  /  ↑ ↓', W / 2 - 30, optY + 76, '#556677', 9);
-  ctx.globalAlpha = 1;
-}
-
-// ─── GAME DRAW ───────────────────────────────────────────────────────────────
-let gameStars = [];
-for (let i = 0; i < 60; i++) {
-  gameStars.push({ x: Math.random() * W, y: Math.random() * (H * 0.5), r: Math.random() > 0.8 ? 2 : 1, b: Math.random() });
-}
-
-function drawBackground(tt) {
-  rect(0, 0, W, H, C.bg);
-  ctx.strokeStyle = C.wallLine;
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.3;
-  for (let x = 0; x < W; x += 32) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, GROUND_Y); ctx.stroke();
-  }
-  for (let y = 0; y < GROUND_Y; y += 32) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  for (const s of gameStars) {
-    const alpha = 0.3 + 0.3 * Math.sin(tt * 0.02 + s.b * 10);
-    ctx.globalAlpha = alpha;
-    rect(s.x, s.y, s.r, s.r, C.neon1);
-    ctx.globalAlpha = 1;
-  }
-
-  neonLine(0, 8,  W, 8,  C.neon2, 3);
-  neonLine(0, 12, W, 12, C.neon1, 1);
-}
-
-function drawSign(tt) {
-  const obj = objects.find(o => o.type === 'sign');
-  const flash = Math.sin(tt * 0.05) > 0;
-  rect(obj.x - 4, obj.y - 4, obj.w + 8, obj.h + 8, '#1a002a');
-  ctx.strokeStyle = flash ? C.neon2 : C.neon3;
-  ctx.lineWidth = 2;
-  ctx.shadowColor = flash ? C.neon2 : C.neon3;
-  ctx.shadowBlur = 12;
-  ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
-  ctx.shadowBlur = 0;
-  neonText('XTANCO',  obj.x + obj.w / 2, obj.y + 20, flash ? C.neon2 : C.neon3, 18);
-  neonText('GENERIC', obj.x + obj.w / 2, obj.y + 36, C.neon1, 10);
-}
-
-function drawFloor() {
-  rect(0, GROUND_Y, W, 60, C.floor);
-  rect(0, GROUND_Y, W, 3, C.floorTop);
-  ctx.globalAlpha = 0.15;
-  for (let x = 0; x < W; x += 32) neonLine(x, GROUND_Y, x, H, C.neon1, 1);
-  neonLine(0, GROUND_Y + 30, W, GROUND_Y + 30, C.neon1, 1);
-  ctx.globalAlpha = 1;
-}
-
-function drawCounter() {
-  const obj = objects.find(o => o.type === 'counter');
-  const { x, y, w, h } = obj;
-  rect(x, y, w, h, C.counter);
-  rect(x, y, w, 4, C.counterT);
-
-  rect(x + 10, y + 8, 50, 32, C.screen);
-  rect(x + 12, y + 10, 46, 28, '#001a0a');
-  const cs = i18n[lang].counterScreen;
-  ctx.globalAlpha = 0.8;
-  txt(cs[0], x + 14, y + 22, C.machineL, 7);
-  txt(cs[1], x + 14, y + 32, C.neon1, 8);
-  txt(cs[2], x + 14, y + 40, '#00ff44', 7);
-  ctx.globalAlpha = 1;
-
-  rect(x + 70, y + 10, 80, 32, C.glass);
-  rect(x + 70, y + 10, 80, 3, C.glassH);
-  for (let i = 0; i < 8; i++) {
-    const colors = [C.prod1, C.prod2, C.prod3, C.prod4];
-    rect(x + 74 + i * 9, y + 16, 6, 20, colors[i % 4]);
-    rect(x + 74 + i * 9, y + 16, 6, 3, '#ffffff44');
-  }
-  neonLine(x, y, x + w, y, C.neon1, 2);
-}
-
-function drawShelves() {
-  const ys = [GROUND_Y - 80, GROUND_Y - 140, GROUND_Y - 200];
-  const sx = 320, sw = 120;
-  rect(sx, ys[2], sw, GROUND_Y - ys[2], C.shelf);
-  rect(sx, ys[2], 3, GROUND_Y - ys[2], C.shelfT);
-  rect(sx + sw - 3, ys[2], 3, GROUND_Y - ys[2], C.shelfT);
-  for (const y of ys) {
-    rect(sx, y, sw, 8, '#1e1e5a');
-    neonLine(sx, y, sx + sw, y, C.shelfT, 2);
-    const prodColors = [C.prod1, C.prod2, C.prod3, C.prod4, C.neon3, C.prod1, C.prod2];
-    for (let i = 0; i < 7; i++) {
-      const px = sx + 5 + i * 16;
-      const ph = 8 + Math.floor(i * 1.3) % 6;
-      rect(px, y - ph, 12, ph, prodColors[i]);
-      rect(px, y - ph, 12, 2, '#ffffff33');
-      rect(px + 3, y - ph + 3, 6, 2, '#ffffff22');
+const BTN_DEFS={}; // filled during draw
+function handleClick(mx,my){
+  for(const [id,b] of Object.entries(BTN_DEFS)){
+    if(mx>=b.x&&mx<b.x+b.w&&my>=b.y&&my<b.y+b.h){
+      doAction(id);
+      return;
     }
   }
 }
 
-function drawVending(tt) {
-  const obj = objects.find(o => o.type === 'machine');
-  const { x, y, w, h } = obj;
-  rect(x, y, w, h, C.machine);
-  rect(x, y, w, 4, '#002a00');
-  rect(x + 5, y + 8, 45, 30, C.screen);
-  const vs = i18n[lang].vendingScreen;
-  ctx.globalAlpha = 0.6 + 0.4 * Math.sin(tt * 0.05);
-  txt(vs[0], x + 8, y + 20, C.machineL, 7);
-  txt(vs[1], x + 8, y + 29, C.machineL, 7);
-  txt(`[${String(Math.floor(tt / 20) % 99).padStart(2, '0')}]`, x + 8, y + 38, C.neon1, 8);
-  ctx.globalAlpha = 1;
-  rect(x + 5, y + 42, 55, 32, '#0a1a0a');
-  for (let row = 0; row < 2; row++) {
-    for (let col = 0; col < 4; col++) {
-      const colors = [C.prod1, C.prod2, C.prod3, C.neon3];
-      rect(x + 8 + col * 13, y + 45 + row * 14, 10, 12, colors[col]);
-      rect(x + 8 + col * 13, y + 45 + row * 14, 10, 2, '#ffffff33');
+function doAction(id){
+  if(id.startsWith('tab')){
+    activeTab=parseInt(id[3]);
+    return;
+  }
+  if(id.startsWith('hire')){
+    const i=parseInt(id[4]);
+    if(!staff[i].hired&&money>=HIRE_COST[i]){
+      money-=HIRE_COST[i]; staff[i].hired=true;
+      weekExpenses+=HIRE_COST[i];
+      showEvent(T().eventMsgs[5]);
+      addFloat(staff[i].x,staff[i].y-40,'+'+T().staffLabel[i],P.neon1);
     }
+    return;
   }
-  for (let i = 0; i < 4; i++) {
-    rect(x + 60, y + 20 + i * 14, 12, 10, i === Math.floor(tt / 30) % 4 ? C.machineL : '#004400');
-  }
-  ctx.strokeStyle = C.machineL; ctx.lineWidth = 1;
-  ctx.shadowColor = C.machineL; ctx.shadowBlur = 8;
-  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-  ctx.shadowBlur = 0;
-}
-
-function drawLottery(tt) {
-  const obj = objects.find(o => o.type === 'lottery');
-  const { x, y, w, h } = obj;
-  rect(x, y, w, h, '#1a1a00');
-  rect(x, y, w, 4, C.neon3);
-  rect(x + 3, y + 6, w - 6, 24, '#0a0a00');
-  const digits = String(Math.floor(tt / 10) % 99999).padStart(5, '0');
-  ctx.globalAlpha = 0.9;
-  txt(digits, x + 6, y + 22, C.neon3, 10);
-  ctx.globalAlpha = 1;
-  txt(i18n[lang].lotteryLabel, x + 5, y + 36, C.neon3, 7);
-  ctx.strokeStyle = C.neon3; ctx.lineWidth = 1;
-  ctx.shadowColor = C.neon3; ctx.shadowBlur = 6;
-  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-  ctx.shadowBlur = 0;
-}
-
-function drawDoor(tt) {
-  const obj = objects.find(o => o.type === 'door');
-  const { x, y, w, h } = obj;
-  rect(x, y, w, h, '#001122');
-  const offset = (Math.sin(tt * 0.03) * 4 + 4) | 0;
-  rect(x + 2, y + 2, w / 2 - 2 - offset, h - 4, '#002244');
-  rect(x + w / 2 + offset, y + 2, w / 2 - 2 - offset, h - 4, '#002244');
-  neonLine(x, y, x + w, y, C.neon1, 2);
-  neonLine(x, y + h, x + w, y + h, C.neon1, 1);
-  neonLine(x, y, x, y + h, C.neon1, 1);
-  neonLine(x + w, y, x + w, y + h, C.neon1, 1);
-  txt(i18n[lang].exitLabel, x + w / 2 - 10, y + h / 2 + 4, C.neon1, 8);
-}
-
-function drawWalkway() {
-  const p = platforms[5];
-  rect(p.x, p.y, p.w, p.h, '#1a1a3a');
-  neonLine(p.x, p.y, p.x + p.w, p.y, C.neon2, 2);
-  for (let x = p.x; x < p.x + p.w; x += 16) neonLine(x, p.y, x, p.y - 12, C.neon2, 1);
-  neonLine(p.x, p.y - 12, p.x + p.w, p.y - 12, C.neon2, 1);
-}
-
-function drawPlayer(tt) {
-  const x = Math.round(player.x);
-  const y = Math.round(player.y);
-  const f = player.frame;
-  ctx.save();
-  if (player.dir === -1) {
-    ctx.translate(x + player.w, 0); ctx.scale(-1, 1); ctx.translate(-x, 0);
-  }
-  ctx.globalAlpha = 0.3;
-  ctx.beginPath();
-  ctx.ellipse(x + 7, y + player.h + 2, 8, 3, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#000'; ctx.fill();
-  ctx.globalAlpha = 1;
-
-  const legOff = f === 0 ? 0 : 2;
-  rect(x + 2, y + 14, 4, 8 + legOff, C.playerB);
-  rect(x + 8, y + 14, 4, 8 - legOff, C.playerB);
-  rect(x + 1, y + 6, 12, 10, C.playerB);
-  rect(x + 1, y, 12, 8, '#334455');
-  rect(x + 2, y + 1, 10, 5, C.glass);
-  ctx.globalAlpha = 0.5;
-  rect(x + 3, y + 2, 4, 2, '#aaddff');
-  ctx.globalAlpha = 1;
-  const armOff = player.onGround && Math.abs(player.vx) > 0.5 ? (f === 0 ? -2 : 2) : 0;
-  rect(x - 2, y + 7 + armOff, 4, 6, C.playerS);
-  rect(x + 12, y + 7 - armOff, 4, 6, C.playerS);
-  rect(x + 4, y + 8, 6, 4, Math.sin(tt * 0.07) > 0 ? C.neon1 : C.playerB);
-  ctx.restore();
-}
-
-function drawInteractPrompt() {
-  if (!player.interactTarget) return;
-  const obj = player.interactTarget;
-  const px = Math.round(player.x + player.w / 2);
-  const py = Math.round(player.y - 18);
-  const label = tl(obj.type);
-  ctx.fillStyle = '#000000aa';
-  ctx.fillRect(px - 34, py - 12, 68, 14);
-  neonText(`[${i18n[lang].interactKey}] ${label}`, px, py, obj.color, 8);
-}
-
-function drawInteractionPanel() {
-  if (!interactionMsg || interactionTimer <= 0) return;
-  const pw = 210, ph = 90;
-  const px = W / 2 - pw / 2, py = 60;
-  ctx.fillStyle = '#000000cc';
-  ctx.fillRect(px, py, pw, ph);
-  ctx.strokeStyle = C.neon1; ctx.lineWidth = 1;
-  ctx.shadowColor = C.neon1; ctx.shadowBlur = 8;
-  ctx.strokeRect(px, py, pw, ph);
-  ctx.shadowBlur = 0;
-  neonText(interactionMsg[0], px + pw / 2, py + 18, C.neon1, 10);
-  for (let i = 1; i < interactionMsg.length; i++) {
-    txt('• ' + interactionMsg[i], px + 12, py + 30 + i * 14, '#aaffee', 9);
-  }
-  interactionTimer--;
-}
-
-function drawOverlays(tt) {
-  const overlays = i18n[lang].overlays;
-  const positions = [
-    { x: 160, y: GROUND_Y - 70, color: C.neon1 },
-    { x: 370, y: GROUND_Y - 220, color: C.neon2 },
-    { x: 615, y: GROUND_Y - 150, color: C.machineL },
-    { x: 490, y: GROUND_Y - 65, color: C.neon3 },
-  ];
-  overlays.forEach((l, i) => {
-    const pos = positions[i];
-    const fy = pos.y + Math.sin(tt * 0.03 + pos.x) * 2;
-    ctx.globalAlpha = 0.75;
-    txt(l.text, pos.x, fy, pos.color, 8);
-    ctx.globalAlpha = 1;
-  });
-}
-
-function drawMinimap() {
-  const mx = W - 110, my = 20, mw = 90, mh = 50;
-  ctx.fillStyle = '#000000bb';
-  ctx.fillRect(mx, my, mw, mh);
-  ctx.strokeStyle = C.neon1; ctx.lineWidth = 1;
-  ctx.strokeRect(mx, my, mw, mh);
-  txt(t('minimap'), mx + 4, my - 2, C.neon1, 7);
-  ctx.fillStyle = C.floorTop;
-  ctx.fillRect(mx + 2, my + mh - 6, mw - 4, 4);
-  for (const obj of objects) {
-    if (obj.type === 'sign') continue;
-    ctx.fillStyle = obj.color;
-    ctx.fillRect(mx + 2 + (obj.x / W) * (mw - 4), my + (obj.y / H) * mh, (obj.w / W) * (mw - 4), 3);
-  }
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(mx + 2 + (player.x / W) * (mw - 4), my + (player.y / H) * mh, 3, 4);
-}
-
-// ─── PHYSICS ─────────────────────────────────────────────────────────────────
-function updatePlayer() {
-  if (state !== 'playing') return;
-
-  if (keys['ArrowLeft'] || keys['KeyA']) { player.vx = -2.8; player.dir = -1; }
-  else if (keys['ArrowRight'] || keys['KeyD']) { player.vx = 2.8; player.dir = 1; }
-  else { player.vx *= 0.7; }
-
-  if ((keys['ArrowUp'] || keys['Space'] || keys['KeyW']) && player.onGround) {
-    player.vy = -8; player.onGround = false;
-  }
-
-  player.vy += 0.35;
-  player.x += player.vx;
-  player.y += player.vy;
-
-  if (Math.abs(player.vx) > 0.5) {
-    player.frameTimer++;
-    if (player.frameTimer > 8) { player.frame = (player.frame + 1) % 2; player.frameTimer = 0; }
-  } else { player.frame = 0; }
-
-  player.onGround = false;
-  for (const p of platforms) {
-    if (
-      player.x + player.w > p.x && player.x < p.x + p.w &&
-      player.y + player.h > p.y && player.y + player.h < p.y + p.h + Math.abs(player.vy) + 1 &&
-      player.vy >= 0
-    ) {
-      player.y = p.y - player.h; player.vy = 0; player.onGround = true;
+  if(id.startsWith('train')){
+    const i=parseInt(id[5]);
+    if(staff[i].hired&&money>=TRAIN_COST[i]&&staff[i].level<5){
+      money-=TRAIN_COST[i]; staff[i].level++;
+      weekExpenses+=TRAIN_COST[i];
+      addFloat(staff[i].x,staff[i].y-40,'LVL '+staff[i].level,P.neon3);
     }
+    return;
   }
-
-  player.x = Math.max(0, Math.min(W - player.w, player.x));
-  if (player.y > H) { player.y = GROUND_Y - player.h; player.vy = 0; }
-
-  player.interactTarget = null;
-  for (const obj of objects) {
-    if (
-      player.x + player.w > obj.x - 20 && player.x < obj.x + obj.w + 20 &&
-      player.y + player.h > obj.y && player.y < obj.y + obj.h
-    ) { player.interactTarget = obj; break; }
+  if(id.startsWith('rest')){
+    const i=parseInt(id[4]);
+    if(money>=RESTOCK_COST){
+      money-=RESTOCK_COST; products[i].stock=products[i].maxStock;
+      weekExpenses+=RESTOCK_COST;
+      updateBars();
+      showEvent(T().eventMsgs[4]);
+    }
+    return;
+  }
+  if(id==='advert'){
+    if(money>=ADVERT_COST){
+      money-=ADVERT_COST; fame=Math.min(100,fame+15);
+      satisfaction=Math.min(100,satisfaction+8);
+      weekExpenses+=ADVERT_COST;
+      showEvent(T().eventMsgs[7]);
+      addFloat(W/2,H/2-40,'+FAME',P.neon2);
+    }
+    return;
+  }
+  if(id==='upgrade'){
+    if(money>=3000){
+      money-=3000; satisfaction=Math.min(100,satisfaction+12);
+      weekExpenses+=3000;
+      addFloat(W/2,H/2-40,'UPGRADE!',P.neon1);
+    }
+    return;
   }
 }
 
-// ─── MAIN LOOP ───────────────────────────────────────────────────────────────
-let tt = 0;
-function loop() {
+function showEvent(msg){
+  eventMsg=msg; eventTimer=160;
+}
+
+function updateBars(){
+  const avgStock=products.reduce((a,p)=>a+(p.stock/p.maxStock),0)/products.length;
+  const hiStaff=staff.filter(s=>s.hired).length;
+  bars[0].val=Math.min(100,40+hiStaff*10+fame*0.3);
+  bars[1].val=Math.min(100,20+customersToday*4+satisfaction*0.5);
+  bars[2].val=Math.round(avgStock*100);
+  bars[3].val=Math.min(100,30+hiStaff*12+satisfaction*0.4);
+}
+
+// ── GAME LOGIC ────────────────────────────────────────────────
+function updateGame(){
   tt++;
-  updatePlayer();
-  ctx.clearRect(0, 0, W, H);
+  weekTimer++;
 
-  if (state === 'menu') {
-    drawMenu(tt);
-  } else {
-    drawBackground(tt);
-    drawSign(tt);
-    drawWalkway();
-    drawShelves();
-    drawCounter();
-    drawLottery(tt);
-    drawVending(tt);
-    drawDoor(tt);
-    drawFloor();
-    drawPlayer(tt);
-    drawInteractPrompt();
-    drawInteractionPanel();
-    drawOverlays(tt);
-    drawMinimap();
+  // Animate staff
+  for(const s of staff){
+    if(!s.hired) continue;
+    s.animTimer++;
+    if(s.animTimer>12){s.animFrame=(s.animFrame+1)%2;s.animTimer=0;}
+    if(s.busy>0) s.busy--;
+    if(s.bubbleTimer>0) s.bubbleTimer--;
+    // Random work bubble
+    if(Math.random()<0.003&&s.bubbleTimer===0){
+      s.bubbleTimer=80; s.busy=60;
+      const p=products[Math.floor(Math.random()*products.length)];
+      if(p.stock>0){
+        const sale=s.level*(2+Math.random()*3)|0;
+        const revenue=sale*p.price;
+        money+=revenue; weekRevenue+=revenue;
+        customersToday++;
+        p.stock=Math.max(0,p.stock-sale);
+        addFloat(s.x+10,s.y-30,'+€'+revenue,P.green);
+      }
+    }
+    // Energy drain & recovery
+    s.energy=Math.max(20,s.energy-(s.busy>0?0.05:0.01));
+    if(s.energy<30) s.energy=Math.min(100,s.energy+0.1);
   }
 
-  requestAnimationFrame(loop);
+  // Customers
+  if(Math.random()<0.008*Math.max(1,staff.filter(s=>s.hired).length)) spawnCustomer();
+  for(let i=customers.length-1;i>=0;i--){
+    const c=customers[i];
+    c.fTimer++;
+    if(c.fTimer>10){c.frame=(c.frame+1)%2;c.fTimer=0;}
+    if(c.state==='walking'){
+      const dx=c.tx-c.x, dy=c.ty-c.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<3){c.state='browsing';c.timer=80+Math.random()*60;}
+      else{c.x+=dx/d*1.2;c.y+=dy/d*1.2;c.dir=dx<0?-1:1;}
+    } else if(c.state==='browsing'){
+      c.timer--;
+      if(c.timer<=0){
+        c.state='leaving';c.tx=650;c.ty=390;
+        if(c.satisfied){
+          satisfaction=Math.min(100,satisfaction+0.5);
+          customersToday++;
+        }
+      }
+    } else if(c.state==='leaving'){
+      const dx=c.tx-c.x,dy=c.ty-c.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<3) customers.splice(i,1);
+      else{c.x+=dx/d*1.5;c.y+=dy/d*1.5;c.dir=dx<0?-1:1;}
+    }
+  }
+
+  // Floating numbers
+  for(let i=floats.length-1;i>=0;i--){
+    floats[i].y+=floats[i].vy; floats[i].life--;
+    if(floats[i].life<=0) floats.splice(i,1);
+  }
+
+  // Weekly tick
+  if(weekTimer>=WEEK_TICKS){
+    weekTimer=0; week++;
+    // Pay salaries
+    const salaries=staff.filter(s=>s.hired).reduce((a,s)=>a+SALARY[s.role]*s.level,0);
+    money-=salaries; weekExpenses+=salaries;
+    addFloat(SHOP_X+SHOP_W/2,SHOP_Y+10,'-€'+salaries+' SALARIOS',P.red);
+    // Natural stock decay
+    for(const p of products) p.stock=Math.max(0,p.stock-Math.random()*5|0);
+    updateBars();
+    if(week>7){week=1;year++;customersToday=0;}
+    satisfaction=Math.max(10,satisfaction-2);
+    if(week===1){
+      if(weekRevenue>weekExpenses) showEvent(T().eventMsgs[6]);
+      weekRevenue=0; weekExpenses=0;
+    }
+    if(eventTimer===0&&Math.random()<0.3) showEvent(T().eventMsgs[Math.floor(Math.random()*T().eventMsgs.length)]);
+  }
+  if(eventTimer>0) eventTimer--;
+  updateBars();
 }
 
-// Init HUD with default (menu shows before lang is set)
-hudEl.textContent = '';
-controlsEl.textContent = '';
+// ── DRAW HELPERS ──────────────────────────────────────────────
+function r(x,y,w,h,c){cx.fillStyle=c;cx.fillRect(x|0,y|0,w,h);}
+function rx(x,y,w,h,c,lw=1){cx.strokeStyle=c;cx.lineWidth=lw;cx.strokeRect((x|0)+.5,(y|0)+.5,w-1,h-1);}
+function t2(s,x,y,c,sz=9,al='left'){
+  cx.fillStyle=c;cx.font=`${sz}px monospace`;cx.textAlign=al;
+  cx.fillText(s,x|0,y|0);cx.textAlign='left';
+}
+function glow(c,b=8){cx.shadowColor=c;cx.shadowBlur=b;}
+function noglow(){cx.shadowBlur=0;}
+function nline(x1,y1,x2,y2,c,lw=1){
+  glow(c,6);cx.strokeStyle=c;cx.lineWidth=lw;
+  cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();noglow();
+}
+function nt(s,x,y,c,sz=12){
+  glow(c,10);t2(s,x,y,c,sz,'center');noglow();
+}
 
+// ── SHOP LAYOUT ───────────────────────────────────────────────
+const SHOP_X=10, SHOP_Y=50, SHOP_W=620, SHOP_H=400;
+const UI_X=640, UI_W=155;
+
+// ── DRAW MENU ────────────────────────────────────────────────
+let menuStars=[];
+for(let i=0;i<100;i++) menuStars.push({x:Math.random()*W,y:Math.random()*H,b:Math.random(),r:Math.random()>.8?2:1});
+
+function drawMenu(){
+  r(0,0,W,H,P.bg);
+  cx.globalAlpha=0.2;
+  for(let x=0;x<W;x+=32){cx.strokeStyle=P.wall;cx.lineWidth=1;cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke();}
+  for(let y=0;y<H;y+=32){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke();}
+  cx.globalAlpha=1;
+  for(const s of menuStars){
+    cx.globalAlpha=.15+.25*Math.sin(tt*.02+s.b*10);
+    r(s.x,s.y,s.r,s.r,P.neon1);
+  }
+  cx.globalAlpha=1;
+  nline(0,6,W,6,P.neon2,3); nline(0,H-6,W,H-6,P.neon1,3);
+
+  const ty=H/2-100;
+  glow(P.neon3,20); t2(T().menuTitle,W/2,ty,P.neon3,72,'center'); noglow();
+  nt(T().menuSub,W/2,ty+50,P.neon1,12);
+  nline(W/2-160,ty+64,W/2+160,ty+64,P.neon2,1);
+
+  cx.globalAlpha=.5+.5*Math.abs(Math.sin(tt*.06));
+  nt(T().langPick,W/2,ty+90,P.neon2,13);
+  cx.globalAlpha=1;
+
+  const oy=ty+122, ow=170, oh=40, gap=24;
+  const sx=W/2-(ow*2+gap)/2;
+  [{label:T().langEs,sel:menuSel===0},{label:T().langEn,sel:menuSel===1}].forEach((o,i)=>{
+    const ox=sx+i*(ow+gap);
+    r(ox,oy,ow,oh,o.sel?'#001a12':'#0a0a1a');
+    rx(ox,oy,ow,oh,o.sel?P.neon1:P.gray,o.sel?2:1);
+    if(o.sel){glow(P.neon1,14);}
+    t2(o.label,ox+ow/2,oy+25,o.sel?P.neon1:P.gray,13,'center');
+    noglow();
+    if(o.sel) nt('▶',ox-16,oy+25,P.neon1,12);
+  });
+  cx.globalAlpha=.4+.6*Math.abs(Math.sin(tt*.04));
+  nt(T().startBtn,W/2,oy+58,P.neon3,10);
+  cx.globalAlpha=1;
+  cx.globalAlpha=.3;
+  t2('← →',W/2-12,oy+74,P.gray,9,'center');
+  cx.globalAlpha=1;
+
+  // Mini pixel art character preview
+  drawChibi(W/2-80,oy+110,1,P.shirt1,P.hair1,0,false,tt);
+  drawChibi(W/2-40,oy+108,1,P.shirt2,P.hair2,0,false,tt);
+  drawChibi(W/2+0, oy+110,1,P.shirt3,P.hair3,0,false,tt);
+  drawChibi(W/2+40,oy+108,1,P.shirt4,P.hair4,0,false,tt);
+}
+
+// ── DRAW CHIBI CHARACTER ─────────────────────────────────────
+function drawChibi(x,y,dir,shirt,hair,frame,busy,tick){
+  cx.save();
+  if(dir===-1){cx.translate(x+10,0);cx.scale(-1,1);cx.translate(-x,0);}
+  // shadow
+  cx.globalAlpha=.25;
+  cx.beginPath();cx.ellipse(x+6,y+24,6,2,0,0,Math.PI*2);
+  cx.fillStyle='#000';cx.fill();cx.globalAlpha=1;
+  // legs
+  const lk=frame===0?0:2;
+  r(x+2,y+16,4,8+lk,P.pants); r(x+7,y+16,4,8-lk,P.pants);
+  r(x+2,y+23,4,2,P.shoes);    r(x+7,y+23,4,2,P.shoes);
+  // body
+  r(x+1,y+7,12,10,shirt);
+  // chest detail
+  r(x+4,y+9,5,3,'#ffffff22');
+  // arms
+  const ak=busy?(frame===0?-2:2):0;
+  r(x-2,y+8+ak,4,6,shirt); r(x+12,y+8-ak,4,6,shirt);
+  // head (big chibi head)
+  r(x+0,y-2,14,14,P.skin);
+  // hair
+  r(x+0,y-5,14,7,hair);
+  r(x-1,y-4,3,10,hair); r(x+12,y-4,3,10,hair);
+  // eyes
+  const blink=Math.floor(tick/80)%8===0;
+  r(x+2,y+3,3,blink?1:3,P.black); r(x+8,y+3,3,blink?1:3,P.black);
+  r(x+3,y+3,1,blink?0:1,P.white); r(x+9,y+3,1,blink?0:1,P.white);
+  // mouth
+  r(x+4,y+9,1,1,P.hair1); r(x+8,y+9,1,1,P.hair1);
+  cx.restore();
+}
+
+// ── DRAW SHOP FLOOR ───────────────────────────────────────────
+function drawShop(){
+  // Floor
+  r(SHOP_X,SHOP_Y,SHOP_W,SHOP_H,P.floor);
+  // Floor tiles
+  for(let tx=SHOP_X;tx<SHOP_X+SHOP_W;tx+=32){
+    for(let ty2=SHOP_Y;ty2<SHOP_Y+SHOP_H;ty2+=32){
+      const alt=(((tx-SHOP_X)/32+(ty2-SHOP_Y)/32)%2===0);
+      r(tx,ty2,31,31,alt?P.tile1:P.tile2);
+    }
+  }
+  // Walls
+  r(SHOP_X,SHOP_Y,SHOP_W,8,P.wall);
+  nline(SHOP_X,SHOP_Y,SHOP_X+SHOP_W,SHOP_Y,P.neon2,2);
+  nline(SHOP_X,SHOP_Y,SHOP_X,SHOP_Y+SHOP_H,P.neon1,1);
+  nline(SHOP_X+SHOP_W,SHOP_Y,SHOP_X+SHOP_W,SHOP_Y+SHOP_H,P.neon1,1);
+
+  // Ceiling neon
+  nline(SHOP_X+10,SHOP_Y+10,SHOP_X+SHOP_W-10,SHOP_Y+10,P.neon1,1);
+
+  // SIGN
+  r(220,SHOP_Y+16,200,28,'#1a002a');
+  glow(P.neon3,14);
+  rx(222,SHOP_Y+17,196,26,P.neon3,1);
+  t2('✦  XTANCO GENERIC  ✦',320,SHOP_Y+35,P.neon3,13,'center');
+  noglow();
+
+  drawCounter();
+  drawShelves();
+  drawLotteryDesk();
+  drawManagerDesk();
+  drawDoor();
+}
+
+function drawCounter(){
+  // Counter body (cashier station)
+  const cx2=120,cy=170,cw=140,ch=40;
+  r(cx2,cy,cw,ch,P.counter);
+  r(cx2,cy,cw,6,P.counterT);
+  nline(cx2,cy,cx2+cw,cy,P.neon1,2);
+  // Screen
+  r(cx2+8,cy+8,56,24,P.ui);
+  r(cx2+10,cy+10,52,20,'#001a0a');
+  t2(T().money+': €'+(money|0),cx2+12,cy+24,P.neon1,8);
+  // Glass display
+  r(cx2+70,cy+8,62,24,P.glass||'#002244');
+  for(let i=0;i<4;i++){
+    const pc=[P.prod1,P.prod2,P.prod3,P.prod4][i];
+    r(cx2+74+i*14,cy+12,10,16,pc);
+    r(cx2+74+i*14,cy+12,10,2,'#ffffff33');
+  }
+  // Label
+  glow(P.neon1,4);
+  t2(T().staffLabel[0],cx2+cw/2,cy-4,P.neon1,7,'center');
+  noglow();
+}
+
+function drawShelves(){
+  const sx=290,sy=80,sw=120,sh=280;
+  // Back panel
+  r(sx,sy,sw,sh,P.shelf);
+  r(sx,sy,4,sh,P.shelfT); r(sx+sw-4,sy,4,sh,P.shelfT);
+  // Shelf boards
+  const shelfYs=[sy+40,sy+100,sy+160,sy+220];
+  for(const y2 of shelfYs){
+    r(sx,y2,sw,8,P.shelf);
+    nline(sx,y2,sx+sw,y2,P.shelfT,2);
+    // Products on shelf
+    for(let i=0;i<6;i++){
+      const p=products[i%products.length];
+      const stk=p.stock/p.maxStock;
+      const ph=6+Math.floor(i*1.2)%8;
+      r(sx+6+i*18,y2-ph-2,13,ph,p.color);
+      r(sx+6+i*18,y2-ph-2,13,2,'#ffffff33');
+      // Stock indicator dot
+      r(sx+6+i*18+5,y2-ph-5,3,3,stk>0.5?P.green:stk>0.2?P.yellow:P.red);
+    }
+  }
+  nline(sx,sy,sx+sw,sy,P.shelfT,2);
+  glow(P.neon2,4);
+  t2(T().staffLabel[1],sx+sw/2,sy-4,P.neon2,7,'center');
+  noglow();
+}
+
+function drawLotteryDesk(){
+  const lx=430,ly=170,lw=100,lh=40;
+  r(lx,ly,lw,lh,'#1a1a00');
+  r(lx,ly,lw,5,P.neon3);
+  nline(lx,ly,lx+lw,ly,P.neon3,2);
+  // Screen
+  r(lx+6,ly+7,50,24,'#0a0a00');
+  const digs=String(Math.floor(tt/8)%99999).padStart(5,'0');
+  cx.globalAlpha=.9;
+  t2(digs,lx+8,ly+23,P.neon3,11);
+  cx.globalAlpha=1;
+  t2(T().staffLabel[2],lx+lw/2,ly-4,P.neon3,7,'center');
+  // Neon frame
+  glow(P.neon3,5); rx(lx,ly,lw,lh,P.neon3,1); noglow();
+}
+
+function drawManagerDesk(){
+  const mx=430,my=280,mw=100,mh=40;
+  r(mx,my,mw,mh,P.desk);
+  r(mx,my,mw,5,P.deskT);
+  nline(mx,my,mx+mw,my,P.neonB,2);
+  r(mx+6,my+7,50,24,P.ui);
+  r(mx+8,my+9,46,20,'#001020');
+  t2(T().yearLabel+' '+year,mx+10,my+21,P.neonB,8);
+  t2(T().weekLabel+' '+week,mx+10,my+30,P.neon1,7);
+  t2(T().staffLabel[3],mx+mw/2,my-4,P.neonB,7,'center');
+  glow(P.neonB,4); rx(mx,my,mw,mh,P.neonB,1); noglow();
+}
+
+function drawDoor(){
+  const dx=560,dy=280,dw=44,dh=140;
+  r(dx,dy,dw,dh,'#001122');
+  const off=(Math.sin(tt*.025)*4+4)|0;
+  r(dx+2,dy+2,dw/2-2-off,dh-4,'#002244');
+  r(dx+dw/2+off,dy+2,dw/2-2-off,dh-4,'#002244');
+  nline(dx,dy,dx+dw,dy,P.neon1,2);
+  nline(dx,dy+dh,dx+dw,dy+dh,P.neon1,1);
+  nline(dx,dy,dx,dy+dh,P.neon1,1);
+  nline(dx+dw,dy,dx+dw,dy+dh,P.neon1,1);
+  t2('IN/OUT',dx+dw/2,dy+dh/2+4,P.neon1,7,'center');
+}
+
+// ── DRAW STAFF ────────────────────────────────────────────────
+function drawStaff(){
+  for(const s of staff){
+    if(!s.hired) continue;
+    drawChibi(s.x,s.y,1,s.shirt,s.hair,s.animFrame,s.busy>0,tt);
+    // Name tag
+    t2(s.name,s.x+7,s.y-3,P.white,7,'center');
+    // Energy bar
+    r(s.x,s.y+25,14,3,'#111');
+    r(s.x,s.y+25,(14*(s.energy/100))|0,3,s.energy>50?P.green:s.energy>25?P.yellow:P.red);
+    // Level stars
+    for(let i=0;i<s.level;i++) t2('★',s.x-4+i*7,s.y+34,P.neon3,7);
+    // Speech bubble
+    if(s.bubbleTimer>0){
+      const msg=T().bubble[s.bubbleIdx]||'!';
+      const bw=msg.length*6+8, bh=14;
+      const bx=s.x+7-bw/2, by=s.y-22;
+      r(bx,by,bw,bh,'#ffffffee');
+      rx(bx,by,bw,bh,'#000',1);
+      t2(msg,bx+4,by+10,'#000',8);
+      // Tail
+      r(s.x+4,by+bh,4,4,'#ffffffee');
+    }
+  }
+}
+
+// ── DRAW CUSTOMERS ────────────────────────────────────────────
+function drawCustomers(){
+  for(const c of customers){
+    cx.save();
+    if(c.dir===-1){cx.translate(c.x+10,0);cx.scale(-1,1);cx.translate(-c.x,0);}
+    // tiny customer chibi (smaller)
+    const lk=c.frame===0?0:1;
+    r(c.x+2,c.y+12,3,6+lk,P.pants);
+    r(c.x+6,c.y+12,3,6-lk,P.pants);
+    r(c.x+1,c.y+5,9,8,c.color);
+    r(c.x+0,c.y-2,10,9,P.skin);
+    r(c.x+0,c.y-5,10,5,c.hair);
+    r(c.x+1,c.y+1,2,2,P.black);
+    r(c.x+6,c.y+1,2,2,P.black);
+    if(c.state==='browsing'&&c.satisfied){
+      r(c.x+2,c.y+6,1,1,P.neon3); r(c.x+6,c.y+6,1,1,P.neon3);
+    }
+    cx.restore();
+  }
+}
+
+// ── DRAW FLOATS ───────────────────────────────────────────────
+function drawFloats(){
+  for(const f of floats){
+    cx.globalAlpha=Math.min(1,f.life/20);
+    glow(f.color,6);
+    t2(f.txt,f.x,f.y,f.color,9,'center');
+    noglow();
+    cx.globalAlpha=1;
+  }
+}
+
+// ── DRAW TOP HUD ──────────────────────────────────────────────
+function drawHUD(){
+  r(0,0,W,46,P.ui);
+  nline(0,46,W,46,P.neon1,1);
+  // Money
+  glow(P.neon1,6);
+  t2('€ '+(money|0).toLocaleString(),12,30,P.neon1,16);
+  noglow();
+  // Date
+  t2(T().yearLabel+' '+year+'  '+T().weekLabel+' '+week,170,18,P.uiT2,9);
+  // Week progress bar
+  r(170,22,120,6,P.uiB);
+  r(170,22,(120*weekTimer/WEEK_TICKS)|0,6,P.neon3);
+  rx(170,22,120,6,P.gray,1);
+  // Satisfaction
+  t2(T().satisfaction,310,18,P.uiT3,8);
+  r(310,22,80,6,P.uiB);
+  r(310,22,(80*satisfaction/100)|0,6,satisfaction>70?P.green:satisfaction>40?P.yellow:P.red);
+  rx(310,22,80,6,P.gray,1);
+  // Fame
+  t2(T().fame,400,18,P.uiT3,8);
+  r(400,22,60,6,P.uiB);
+  r(400,22,(60*fame/100)|0,6,P.neon2);
+  rx(400,22,60,6,P.gray,1);
+  // Customers
+  t2(T().customers+': '+customersToday,470,30,P.uiT2,9);
+  // Stat bars top right
+  for(let i=0;i<4;i++){
+    const b=bars[i]; const bx=630+i*42, by=6;
+    r(bx,by,38,8,P.uiB);
+    r(bx,by,(38*b.val/100)|0,8,b.color);
+    rx(bx,by,38,8,P.gray,1);
+    t2(T().statLabels[i],bx+19,by+18,b.color,7,'center');
+  }
+}
+
+// ── DRAW EVENT MSG ────────────────────────────────────────────
+function drawEvent(){
+  if(!eventMsg||eventTimer<=0) return;
+  const ew=260,eh=28,ex=SHOP_X+SHOP_W/2-ew/2,ey=SHOP_Y+20;
+  r(ex,ey,ew,eh,'#000000cc');
+  glow(P.neon3,8); rx(ex,ey,ew,eh,P.neon3,1); noglow();
+  t2('⚡ '+eventMsg,ex+ew/2,ey+18,P.neon3,10,'center');
+}
+
+// ── DRAW UI PANEL ─────────────────────────────────────────────
+function drawUI(){
+  Object.keys(BTN_DEFS).forEach(k=>delete BTN_DEFS[k]);
+  r(UI_X,0,UI_W,H,P.ui);
+  nline(UI_X,0,UI_X,H,P.neon1,1);
+
+  // Tabs
+  const tabs=T().tabs;
+  const tw=UI_W/4;
+  for(let i=0;i<4;i++){
+    const tx=UI_X+i*tw;
+    r(tx,46,tw,18,i===activeTab?P.uiH:P.uiB);
+    if(i===activeTab) nline(tx,64,tx+tw,64,P.neon1,2);
+    t2(tabs[i].slice(0,3),tx+tw/2,60,i===activeTab?P.neon1:P.uiT3,7,'center');
+    BTN_DEFS['tab'+i]={x:tx,y:46,w:tw,h:18};
+  }
+  nline(UI_X,64,UI_X+UI_W,64,P.gray,1);
+
+  const py=70;
+  if(activeTab===0) drawTabSales(py);
+  if(activeTab===1) drawTabStaff(py);
+  if(activeTab===2) drawTabStock(py);
+  if(activeTab===3) drawTabStore(py);
+}
+
+function btn(id,x,y,w,h,label,color,enabled=true){
+  const bg=enabled?P.btn:'#0a0a0a';
+  const tc=enabled?color:P.gray;
+  r(x,y,w,h,bg);
+  glow(enabled?color:P.gray,enabled?4:0);
+  rx(x,y,w,h,tc,1);
+  t2(label,x+w/2,y+h/2+4,tc,8,'center');
+  noglow();
+  if(enabled) BTN_DEFS[id]={x,y,w,h};
+}
+
+function drawTabSales(py){
+  t2(T().revenue,UI_X+6,py+10,P.uiT3,8);
+  glow(P.green,4);
+  t2('€ '+weekRevenue.toFixed(0),UI_X+6,py+24,P.green,13);
+  noglow();
+  t2(T().expenses,UI_X+6,py+40,P.uiT3,8);
+  glow(P.red,4);
+  t2('€ '+weekExpenses.toFixed(0),UI_X+6,py+54,P.red,13);
+  noglow();
+  t2(T().net,UI_X+6,py+70,P.uiT3,8);
+  const net=weekRevenue-weekExpenses;
+  glow(net>=0?P.green:P.red,4);
+  t2((net>=0?'+':'')+'€ '+net.toFixed(0),UI_X+6,py+84,net>=0?P.green:P.red,13);
+  noglow();
+  nline(UI_X+4,py+96,UI_X+UI_W-4,py+96,P.gray,1);
+
+  // Stat bars
+  for(let i=0;i<4;i++){
+    const b=bars[i];
+    t2(T().statLabels[i],UI_X+6,py+106+i*28,b.color,8);
+    r(UI_X+6,py+110+i*28,UI_W-12,8,P.uiB);
+    r(UI_X+6,py+110+i*28,((UI_W-12)*b.val/100)|0,8,b.color);
+    rx(UI_X+6,py+110+i*28,UI_W-12,8,P.gray,1);
+    t2(b.val+'%',UI_X+UI_W-6,py+118+i*28,b.color,7,'right');
+  }
+
+  btn('advert',UI_X+6,py+222,UI_W-12,20,T().advertBtn+' -€'+ADVERT_COST,P.neon2,money>=ADVERT_COST);
+}
+
+function drawTabStaff(py){
+  for(let i=0;i<4;i++){
+    const s=staff[i];
+    const ry=py+i*100;
+    r(UI_X+4,ry,UI_W-8,92,s.hired?P.uiH:'#0d0d1a');
+    rx(UI_X+4,ry,UI_W-8,92,s.hired?P.neon1:P.gray,1);
+    // Mini chibi
+    if(s.hired) drawChibi(UI_X+8,ry+30,-1,s.shirt,s.hair,s.animFrame,s.busy>0,tt);
+    // Info
+    const tx2=UI_X+34;
+    t2(s.hired?s.name:T().noStaff,tx2,ry+14,s.hired?P.white:P.gray,8);
+    t2(T().staffLabel[s.role],tx2,ry+26,P.uiT3,7);
+    if(s.hired){
+      // Level stars
+      for(let l=0;l<s.level;l++) t2('★',tx2+l*9,ry+38,P.neon3,8);
+      // Energy
+      r(tx2,ry+42,UI_W-12-28,5,P.uiB);
+      r(tx2,ry+42,((UI_W-12-28)*s.energy/100)|0,5,s.energy>50?P.green:P.yellow);
+      rx(tx2,ry+42,UI_W-12-28,5,P.gray,1);
+      btn('train'+i,tx2,ry+52,UI_W-12-28,18,T().trainBtn+' LVL '+(s.level+1)+' -€'+TRAIN_COST[i],P.neonB,money>=TRAIN_COST[i]&&s.level<5);
+      t2('💰€'+SALARY[i]*s.level+'/sem',tx2,ry+82,P.red,7);
+    } else {
+      btn('hire'+i,tx2,ry+40,UI_W-12-28,18,T().hireBtn+' -€'+HIRE_COST[i],P.neon1,money>=HIRE_COST[i]);
+    }
+  }
+}
+
+function drawTabStock(py){
+  for(let i=0;i<6;i++){
+    const p=products[i];
+    const ry=py+i*64;
+    const stk=p.stock/p.maxStock;
+    r(UI_X+4,ry,UI_W-8,56,P.uiB);
+    rx(UI_X+4,ry,UI_W-8,56,P.gray,1);
+    // Color swatch
+    r(UI_X+8,ry+4,12,12,p.color);
+    t2(T().productLabel[i],UI_X+24,ry+14,P.white,8);
+    t2('€'+p.price+'/u',UI_X+24,ry+24,P.uiT3,7);
+    // Stock bar
+    r(UI_X+6,ry+30,UI_W-12,8,P.uiB);
+    r(UI_X+6,ry+30,((UI_W-12)*stk)|0,8,stk>0.5?P.green:stk>0.2?P.yellow:P.red);
+    rx(UI_X+6,ry+30,UI_W-12,8,P.gray,1);
+    t2(p.stock+'/'+p.maxStock,UI_X+UI_W-6,ry+37,P.uiT3,7,'right');
+    btn('rest'+i,UI_X+6,ry+40,UI_W-12,14,'RESTOCK -€'+RESTOCK_COST,P.neonB,money>=RESTOCK_COST&&p.stock<p.maxStock);
+  }
+}
+
+function drawTabStore(py){
+  t2(T().upgradeBtn,UI_X+6,py+14,P.uiT2,9);
+  t2('-€ 3,000',UI_X+6,py+26,P.red,8);
+  btn('upgrade',UI_X+6,py+32,UI_W-12,20,'UPGRADE -€3000',P.neon1,money>=3000);
+  nline(UI_X+4,py+58,UI_X+UI_W-4,py+58,P.gray,1);
+
+  t2(T().advertBtn,UI_X+6,py+72,P.uiT2,9);
+  t2('-€ '+ADVERT_COST,UI_X+6,py+84,P.red,8);
+  btn('advert2',UI_X+6,py+90,UI_W-12,20,T().advertBtn,P.neon2,money>=ADVERT_COST);
+  BTN_DEFS['advert2']=BTN_DEFS['advert2']||undefined;
+  // reuse advert action
+  if(BTN_DEFS['advert2']) BTN_DEFS['advert']=BTN_DEFS['advert2'];
+
+  nline(UI_X+4,py+116,UI_X+UI_W-4,py+116,P.gray,1);
+
+  // Staff salary summary
+  t2('SALARIOS/SEM',UI_X+6,py+130,P.uiT3,8);
+  const total=staff.filter(s=>s.hired).reduce((a,s)=>a+SALARY[s.role]*s.level,0);
+  glow(P.red,4);
+  t2('€ '+total,UI_X+6,py+144,P.red,13);
+  noglow();
+
+  // Minimap
+  const mm={x:UI_X+6,y:py+164,w:UI_W-12,h:80};
+  r(mm.x,mm.y,mm.w,mm.h,P.bg);
+  rx(mm.x,mm.y,mm.w,mm.h,P.neon1,1);
+  t2('PLANTA',mm.x+mm.w/2,mm.y-3,P.neon1,7,'center');
+  // floor
+  r(mm.x+2,mm.y+mm.h-8,mm.w-4,6,P.floorL);
+  // objects
+  const mapObjs=[
+    {x:120,c:P.neon1,lbl:'CNT'},{x:290,c:P.neon2,lbl:'SHL'},
+    {x:430,c:P.neon3,lbl:'LOT'},{x:430,c:P.neonB,lbl:'MGR'},
+    {x:560,c:P.neon1,lbl:'OUT'}
+  ];
+  for(const o of mapObjs){
+    const mx2=mm.x+2+((o.x-SHOP_X)/SHOP_W)*(mm.w-4);
+    r(mx2,mm.y+mm.h-14,16,6,o.c);
+    t2(o.lbl,mx2+8,mm.y+mm.h-17,o.c,5,'center');
+  }
+  // customers on minimap
+  for(const c of customers){
+    r(mm.x+2+((c.x-SHOP_X)/SHOP_W)*(mm.w-4),mm.y+mm.h-20,3,3,c.color);
+  }
+}
+
+// ── DRAW GAME ────────────────────────────────────────────────
+function drawGame(){
+  r(0,0,W,H,'#050510');
+  drawShop();
+  drawCustomers();
+  drawStaff();
+  drawFloats();
+  drawEvent();
+  drawHUD();
+  drawUI();
+}
+
+// ── MAIN LOOP ─────────────────────────────────────────────────
+function loop(){
+  requestAnimationFrame(loop);
+  if(state==='menu'){
+    tt++;
+    cx.clearRect(0,0,W,H);
+    drawMenu();
+  } else {
+    updateGame();
+    cx.clearRect(0,0,W,H);
+    drawGame();
+  }
+}
 loop();
 </script>
 </body>
