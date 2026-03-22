@@ -53,7 +53,7 @@
 <canvas id="c" width="800" height="500"></canvas>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.10
+//  XTANCO DIGITAL TWIN — BETA v1.11
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -357,7 +357,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.10',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.11',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -407,7 +407,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.10',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.11',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2190,40 +2190,55 @@ function drawAltadisTFT(){
   for(let i=1;i<wallClipPts.length;i++) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y-ISO.wallH);
   for(let i=wallClipPts.length-1;i>=0;i--) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y);
   cx.closePath();cx.clip();
-  // 4 corners of the screen on the wall (between row 1.5→4.5)
-  // On the LEFT iso wall: row 4.5 is visually LEFT, row 1.5 is visually RIGHT
+  // Screen corners on left wall — SMALLER and centered (row 2→4 instead of 1.5→4.5)
   const ledEndY=ISO.wallH*0.3+20;
-  const pR=toIso(0,1.5); // wall point at row 1.5 (visually RIGHT)
-  const pL=toIso(0,4.5); // wall point at row 4.5 (visually LEFT)
-  // tl=top-left (visual), tr=top-right (visual), etc.
-  const tl={x:pL.x, y:pL.y-ISO.wallH+ledEndY+10};  // top-LEFT
-  const tr={x:pR.x, y:pR.y-ISO.wallH+ledEndY+10};  // top-RIGHT
-  const bl={x:pL.x, y:pL.y-10};                      // bottom-LEFT
-  const br={x:pR.x, y:pR.y-10};                      // bottom-RIGHT
+  const pR=toIso(0,2.0); // visually RIGHT (row 2)
+  const pL=toIso(0,4.0); // visually LEFT (row 4)
+  // Bezel corners (outer frame)
+  const bzTL={x:pL.x, y:pL.y-ISO.wallH+ledEndY+14};
+  const bzTR={x:pR.x, y:pR.y-ISO.wallH+ledEndY+14};
+  const bzBL={x:pL.x, y:pL.y-14};
+  const bzBR={x:pR.x, y:pR.y-14};
   // Draw bezel (black parallelogram)
   cx.beginPath();
-  cx.moveTo(tl.x-3,tl.y-3);cx.lineTo(tr.x-3,tr.y-3);
-  cx.lineTo(br.x+3,br.y+3);cx.lineTo(bl.x+3,bl.y+3);
+  cx.moveTo(bzTL.x,bzTL.y);cx.lineTo(bzTR.x,bzTR.y);
+  cx.lineTo(bzBR.x,bzBR.y);cx.lineTo(bzBL.x,bzBL.y);
   cx.closePath();cx.fillStyle='#1a1a1a';cx.fill();
-  // Screen (blue parallelogram)
+  cx.strokeStyle='#333';cx.lineWidth=1;cx.stroke();
+  // Screen corners (inner, with padding from bezel)
+  // Interpolate inward by ~8% on each edge
+  const pad=0.08;
+  const tl={
+    x:bzTL.x+(bzTR.x-bzTL.x)*pad+(bzBL.x-bzTL.x)*pad,
+    y:bzTL.y+(bzTR.y-bzTL.y)*pad+(bzBL.y-bzTL.y)*pad
+  };
+  const tr={
+    x:bzTR.x-(bzTR.x-bzTL.x)*pad+(bzBR.x-bzTR.x)*pad,
+    y:bzTR.y-(bzTR.y-bzTL.y)*pad+(bzBR.y-bzTR.y)*pad
+  };
+  const bl={
+    x:bzBL.x+(bzBR.x-bzBL.x)*pad-(bzBL.x-bzTL.x)*pad,
+    y:bzBL.y+(bzBR.y-bzBL.y)*pad-(bzBL.y-bzTL.y)*pad
+  };
+  const br={
+    x:bzBR.x-(bzBR.x-bzBL.x)*pad-(bzBR.x-bzTR.x)*pad,
+    y:bzBR.y-(bzBR.y-bzBL.y)*pad-(bzBR.y-bzTR.y)*pad
+  };
+  // Screen fill (dark blue)
   cx.beginPath();
   cx.moveTo(tl.x,tl.y);cx.lineTo(tr.x,tr.y);
   cx.lineTo(br.x,br.y);cx.lineTo(bl.x,bl.y);
-  cx.closePath();cx.fillStyle='#002244';cx.fill();
-  // Apply affine transform to map a virtual 100x100 rect → the parallelogram on the wall
+  cx.closePath();cx.fillStyle='#001833';cx.fill();
+  // Clip + affine transform: virtual 100×100 → screen parallelogram
   cx.save();
   cx.beginPath();
   cx.moveTo(tl.x,tl.y);cx.lineTo(tr.x,tr.y);
   cx.lineTo(br.x,br.y);cx.lineTo(bl.x,bl.y);
   cx.closePath();cx.clip();
-  // Virtual screen: 100 wide × 100 tall mapped to the parallelogram
-  // tl→(0,0) tr→(100,0) bl→(0,100) br→(100,100)
   const vW=100,vH=100;
-  // Affine transform: maps (0,0)→tl, (vW,0)→tr, (0,vH)→bl
   const ax=(tr.x-tl.x)/vW, ay=(tr.y-tl.y)/vW;
   const bx=(bl.x-tl.x)/vH, by=(bl.y-tl.y)/vH;
   cx.setTransform(ax,ay,bx,by,tl.x,tl.y);
-  // Now all draws use virtual coords (0,0)→(100,100) and are auto-skewed
   const cX=vW/2, cY=vH/2;
   const sH=vH;
 
@@ -2369,12 +2384,12 @@ function drawAltadisTFT(){
     cx.textAlign='left';
   }
   cx.restore(); // undo screen clip + transform
-  // Glare (back to normal coords)
-  cx.globalAlpha=0.04;cx.fillStyle='#fff';
-  cx.beginPath();cx.moveTo(tl.x,tl.y);cx.lineTo((tl.x+tr.x)/2,(tl.y+tr.y)/2);cx.lineTo(bl.x,(tl.y+bl.y)/2);cx.closePath();cx.fill();
+  // Glare on bezel
+  cx.globalAlpha=0.05;cx.fillStyle='#fff';
+  cx.beginPath();cx.moveTo(bzTL.x,bzTL.y);cx.lineTo((bzTL.x+bzTR.x)/2,(bzTL.y+bzTR.y)/2);cx.lineTo(bzBL.x,(bzTL.y+bzBL.y)/2);cx.closePath();cx.fill();
   cx.globalAlpha=1;
-  // Mount bracket
-  const mountX=(tl.x+tr.x)/2, mountY=(tl.y+tr.y)/2-4;
+  // Mount bracket (centered on bezel top edge)
+  const mountX=(bzTL.x+bzTR.x)/2, mountY=(bzTL.y+bzTR.y)/2-3;
   cx.fillStyle='#444';cx.fillRect(mountX-4,mountY,8,3);
   cx.restore();
 }
