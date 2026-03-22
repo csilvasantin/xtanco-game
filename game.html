@@ -53,7 +53,7 @@
 <canvas id="c" width="800" height="500"></canvas>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.9
+//  XTANCO DIGITAL TWIN — BETA v1.10
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -357,7 +357,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.9',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.10',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -407,7 +407,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.9',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.10',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1150,17 +1150,21 @@ function updateGame(){
     }
   }
 
-  // ── PARTY: Manager touches customer → show on Admira ──
-  if(G.staff&&G.staff[0]&&G.staff[0].hired&&G.custs){
-    const mgr=G.staff[0];
-    for(const c of G.custs){
-      const dx=mgr.x-c.x,dy=mgr.y-c.y;
-      if(Math.sqrt(dx*dx+dy*dy)<18){
-        if(!G.tftParty||G.tftParty<=0){
-          G.tftParty=180; // show PARTY for 3 seconds
-          addFloat(mgr.x,mgr.y-40,'🎉 PARTY!','#ff44cc');
+  // ── FIESTA: Any hired staff touches a customer → show on Admira ──
+  if(G.staff&&G.custs){
+    let partyTriggered=false;
+    for(const s of G.staff){
+      if(!s.hired||s.fired||partyTriggered) continue;
+      for(const c of G.custs){
+        const dx=s.x-c.x,dy=s.y-c.y;
+        if(Math.sqrt(dx*dx+dy*dy)<18){
+          if(!G.tftParty||G.tftParty<=0){
+            G.tftParty=180;
+            addFloat(s.x,s.y-40,'🎉 Fiesta!','#ff44cc');
+          }
+          partyTriggered=true;
+          break;
         }
-        break;
       }
     }
   }
@@ -2234,10 +2238,10 @@ function drawAltadisTFT(){
       cx.fillRect(cx2,cy2,4,4);
     }
     cx.textAlign='center';
-    cx.fillStyle='#ffffff';cx.font='bold 18px monospace';
-    cx.fillText('PARTY',cX,42);
+    cx.fillStyle='#ffffff';cx.font='bold 16px monospace';
+    cx.fillText('Fiesta',cX,42);
     cx.fillStyle='#ffee44';cx.font='bold 14px monospace';
-    cx.fillText('!!',cX,62);
+    cx.fillText('!!',cX,60);
     cx.fillStyle='#fff';cx.font='8px monospace';
     cx.fillText('🎉🎊🎉',cX,80);
     cx.textAlign='left';
