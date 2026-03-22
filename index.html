@@ -9,8 +9,9 @@
   <title>XTANCO — Digital Twin</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#1a1208;display:flex;align-items:center;justify-content:center;height:100vh;height:100dvh;width:100vw;font-family:monospace;overflow:hidden}
-    canvas{image-rendering:pixelated;display:block;max-width:100vw;max-height:100vh;max-height:100dvh;width:auto;height:auto}
+    html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:monospace}
+    body{display:flex;align-items:center;justify-content:center}
+    canvas{image-rendering:pixelated;display:block}
   </style>
 </head>
 <body>
@@ -26,14 +27,19 @@ const W=800,H=500;
 // ── RESPONSIVE FULLSCREEN ────────────────────────────────────
 function resizeCanvas(){
   const vw=window.innerWidth, vh=window.innerHeight;
-  const ratio=W/H; // 1.6
+  const ratio=W/H; // 800/500 = 1.6
   let cw,ch;
-  if(vw/vh > ratio){ ch=vh; cw=Math.floor(ch*ratio); }
-  else { cw=vw; ch=Math.floor(cw/ratio); }
+  if(vw/vh > ratio){
+    // Window is wider than canvas ratio → fit to height
+    ch=vh; cw=Math.floor(ch*ratio);
+  } else {
+    // Window is taller than canvas ratio → fit to width
+    cw=vw; ch=Math.floor(cw/ratio);
+  }
   cv.style.width=cw+'px';
   cv.style.height=ch+'px';
-  cv.style.maxWidth=cw+'px';
-  cv.style.maxHeight=ch+'px';
+  // Debug: log actual canvas display size
+  console.log('[resize]',vw+'x'+vh,'→ canvas:',cw+'x'+ch,'bottom bar at y:',Math.floor(ch*(H-32)/H));
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
@@ -2793,15 +2799,17 @@ function drawElgatoNotify(){
 // ── DRAW BOTTOM BAR (GDS style: Yr Sales | Yr Profit | Status | Menu) ──
 function drawBottomBar(){
   const bh=32, by=H-bh;
+  // BRIGHT RED DEBUG — remove after confirming visibility
+  r(0,by-4,W,4,'#ff0000');
   // Solid dark background — high contrast against game area
-  r(0,by,W,bh,'#181418');
+  r(0,by,W,bh,'#282030');
   // Bright top border
-  r(0,by,W,2,'#665533');
+  r(0,by,W,2,'#ffaa44');
 
-  // Save button (left)
-  r(4,by+6,44,22,'#443322');rx(4,by+6,44,22,'#aa8855',1.5);
-  tx('Save',26,by+20,'#eeddbb',9,'center');
-  BTNS['save']={x:4,y:by+6,w:44,h:22};
+  // Save button (left) — bright green
+  r(4,by+5,50,24,'#226622');rx(4,by+5,50,24,'#44ff44',2);
+  tx('SAVE',29,by+21,'#ffffff',10,'center');
+  BTNS['save']={x:4,y:by+5,w:50,h:24};
 
   // Yr Sales
   tx('Yr Sales',58,by+13,'#bbaa88',8);
@@ -2845,17 +2853,17 @@ function drawBottomBar(){
   const hasProject=G.staff.some(s=>s.hired&&s.busy>0);
   tx(hasProject?'Vendiendo...':'Idle',490,by+20,hasProject?'#88ee88':'#bbaa88',10);
 
-  // Editor button
-  const edX=W-110;
-  r(edX,by+6,50,22,'#2a2244');rx(edX,by+6,50,22,'#7766aa',1.5);
-  tx('✏ Edit',edX+25,by+20,'#ccbbee',8,'center');
-  BTNS['editor']={x:edX,y:by+6,w:50,h:22};
+  // Editor button — bright purple
+  const edX=W-120;
+  r(edX,by+5,54,24,'#442266');rx(edX,by+5,54,24,'#aa66ff',2);
+  tx('EDIT',edX+27,by+21,'#ffffff',10,'center');
+  BTNS['editor']={x:edX,y:by+5,w:54,h:24};
 
-  // Menu button (right)
-  const menX=W-52;
-  r(menX,by+6,46,22,'#443322');rx(menX,by+6,46,22,'#aa8855',1.5);
-  tx('Menu',menX+23,by+20,'#eeddbb',9,'center');
-  BTNS['menu']={x:menX,y:by+6,w:46,h:22};
+  // Menu button (right) — bright orange
+  const menX=W-58;
+  r(menX,by+5,52,24,'#664411');rx(menX,by+5,52,24,'#ffaa44',2);
+  tx('MENU',menX+26,by+21,'#ffffff',10,'center');
+  BTNS['menu']={x:menX,y:by+5,w:52,h:24};
 }
 
 // ── DRAW UI PANEL ─────────────────────────────────────────────
