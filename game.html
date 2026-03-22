@@ -53,7 +53,7 @@
 <canvas id="c" width="800" height="500"></canvas>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.16
+//  XTANCO DIGITAL TWIN — BETA v1.17
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -357,7 +357,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.16',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.17',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -407,7 +407,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.16',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.17',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1334,7 +1334,7 @@ let uiOpen=false; // toggle with Menu button
 const ISO={
   tileW:88,tileH:30,    // wide tiles filling 800px width
   cols:12,rows:6,        // wide grid
-  ox:300,oy:200,         // shifted left so right corner fits, wall tops at y=30
+  ox:270,oy:192,         // shifted left+up for extra tile margin on left and bottom
   wallH:170,             // tall Kairosoft walls
   doorCol:11,doorRow:3,  // door far right
 };
@@ -2119,20 +2119,22 @@ function drawGlassDoor(){
   cx.moveTo(doorTop.x,doorTop.y);cx.lineTo(doorBot.x,doorBot.y);
   cx.lineTo(doorBot.x,doorBot.y-doorH);cx.lineTo(doorTop.x,doorTop.y-doorH);
   cx.closePath();cx.stroke();
-  // XTANCO logo
-  const doorCx=(doorTop.x+doorBot.x)/2;
-  const doorCy=(doorTop.y+doorBot.y)/2-doorH*0.35;
-  const globeR=7,globeX=doorCx-8,globeY=doorCy-2;
+  // XTANCO logo on TOP glass panel only
+  const logoCx=doorTop.x+(doorBot.x-doorTop.x)*0.22;
+  const logoCy=(doorTop.y-doorH*0.5);
+  const globeR=6,globeX=logoCx-6,globeY=logoCy;
   cx.beginPath();cx.arc(globeX,globeY,globeR,0,Math.PI*2);
   const grd=cx.createRadialGradient(globeX-2,globeY-2,1,globeX,globeY,globeR);
   grd.addColorStop(0,'#88ddee');grd.addColorStop(0.5,'#4a99aa');grd.addColorStop(1,'#2a6677');
   cx.fillStyle=grd;cx.fill();cx.strokeStyle='#1a4455';cx.lineWidth=0.8;cx.stroke();
-  cx.strokeStyle='#aaeeff44';cx.lineWidth=0.6;
+  cx.strokeStyle='#aaeeff44';cx.lineWidth=0.5;
   cx.beginPath();cx.ellipse(globeX,globeY,globeR*0.7,globeR*0.3,0.3,0,Math.PI*2);cx.stroke();
-  cx.beginPath();cx.ellipse(globeX,globeY-2,globeR*0.5,globeR*0.2,-0.2,0,Math.PI*2);cx.stroke();
-  cx.fillStyle='#2a5566';cx.font='bold 7px monospace';cx.textAlign='left';
-  cx.fillText('XTANCO',globeX+globeR+3,globeY+3);
-  tx('OPEN',doorCx,doorCy+14,'#2a6644',7,'center');
+  cx.fillStyle='#1a4455';cx.font='bold 6px monospace';cx.textAlign='left';
+  cx.fillText('XTANCO',globeX+globeR+2,globeY+2);
+  // OPEN sign on bottom panel
+  const openCx=doorBot.x-(doorBot.x-doorTop.x)*0.25;
+  const openCy=(doorBot.y-doorH*0.25);
+  tx('OPEN',openCx,openCy,'#2a6644',7,'center');
 }
 
 // ── LED DISPLAY (on LEFT WALL, middle height) ────────────────
@@ -2921,11 +2923,11 @@ function drawHUD(){
   rx(dotX,10,50,6,'#4a3820',1);
   // Money (golden, euro after amount)
   tx((G.money|0).toLocaleString()+'€',218,19,'#ffdd66',14);
-  // People counter: camera + inside now + in/out
+  // People counter: camera + inside | entries | exits — all same size near money
   const insideNow=G.custs?G.custs.length:0;
-  tx('📷'+insideNow,430,19,'#88ccee',14);
-  tx('↓'+( G.custIn||0),480,12,'#66cc88',9);
-  tx('↑'+(G.custOut||0),480,24,'#cc8866',9);
+  tx('📷 '+insideNow,420,19,'#88ccee',13);
+  tx('🟢 '+(G.custIn||0),470,19,'#66ee88',13);
+  tx('🔴 '+(G.custOut||0),520,19,'#ee8866',13);
   // Ingresos Día
   const dayInc=G.sales.reduce((s,v)=>s+v,0);
   tx('Ing. Día',330,12,'#a09880',7);
@@ -2934,9 +2936,9 @@ function drawHUD(){
   const target=CFG.YEAR_TARGETS[G.year-1];
   const prog=Math.min(1,G.yearRevenue/target);
   const bc=prog>=1?P.green:prog>=0.7?'#ccaa44':'#88aa55';
-  tx('Fact.',520,12,'#a09880',7);
-  r(520,15,110,6,'#1a1208');r(520,15,(110*prog)|0,6,bc);rx(520,15,110,6,'#4a3820',1);
-  tx((G.yearRevenue|0).toLocaleString()+'/'+(target).toLocaleString()+'€',520,26,'#c0b898',7);
+  tx('Fact.',570,12,'#a09880',7);
+  r(570,15,90,6,'#1a1208');r(570,15,(90*prog)|0,6,bc);rx(570,15,90,6,'#4a3820',1);
+  tx((G.yearRevenue|0).toLocaleString()+'/'+(target).toLocaleString()+'€',570,26,'#c0b898',7);
   // Rush / Inspect badge (far right of top bar)
   if(G.rush.active){
     const f=Math.sin(tt*.08)>.0;
