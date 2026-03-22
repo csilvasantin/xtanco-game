@@ -10,12 +10,37 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:monospace}
-    body{display:flex;align-items:center;justify-content:center}
-    canvas{image-rendering:pixelated;display:block}
+    body{display:flex;flex-direction:column;align-items:center;justify-content:center}
+    canvas{image-rendering:pixelated;display:block;flex-shrink:1}
+    #bottomBar{display:none;width:100%;max-width:100vw;height:36px;background:#1a1620;border-top:2px solid #aa8844;flex-shrink:0;align-items:center;padding:0 6px;gap:4px;font-family:monospace;color:#bbaa88;font-size:11px;z-index:10}
+    #bottomBar.show{display:flex}
+    #bottomBar button{border:none;padding:4px 12px;border-radius:3px;font-family:monospace;font-size:11px;font-weight:bold;cursor:pointer}
+    #bottomBar .sep{width:1px;height:24px;background:#554433;flex-shrink:0}
+    #bottomBar .stat{display:flex;flex-direction:column;gap:1px}
+    #bottomBar .stat-label{font-size:8px;color:#998877}
+    #bottomBar .stat-val{font-size:12px;font-weight:bold}
+    .btn-save{background:#225522;color:#66ff66;border:1px solid #44cc44 !important}
+    .btn-edit{background:#332255;color:#bb88ff;border:1px solid #8866cc !important}
+    .btn-menu{background:#553311;color:#ffcc66;border:1px solid #cc9933 !important}
   </style>
 </head>
 <body>
 <canvas id="c" width="800" height="500"></canvas>
+<div id="bottomBar">
+  <button class="btn-save" id="btnSave">SAVE</button>
+  <div class="sep"></div>
+  <div class="stat"><span class="stat-label">Yr Sales</span><span class="stat-val" id="bbSales">0€</span></div>
+  <div class="sep"></div>
+  <div class="stat"><span class="stat-label">Yr Profit</span><span class="stat-val" id="bbProfit">0€</span></div>
+  <div class="sep"></div>
+  <div class="stat"><span class="stat-label">Sat</span><span class="stat-val" id="bbSat">0%</span></div>
+  <div class="sep"></div>
+  <div class="stat"><span class="stat-label">Clientes</span><span class="stat-val" id="bbCli">0</span></div>
+  <div class="sep"></div>
+  <span id="bbStatus" style="flex:1;text-align:center;color:#88cc88">Idle</span>
+  <button class="btn-edit" id="btnEdit">✏ EDIT</button>
+  <button class="btn-menu" id="btnMenu">MENU</button>
+</div>
 <script>
 // ═══════════════════════════════════════════════════════════════
 //  XTANCO DIGITAL TWIN — BETA v1.0
@@ -27,22 +52,43 @@ const W=800,H=500;
 // ── RESPONSIVE FULLSCREEN ────────────────────────────────────
 function resizeCanvas(){
   const vw=window.innerWidth, vh=window.innerHeight;
-  const ratio=W/H; // 800/500 = 1.6
+  const barH=document.getElementById('bottomBar').classList.contains('show')?38:0;
+  const availH=vh-barH;
+  const ratio=W/H;
   let cw,ch;
-  if(vw/vh > ratio){
-    // Window is wider than canvas ratio → fit to height
-    ch=vh; cw=Math.floor(ch*ratio);
-  } else {
-    // Window is taller than canvas ratio → fit to width
-    cw=vw; ch=Math.floor(cw/ratio);
-  }
+  if(vw/availH > ratio){ ch=availH; cw=Math.floor(ch*ratio); }
+  else { cw=vw; ch=Math.floor(cw/ratio); }
   cv.style.width=cw+'px';
   cv.style.height=ch+'px';
-  // Debug: log actual canvas display size
-  console.log('[resize]',vw+'x'+vh,'→ canvas:',cw+'x'+ch,'bottom bar at y:',Math.floor(ch*(H-32)/H));
+  const bb=document.getElementById('bottomBar');
+  if(bb) bb.style.width=cw+'px';
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
+
+// ── HTML BOTTOM BAR — wiring ─────────────────────────────────
+const bbEl=document.getElementById('bottomBar');
+document.getElementById('btnSave').onclick=()=>{if(G)doAction('save');};
+document.getElementById('btnEdit').onclick=()=>{if(G)doAction('editor');};
+document.getElementById('btnMenu').onclick=()=>{if(G)doAction('menu');};
+function updateHtmlBar(){
+  const show=state===S.GAME||state===S.PAUSE||state===S.EDITOR;
+  bbEl.classList.toggle('show',show);
+  if(!show||!G||!G.staff){resizeCanvas();return;}
+  const staff=G.staff||[];
+  const profit=G.yearRevenue-(staff.filter(s=>s.hired).reduce((a,s)=>a+(CFG.SALARY[s.role]||0)*s.level*(G.week||0),0));
+  document.getElementById('bbSales').textContent=(G.yearRevenue|0).toLocaleString()+'€';
+  const pe=document.getElementById('bbProfit');
+  pe.textContent=(profit|0).toLocaleString()+'€';
+  pe.style.color=profit>=0?'#66ee66':'#ee6666';
+  document.getElementById('bbSat').textContent=(G.satisfaction|0)+'%';
+  document.getElementById('bbCli').textContent=G.customersToday||0;
+  const hasProj=staff.some(s=>s.hired&&s.busy>0);
+  const se=document.getElementById('bbStatus');
+  se.textContent=hasProj?'Vendiendo...':'Idle';
+  se.style.color=hasProj?'#88ee88':'#bbaa88';
+  resizeCanvas();
+}
 // Mobile touch support
 document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 cv.addEventListener('touchstart',e=>{
@@ -3477,60 +3523,15 @@ function loop(){
   if(state===S.EDITOR){drawEditor();return;}
   if(state===S.SETTINGS){drawSettings();return;}
   if(state===S.PAUSE){
-    r(0,0,W,H,P.bg);drawCityBg();drawShop();drawShopChars();drawHUD();drawBottomBar();drawUI();
-    drawPause();return;
+    r(0,0,W,H,P.bg);drawCityBg();drawShop();drawShopChars();drawHUD();drawUI();
+    drawPause();updateHtmlBar();return;
   }
   // GAME
   if(demoMode) demoUpdate();
   updateGame();
   r(0,0,W,H,P.bg);
   drawCityBg();drawShop();drawShopChars();drawFloats();drawEvent();drawHUD();drawElgatoNotify();drawDemoBadge();drawUI();
-  // ── BOTTOM BAR — drawn LAST, INLINE, to guarantee visibility ──
-  if(G&&G.staff&&G.bars){
-    const _bh=32,_by=H-_bh;
-    cx.save();
-    cx.setTransform(1,0,0,1,0,0); // reset any transform
-    cx.globalAlpha=1;
-    cx.globalCompositeOperation='source-over';
-    cx.fillStyle='#282030';cx.fillRect(0,_by,W,_bh);
-    cx.fillStyle='#ffaa44';cx.fillRect(0,_by,W,2);
-    // Save button
-    cx.fillStyle='#226622';cx.fillRect(4,_by+5,50,24);
-    cx.strokeStyle='#44ff44';cx.lineWidth=2;cx.strokeRect(4,_by+5,50,24);
-    cx.fillStyle='#fff';cx.font='bold 10px monospace';cx.textAlign='center';
-    cx.fillText('SAVE',29,_by+21);
-    // Yr Sales
-    cx.textAlign='left';cx.fillStyle='#bbaa88';cx.font='8px monospace';
-    cx.fillText('Yr Sales',60,_by+13);
-    cx.fillStyle='#ffdd66';cx.font='10px monospace';
-    cx.fillText((G.yearRevenue|0)+'€',60,_by+26);
-    // Yr Profit
-    const _staff=G.staff||[];
-    const _profit=G.yearRevenue-(_staff.filter(s=>s.hired).reduce((a,s)=>a+(CFG.SALARY[s.role]||0)*s.level*(G.week||0),0));
-    cx.fillStyle='#bbaa88';cx.font='8px monospace';
-    cx.fillText('Yr Profit',170,_by+13);
-    cx.fillStyle=_profit>=0?'#66ee66':'#ee6666';cx.font='10px monospace';
-    cx.fillText((_profit|0)+'€',170,_by+26);
-    // Sat
-    cx.fillStyle='#bbaa88';cx.font='8px monospace';
-    cx.fillText('Sat '+(G.satisfaction|0)+'%',290,_by+13);
-    cx.fillText('Cli: '+(G.customersToday||0),290,_by+26);
-    // Edit button
-    cx.fillStyle='#442266';cx.fillRect(W-120,_by+5,54,24);
-    cx.strokeStyle='#aa66ff';cx.lineWidth=2;cx.strokeRect(W-120,_by+5,54,24);
-    cx.fillStyle='#fff';cx.font='bold 10px monospace';cx.textAlign='center';
-    cx.fillText('EDIT',W-93,_by+21);
-    // Menu button
-    cx.fillStyle='#664411';cx.fillRect(W-58,_by+5,52,24);
-    cx.strokeStyle='#ffaa44';cx.lineWidth=2;cx.strokeRect(W-58,_by+5,52,24);
-    cx.fillStyle='#fff';
-    cx.fillText('MENU',W-32,_by+21);
-    cx.textAlign='left';
-    cx.restore();
-    BTNS['save']={x:4,y:_by+5,w:50,h:24};
-    BTNS['editor']={x:W-120,y:_by+5,w:54,h:24};
-    BTNS['menu']={x:W-58,y:_by+5,w:52,h:24};
-  }
+  updateHtmlBar();
 }
 loop();
 </script>
