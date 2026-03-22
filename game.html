@@ -60,7 +60,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.36
+//  XTANCO DIGITAL TWIN — BETA v1.37
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -466,7 +466,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.36',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.37',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -516,7 +516,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.36',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.37',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1282,6 +1282,12 @@ function updateGame(){
   }
   // If manually turned off, intensity is 0 visually
   if(elgatoState.manualOff) lampIntensity=0;
+  // DJ strobe effect: lamp flashes on/off rapidly
+  const djOn=G.staff&&G.staff.some(st=>st.hired&&st.role===4);
+  if(djOn){
+    elgatoState.on=true;elgatoState.manualOff=false;
+    lampIntensity=Math.sin(tt*0.3)>0?100:10;
+  }
   G.lampIntensity=lampIntensity;
   // Auto-turn on lamp when intensity > 0 (only if not manually turned off)
   if(lampIntensity>0&&!elgatoState.on&&!elgatoState.manualOff){
@@ -3102,7 +3108,14 @@ function drawIsoStaff(s){
   // Level stars (golden)
   for(let i=0;i<s.level;i++){tx('★',s.x-3+i*8,s.y+38,'#cc9900',7);}
   // Speech bubble
-  if(s.bTimer>0){
+  const djActive=G&&G.staff&&G.staff.some(st=>st.hired&&st.role===4);
+  if(djActive){
+    // DJ mode: always show "Altadis Party!!" bubble
+    const msg='Altadis Party!!';
+    const bw=msg.length*6+8,bh=14,bx2=s.x+7-bw/2,by2=s.y-24;
+    r(bx2,by2,bw,bh,'#ff44ccdd');rx(bx2,by2,bw,bh,'#cc22aa',1);
+    tx(msg,bx2+4,by2+10,'#ffffff',8);r(s.x+4,by2+bh,4,4,'#ff44ccdd');
+  } else if(s.bTimer>0){
     const msg=T().bubble[s.bIdx]||'!';
     const bw=msg.length*6+8,bh=14,bx2=s.x+7-bw/2,by2=s.y-24;
     r(bx2,by2,bw,bh,'#ffffffe8');rx(bx2,by2,bw,bh,'#8a7a60',1);
