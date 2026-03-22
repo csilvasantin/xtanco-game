@@ -501,7 +501,8 @@ function initGame(){
     doorOpen:0,
     gameTime:shopTimeSettings.openHour,
     dayEnded:false,
-    lampIntensity:0, // 0-100% progressive lamp brightness
+    lampIntensity:0,
+    tftOgre:0, // timer: show ogre on TFT screen
   };
   // Staff from model — convert grid positions to isometric screen coords
   // Staff positions on the iso grid based on their role
@@ -763,9 +764,10 @@ function doAction(id){
   if(id==='visitDel'){
     const bonus=500+Math.floor(Math.random()*500);
     G.money+=bonus;G.fame=Math.min(100,G.fame+8);
-    showEv('🏛 Delegación: subvención €'+bonus+', +8 fama','#cc66aa');
-    addFloat(W/2,H/2-40,'+€'+bonus,'#cc66aa');
+    showEv('🏛 Delegación: subvención '+bonus+'€, +8 fama','#cc66aa');
+    addFloat(W/2,H/2-40,'+'+bonus+'€','#cc66aa');
     monitorAlert={active:true,timer:300,msg:'VISITA DELEGACIÓN',color:'#cc44aa'};
+    G.tftOgre=300; // show ogre on TFT for 5 seconds
     uiOpen=false;return;
   }
   if(id==='visitGC'){
@@ -1098,6 +1100,7 @@ function updateGame(){
   if(G.doorOpen>0) G.doorOpen--;
   if(monitorAlert.timer>0) monitorAlert.timer--;
   else monitorAlert.active=false;
+  if(G.tftOgre>0) G.tftOgre--;
   // Fired staff walks to door and leaves
   for(const s of G.staff){
     if(!s.fired) continue;
@@ -2044,28 +2047,96 @@ function drawAltadisTFT(){
   // Center of screen
   const cX=(tl.x+tr.x+bl.x+br.x)/4;
   const cY=(tl.y+tr.y+bl.y+br.y)/4;
-  const sH=bl.y-tl.y; // screen height
-  // Glow
-  cx.globalAlpha=0.06;
-  cx.beginPath();cx.ellipse(cX,cY,30,sH*0.3,0,0,Math.PI*2);
-  cx.fillStyle='#4488cc';cx.fill();cx.globalAlpha=1;
-  // Gold line top
-  cx.strokeStyle='#cc9933';cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(cX-25,cY-sH*0.3);cx.lineTo(cX+25,cY-sH*0.3);cx.stroke();
-  // ALTADIS
-  cx.fillStyle='#ffffff';cx.font='bold '+Math.max(8,Math.round(sH*0.2))+'px monospace';
-  cx.textAlign='center';
-  cx.fillText('ALTADIS',cX,cY-sH*0.08);
-  // DISTRIBUCIÓN
-  cx.fillStyle='#ccaa44';cx.font=Math.max(5,Math.round(sH*0.1))+'px monospace';
-  cx.fillText('DISTRIBUCIÓN',cX,cY+sH*0.08);
-  // Gold line bottom
-  cx.beginPath();cx.moveTo(cX-22,cY+sH*0.15);cx.lineTo(cX+22,cY+sH*0.15);cx.stroke();
-  // Tagline
-  cx.fillStyle='#8899bb';cx.font=Math.max(4,Math.round(sH*0.07))+'px monospace';
-  cx.fillText('Tu estanco',cX,cY+sH*0.28);
-  cx.fillText('de confianza',cX,cY+sH*0.36);
-  cx.textAlign='left';
+  const sH=bl.y-tl.y;
+
+  if(G&&G.tftOgre>0){
+    // ── OGRE PIXEL ART (Visita Delegación) ──
+    // Pink background
+    r(tl.x,tl.y,br.x-tl.x,sH,'#cc44aa');
+    // Ogre body (green character, original pixel art)
+    const ox=cX,oy=cY;
+    const sc=sH/80; // scale to fit screen
+    // Legs (brown pants)
+    cx.fillStyle='#8a6a30';
+    r(ox-8*sc,oy+14*sc,6*sc,12*sc,'#8a6a30');
+    r(ox+2*sc,oy+14*sc,6*sc,12*sc,'#8a6a30');
+    // Boots
+    cx.fillStyle='#3a2a18';
+    r(ox-9*sc,oy+25*sc,7*sc,4*sc,'#3a2a18');
+    r(ox+2*sc,oy+25*sc,7*sc,4*sc,'#3a2a18');
+    // Body (white tunic)
+    cx.fillStyle='#e8e0d0';
+    r(ox-10*sc,oy-2*sc,20*sc,18*sc,'#e8e0d0');
+    // Vest (brown)
+    cx.fillStyle='#6a4a28';
+    r(ox-10*sc,oy-2*sc,5*sc,16*sc,'#6a4a28');
+    r(ox+5*sc,oy-2*sc,5*sc,16*sc,'#6a4a28');
+    // Belt
+    r(ox-8*sc,oy+13*sc,16*sc,2*sc,'#5a3a18');
+    // Arms (green skin)
+    cx.fillStyle='#88aa22';
+    r(ox-14*sc,oy+0*sc,5*sc,12*sc,'#88aa22');
+    r(ox+9*sc,oy+0*sc,5*sc,12*sc,'#88aa22');
+    // Hands
+    r(ox-15*sc,oy-4*sc,6*sc,6*sc,'#88aa22');
+    r(ox+9*sc,oy-4*sc,6*sc,6*sc,'#88aa22');
+    // Fingers
+    r(ox-16*sc,oy-6*sc,2*sc,4*sc,'#88aa22');
+    r(ox-12*sc,oy-6*sc,2*sc,4*sc,'#88aa22');
+    r(ox+11*sc,oy-6*sc,2*sc,4*sc,'#88aa22');
+    r(ox+14*sc,oy-6*sc,2*sc,4*sc,'#88aa22');
+    // Head (green, big and round)
+    cx.fillStyle='#99bb33';
+    cx.beginPath();cx.ellipse(ox,oy-14*sc,12*sc,11*sc,0,0,Math.PI*2);cx.fill();
+    // Ears (tube-like ogre ears)
+    cx.fillStyle='#88aa22';
+    cx.beginPath();cx.ellipse(ox-13*sc,oy-14*sc,4*sc,3*sc,0.3,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.ellipse(ox+13*sc,oy-14*sc,4*sc,3*sc,-0.3,0,Math.PI*2);cx.fill();
+    // Eyebrows (brown, angry-ish)
+    cx.fillStyle='#5a4a20';
+    r(ox-8*sc,oy-20*sc,6*sc,2*sc,'#5a4a20');
+    r(ox+2*sc,oy-20*sc,6*sc,2*sc,'#5a4a20');
+    // Eyes (white + brown iris)
+    cx.fillStyle='#fff';
+    cx.beginPath();cx.ellipse(ox-5*sc,oy-15*sc,3*sc,3*sc,0,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.ellipse(ox+5*sc,oy-15*sc,3*sc,3*sc,0,0,Math.PI*2);cx.fill();
+    cx.fillStyle='#663311';
+    cx.beginPath();cx.arc(ox-4*sc,oy-15*sc,1.5*sc,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(ox+6*sc,oy-15*sc,1.5*sc,0,Math.PI*2);cx.fill();
+    // Nose (big, round)
+    cx.fillStyle='#7a9a22';
+    cx.beginPath();cx.ellipse(ox,oy-10*sc,3*sc,2.5*sc,0,0,Math.PI*2);cx.fill();
+    // Mouth (big smile)
+    cx.strokeStyle='#3a2a10';cx.lineWidth=1.5*sc;
+    cx.beginPath();cx.arc(ox,oy-6*sc,6*sc,0.2,Math.PI-0.2);cx.stroke();
+    // Teeth
+    cx.fillStyle='#fff';
+    r(ox-3*sc,oy-6*sc,2*sc,2*sc,'#fff');
+    r(ox+1*sc,oy-6*sc,2*sc,2*sc,'#fff');
+    // Text
+    cx.textAlign='center';
+    cx.fillStyle='#fff';cx.font='bold '+Math.max(5,Math.round(sH*0.1))+'px monospace';
+    cx.fillText('DELEGACIÓN',cX,cY+sH*0.42);
+    cx.textAlign='left';
+  } else {
+    // ── NORMAL ALTADIS SCREEN ──
+    // Glow
+    cx.globalAlpha=0.06;
+    cx.beginPath();cx.ellipse(cX,cY,30,sH*0.3,0,0,Math.PI*2);
+    cx.fillStyle='#4488cc';cx.fill();cx.globalAlpha=1;
+    cx.strokeStyle='#cc9933';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(cX-25,cY-sH*0.3);cx.lineTo(cX+25,cY-sH*0.3);cx.stroke();
+    cx.fillStyle='#ffffff';cx.font='bold '+Math.max(8,Math.round(sH*0.2))+'px monospace';
+    cx.textAlign='center';
+    cx.fillText('ALTADIS',cX,cY-sH*0.08);
+    cx.fillStyle='#ccaa44';cx.font=Math.max(5,Math.round(sH*0.1))+'px monospace';
+    cx.fillText('DISTRIBUCIÓN',cX,cY+sH*0.08);
+    cx.beginPath();cx.moveTo(cX-22,cY+sH*0.15);cx.lineTo(cX+22,cY+sH*0.15);cx.stroke();
+    cx.fillStyle='#8899bb';cx.font=Math.max(4,Math.round(sH*0.07))+'px monospace';
+    cx.fillText('Tu estanco',cX,cY+sH*0.28);
+    cx.fillText('de confianza',cX,cY+sH*0.36);
+    cx.textAlign='left';
+  }
   cx.restore(); // undo screen clip
   // Glare
   cx.globalAlpha=0.04;cx.fillStyle='#fff';
