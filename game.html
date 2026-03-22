@@ -53,7 +53,7 @@
 <canvas id="c" width="800" height="500"></canvas>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.12
+//  XTANCO DIGITAL TWIN — BETA v1.13
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -357,7 +357,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.12',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.13',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -407,7 +407,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.12',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.13',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1220,7 +1220,6 @@ function updateGame(){
         const qty=Math.max(1,(s.level*CFG.SALE_BASE*(0.7+Math.random()*0.6)*p.factor*mult)|0);
         const rev=qty*p.price;
         G.money+=rev;G.weekRevenue+=rev;G.yearRevenue+=rev;G.totalRevenue+=rev;
-        G.customersToday++;G.totalCustomers++;
         p.stock=Math.max(0,p.stock-Math.max(1,(qty/p.price)|0));
         addFloat(s.x+7,s.y-28,'€'+rev,P.green);
         if(G.rush.active) addFloat(s.x+7,s.y-16,'x'+CFG.RUSH_MULT.toFixed(1),P.rushGlow);
@@ -1309,6 +1308,7 @@ function spawnCust(){
     fr:0,ft:0,dir:-1
   });
   G.doorOpen=60; // open door for customer entering
+  G.customersToday++;G.totalCustomers++; // count when entering, not when buying
 }
 
 // ── DRAW HELPERS ──────────────────────────────────────────────
@@ -1334,7 +1334,7 @@ let uiOpen=false; // toggle with Menu button
 const ISO={
   tileW:88,tileH:30,    // wide tiles filling 800px width
   cols:12,rows:6,        // wide grid
-  ox:340,oy:198,         // shifted left to reduce right-side air
+  ox:290,oy:218,         // shifted left+down to fill screen better
   wallH:170,             // tall Kairosoft walls
   doorCol:11,doorRow:3,  // door far right
 };
