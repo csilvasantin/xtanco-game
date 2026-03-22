@@ -50,13 +50,14 @@
   <button class="btn-edit" id="btnEdit">✏ Edit</button>
   <button class="btn-menu" id="btnMenu">☰ Menu</button>
 </div>
+<audio id="bgMusic" loop preload="auto"><source src="music/titi.mp3" type="audio/mpeg"></audio>
 <canvas id="c" width="800" height="500"></canvas>
 <div id="videoMonitor" style="display:none;position:absolute;overflow:hidden;border:2px solid #333;border-radius:2px;background:#000;z-index:5;pointer-events:auto">
   <iframe id="ytPlayer" width="100%" height="100%" src="" frameborder="0" allow="autoplay" style="display:block"></iframe>
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.20
+//  XTANCO DIGITAL TWIN — BETA v1.21
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -78,6 +79,18 @@ function resizeCanvas(){
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
+
+// ── BACKGROUND MUSIC ─────────────────────────────────────────
+const bgMusic=document.getElementById('bgMusic');
+bgMusic.volume=0.3;
+let musicStarted=false;
+function startMusic(){
+  if(musicStarted) return;
+  bgMusic.play().then(()=>{musicStarted=true;}).catch(()=>{});
+}
+function toggleMusic(){
+  if(bgMusic.paused){bgMusic.play();} else {bgMusic.pause();}
+}
 
 // ── VIDEO MONITOR (YouTube embed on counter PC) ──────────────
 const YOUTUBE_VIDEOS={
@@ -422,7 +435,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.20',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.21',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -472,7 +485,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.20',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.21',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -809,8 +822,8 @@ document.addEventListener('keydown',e=>{
     if(e.code==='Digit4'){activeTab=3;uiOpen=true;}
     // L = toggle Elgato studio light
     if(e.code==='KeyL'){toggleStudioLight();}
-    // M = toggle video on counter monitor
-    if(e.code==='KeyM'){toggleVideoPause();}
+    // M = toggle background music + video
+    if(e.code==='KeyM'){toggleMusic();toggleVideoPause();}
     // Q/A/O/P move the manager — prevent default for those
     if(e.code==='KeyQ'||e.code==='KeyA'||e.code==='KeyO'||e.code==='KeyP'){
       e.preventDefault();
@@ -831,7 +844,7 @@ cv.addEventListener('click',e=>{
     }
     return;
   }
-  if(state===S.TUT){tutPage++;if(tutPage>=T().tut.length)state=S.GAME;return;}
+  if(state===S.TUT){tutPage++;if(tutPage>=T().tut.length){state=S.GAME;startMusic();}return;}
   if(state===S.PAUSE){state=S.GAME;return;}
   if(state===S.YEAR_END&&G.yearEndAnim>80){advanceYear();return;}
   if(state===S.GAME_END){state=S.MENU;menuSel=0;return;}
@@ -1002,8 +1015,8 @@ function doAction(id){
     lang=menuSel===0?'es':'en';initGame(modelSel);tutPage=0;state=S.TUT;return;
   }
   // ── Tutorial touch/click ──
-  if(id==='tutNext'){tutPage++;if(tutPage>=T().tut.length){state=S.GAME;startVideo();}return;}
-  if(id==='skipTut'){state=S.GAME;startVideo();return;}
+  if(id==='tutNext'){tutPage++;if(tutPage>=T().tut.length){state=S.GAME;startVideo();startMusic();}return;}
+  if(id==='skipTut'){state=S.GAME;startVideo();startMusic();return;}
   if(id==='setOpenDown'){shopTimeSettings.openHour=Math.max(0,shopTimeSettings.openHour-1);return;}
   if(id==='setOpenUp'){shopTimeSettings.openHour=Math.min(shopTimeSettings.closeHour-1,shopTimeSettings.openHour+1);return;}
   if(id==='setCloseDown'){shopTimeSettings.closeHour=Math.max(shopTimeSettings.openHour+1,shopTimeSettings.closeHour-1);return;}
