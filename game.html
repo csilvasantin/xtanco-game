@@ -45,7 +45,7 @@
 <canvas id="c" width="800" height="500"></canvas>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.5
+//  XTANCO DIGITAL TWIN — BETA v1.6
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -330,7 +330,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.5',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.6',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -380,7 +380,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.5',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.6',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -778,8 +778,18 @@ function doAction(id){
     const s=G.staff[i];
     if(!s.hired&&G.money>=CFG.HIRE_COST[i]){
       G.money-=CFG.HIRE_COST[i];G.weekExpenses+=CFG.HIRE_COST[i];
-      s.hired=true;s.energy=100;s.morale=85;
+      s.hired=true;s.energy=100;s.morale=85;s.level=1;
       s.shirt=0;s.hair=3; // Altadis uniform: blue shirt, black hair
+      s.fired=false;s.fireBubble=false;s.clickBubble=0;s.isWalking=false;
+      // Reset position to their assigned station
+      const origStaff=MODELS[modelSel||0].staffInit[i];
+      if(origStaff){
+        const iso=toIso(origStaff.col||Math.floor(origStaff.x/60),origStaff.row||Math.floor(origStaff.y/60));
+        s.x=iso.x-7;s.y=iso.y-20;
+        if(s.gridCol!==undefined){s.gridCol=origStaff.col||5;s.gridRow=origStaff.row||3;}
+      }
+      // Door opens for arrival
+      G.doorOpen=60;
       showEv(T().events[5],P.neon1);addFloat(s.x,s.y-40,'+'+T().staffLabel[s.role],P.neon1);
     }
   }
