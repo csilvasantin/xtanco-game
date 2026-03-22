@@ -497,9 +497,17 @@ function initGame(){
   };
   // Staff from model — convert grid positions to isometric screen coords
   // Staff positions on the iso grid based on their role
+  // Staff positioned next to their assigned furniture:
+  // [0] Cajera → behind counter (col:1,row:1)
+  // [1] Repositor → behind revistero (col:9,row:3)
+  // [2] Azafata → near estantería (col:3,row:0)
+  // [3] Store Manager → behind escritorio (col:9,row:5)
   const staffGridPos=[
-    {col:5,row:3},{col:5,row:1},{col:8,row:1},{col:8,row:4},  // [0]=center of shop
-    {col:3,row:3},{col:2,row:1},{col:4,row:5},{col:10,row:2},
+    {col:2,row:1},  // [0] Cajera → next to counter
+    {col:8,row:3},  // [1] Repositor → next to revistero
+    {col:4,row:1},  // [2] Azafata → next to estantería
+    {col:8,row:5},  // [3] Store Manager → next to escritorio
+    {col:5,row:2},{col:3,row:4},{col:6,row:3},{col:7,row:1},  // extras
   ];
   G.staff=M.staffInit.map((s,i)=>{
     const gp=staffGridPos[i%staffGridPos.length];
