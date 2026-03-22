@@ -9,8 +9,8 @@
   <title>XTANCO — Digital Twin</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#2a2418;display:flex;align-items:center;justify-content:center;height:100vh;height:100dvh;width:100vw;font-family:monospace;overflow:hidden}
-    canvas{image-rendering:pixelated;display:block;object-fit:contain}
+    body{background:#1a1208;display:flex;align-items:center;justify-content:center;height:100vh;height:100dvh;width:100vw;font-family:monospace;overflow:hidden}
+    canvas{image-rendering:pixelated;display:block;max-width:100vw;max-height:100vh;max-height:100dvh;width:auto;height:auto}
   </style>
 </head>
 <body>
@@ -28,10 +28,12 @@ function resizeCanvas(){
   const vw=window.innerWidth, vh=window.innerHeight;
   const ratio=W/H; // 1.6
   let cw,ch;
-  if(vw/vh > ratio){ ch=vh; cw=ch*ratio; }
-  else { cw=vw; ch=cw/ratio; }
+  if(vw/vh > ratio){ ch=vh; cw=Math.floor(ch*ratio); }
+  else { cw=vw; ch=Math.floor(cw/ratio); }
   cv.style.width=cw+'px';
   cv.style.height=ch+'px';
+  cv.style.maxWidth=cw+'px';
+  cv.style.maxHeight=ch+'px';
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
@@ -561,6 +563,20 @@ function loadGame(){
 let activeTab=0;
 const keys={};
 const BTNS={};
+
+// ── DEMO MODE — auto-play after 5s idle ──────────────────────
+let lastInput=Date.now();
+let demoMode=false;
+let demoTimer=0;
+let demoActions=['menu','restock','hire','visit','move','menu_tab'];
+let demoActionIdx=0;
+function resetIdleTimer(){lastInput=Date.now();if(demoMode){demoMode=false;demoTimer=0;}}
+
+// Track all user input
+['keydown','mousedown','touchstart','mousemove'].forEach(ev=>{
+  document.addEventListener(ev,resetIdleTimer,{passive:true});
+});
+
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;
   if(state===S.MENU){
@@ -3317,13 +3333,105 @@ function drawEditor(){
   }
 }
 
+// ── DEMO AUTO-PLAY LOGIC ──────────────────────────────────────
+function demoUpdate(){
+  if(!demoMode) return;
+  demoTimer++;
+
+  // Every ~120 frames (~2 seconds) do an action
+  if(demoTimer%120!==0) return;
+
+  const phase=(demoTimer/120)|0;
+
+  if(state===S.MENU){
+    // Auto-start game: select first model and begin
+    if(phase<=2) doAction('start');
+    return;
+  }
+  if(state===S.MODEL_SEL){
+    doAction('model0');
+    return;
+  }
+  if(state===S.TUT){
+    doAction('skipTut');
+    return;
+  }
+
+  if(state!==S.GAME) return;
+
+  // Cycle through demo actions
+  const actionList=[
+    ()=>{ // Move manager around
+      if(G.staff&&G.staff[0]){
+        const dirs=[[0,-1],[0,1],[-1,0],[1,0]];
+        const d=dirs[(phase)%4];
+        const s=G.staff[0];
+        const nc=s.gridCol+d[0], nr=s.gridRow+d[1];
+        if(nc>=0&&nc<ISO.cols&&nr>=0&&nr<ISO.rows){
+          s.gridCol=nc;s.gridRow=nr;
+          const p=toIso(nc,nr);s.x=p.x-7;s.y=p.y-20;
+          s.dir=d[0]!==0?d[0]:s.dir;s.isWalking=true;s.aTimer=0;
+        }
+      }
+    },
+    ()=>{ // Open menu
+      if(!uiOpen){uiOpen=true;uiTab=0;}
+      else uiTab=(uiTab+1)%4;
+    },
+    ()=>{ // Restock if needed
+      for(let i=0;i<G.prods.length;i++){
+        if(G.prods[i].stock<G.prods[i].max*0.5&&G.money>=CFG.RESTOCK_COST){
+          doAction('rest'+i);break;
+        }
+      }
+    },
+    ()=>{ // Hire if can afford
+      for(let i=1;i<G.staff.length;i++){
+        if(!G.staff[i].hired&&G.money>=CFG.HIRE_COST[i]){
+          doAction('hire'+i);break;
+        }
+      }
+    },
+    ()=>{ // Show stock on Admira
+      const pi=phase%G.prods.length;
+      G.tftStockIdx=pi;G.tftStockTimer=180;
+    },
+    ()=>{ // Visit action
+      const visits=['visitCom','visitTec','visitDel','visitGC'];
+      doAction(visits[phase%4]);
+    },
+    ()=>{ // Close menu
+      if(uiOpen) uiOpen=false;
+    },
+  ];
+
+  actionList[phase%actionList.length]();
+}
+
+function drawDemoBadge(){
+  if(!demoMode) return;
+  const flash=Math.sin(tt*0.06)>0;
+  cx.globalAlpha=0.9;
+  r(W/2-60,4,120,20,flash?'#cc2222':'#881111');
+  rx(W/2-60,4,120,20,'#ff4444',1);
+  tx('▶ DEMO MODE',W/2,17,'#ffffff',10,'center');
+  cx.globalAlpha=1;
+}
+
 function loop(){
   requestAnimationFrame(loop);
   tt++;
+
+  // Check idle → activate demo mode after 5 seconds
+  if(!demoMode&&Date.now()-lastInput>5000&&(state===S.MENU||state===S.GAME)){
+    demoMode=true;demoTimer=0;
+    // If in menu, auto-start
+  }
+
   cx.clearRect(0,0,W,H);
-  if(state===S.MENU){drawMenu();return;}
-  if(state===S.MODEL_SEL){drawModelSelect();return;}
-  if(state===S.TUT){drawTutorial();return;}
+  if(state===S.MENU){drawMenu();drawDemoBadge();if(demoMode)demoUpdate();return;}
+  if(state===S.MODEL_SEL){drawModelSelect();drawDemoBadge();if(demoMode)demoUpdate();return;}
+  if(state===S.TUT){drawTutorial();drawDemoBadge();if(demoMode)demoUpdate();return;}
   if(state===S.YEAR_END){drawYearEnd();return;}
   if(state===S.GAME_END){drawGameEnd();return;}
   if(state===S.EDITOR){drawEditor();return;}
@@ -3333,9 +3441,10 @@ function loop(){
     drawPause();return;
   }
   // GAME
+  if(demoMode) demoUpdate();
   updateGame();
   r(0,0,W,H,P.bg);
-  drawCityBg();drawShop();drawShopChars();drawFloats();drawEvent();drawHUD();drawElgatoNotify();drawBottomBar();drawUI();
+  drawCityBg();drawShop();drawShopChars();drawFloats();drawEvent();drawHUD();drawElgatoNotify();drawBottomBar();drawDemoBadge();drawUI();
 }
 loop();
 </script>
