@@ -1907,9 +1907,10 @@ function drawLED(scx,scy){
 
 // ── ALTADIS TFT (big screen below LED, centered on left wall) ─
 function drawAltadisTFT(){
-  // Span: centered on left wall (rows 1→5)
-  const tp1=toIso(0,1);
-  const tp2=toIso(0,5);
+  // Use bottom→top direction (same as LED) so text reads correctly
+  // tp1 = bottom of screen area, tp2 = top (below LED)
+  const tp1=toIso(0,5);   // bottom
+  const tp2=toIso(0,1.5); // top (below LED area)
   cx.save();
   // Clip to left wall
   const wallClipPts=[];
@@ -1919,67 +1920,74 @@ function drawAltadisTFT(){
   for(let i=1;i<wallClipPts.length;i++) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y-ISO.wallH);
   for(let i=wallClipPts.length-1;i>=0;i--) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y);
   cx.closePath();cx.clip();
-  // Follow wall angle
+  // Angle from tp1→tp2 (bottom to top = readable direction, same as LED)
   const angle=Math.atan2(tp2.y-tp1.y,tp2.x-tp1.x);
   const scrLen=Math.sqrt((tp2.x-tp1.x)**2+(tp2.y-tp1.y)**2);
-  // Position: starts right below LED (LED is at wallH*0.3 + ~16px)
-  const tftTop=tp1.y-ISO.wallH+Math.round(ISO.wallH*0.3)+20;
-  // Height: fill down to near the floor (~85% of remaining wall)
-  const tftH=Math.round((tp1.y-tftTop)*0.85);
-  cx.translate(tp1.x,tftTop);
+  // Y position: below LED (LED ends at wallH*0.3 + 16px from ceiling)
+  const ledBottom=ISO.wallH*0.3+20;
+  const tftTopY=tp1.y-ISO.wallH+ledBottom+6; // 6px gap below LED
+  // Height: from below LED to near floor
+  const floorY=tp1.y-8; // 8px above wall base
+  const tftH=Math.round(floorY-tftTopY);
+  if(tftH<20) {cx.restore();return;} // too small, skip
+  cx.translate(tp1.x,tftTopY);
   cx.rotate(angle);
   // Bezel (black frame)
-  r(-5,-5,scrLen+10,tftH+10,'#1a1a1a');
-  r(-3,-3,scrLen+6,tftH+6,'#222');
-  // Screen background (deep blue Altadis)
+  r(-4,-4,scrLen+8,tftH+8,'#1a1a1a');
+  r(-2,-2,scrLen+4,tftH+4,'#222');
+  // Screen background
   const scrGrad=cx.createLinearGradient(0,0,0,tftH);
   scrGrad.addColorStop(0,'#001833');
   scrGrad.addColorStop(0.5,'#002244');
   scrGrad.addColorStop(1,'#001830');
   cx.fillStyle=scrGrad;
   cx.fillRect(0,0,scrLen,tftH);
-  // Subtle radial glow in center
-  cx.globalAlpha=0.08;
-  cx.beginPath();cx.ellipse(scrLen/2,tftH/2,scrLen*0.4,tftH*0.4,0,0,Math.PI*2);
+  // Radial glow
+  cx.globalAlpha=0.06;
+  cx.beginPath();cx.ellipse(scrLen/2,tftH/2,scrLen*0.35,tftH*0.35,0,0,Math.PI*2);
   cx.fillStyle='#4488cc';cx.fill();
   cx.globalAlpha=1;
-  // Altadis logo — centered
+  // Content rotated 180° so text reads correctly on this wall angle
+  cx.save();
+  cx.translate(scrLen/2,tftH/2);
+  cx.rotate(Math.PI); // 180° flip
   cx.textAlign='center';
-  // Golden decorative line top
+  const hw=scrLen/2,hh2=tftH/2;
+  // Golden line top
   cx.strokeStyle='#cc9933';cx.lineWidth=1.5;
-  cx.beginPath();cx.moveTo(scrLen*0.15,tftH*0.2);cx.lineTo(scrLen*0.85,tftH*0.2);cx.stroke();
-  // ALTADIS text
-  cx.fillStyle='#ffffff';cx.font='bold '+Math.max(10,Math.round(tftH*0.22))+'px monospace';
-  cx.fillText('ALTADIS',scrLen/2,tftH*0.42);
-  // Subtitle
-  cx.fillStyle='#ccaa44';cx.font=Math.max(6,Math.round(tftH*0.1))+'px monospace';
-  cx.fillText('DISTRIBUCIÓN',scrLen/2,tftH*0.55);
-  // Golden decorative line bottom
+  cx.beginPath();cx.moveTo(-hw*0.7,-hh2*0.55);cx.lineTo(hw*0.7,-hh2*0.55);cx.stroke();
+  // ALTADIS
+  cx.fillStyle='#ffffff';cx.font='bold '+Math.max(8,Math.round(tftH*0.2))+'px monospace';
+  cx.fillText('ALTADIS',0,-hh2*0.15);
+  // DISTRIBUCIÓN
+  cx.fillStyle='#ccaa44';cx.font=Math.max(5,Math.round(tftH*0.1))+'px monospace';
+  cx.fillText('DISTRIBUCIÓN',0,hh2*0.05);
+  // Golden line bottom
   cx.strokeStyle='#cc9933';cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(scrLen*0.2,tftH*0.62);cx.lineTo(scrLen*0.8,tftH*0.62);cx.stroke();
+  cx.beginPath();cx.moveTo(-hw*0.6,hh2*0.2);cx.lineTo(hw*0.6,hh2*0.2);cx.stroke();
   // Tagline
-  cx.fillStyle='#8899bb';cx.font=Math.max(5,Math.round(tftH*0.08))+'px monospace';
-  cx.fillText('Tu estanco de confianza',scrLen/2,tftH*0.75);
-  // Animated scrolling dots at bottom (like a ticker)
-  const dotCount=8;
-  for(let i=0;i<dotCount;i++){
-    const dx=((tt*0.5+i*(scrLen/dotCount))%(scrLen+20))-10;
-    cx.globalAlpha=0.3+0.2*Math.sin(tt*0.03+i);
-    cx.beginPath();cx.arc(dx,tftH*0.88,2,0,Math.PI*2);
+  cx.fillStyle='#8899bb';cx.font=Math.max(4,Math.round(tftH*0.07))+'px monospace';
+  cx.fillText('Tu estanco de confianza',0,hh2*0.45);
+  // Dots
+  for(let i=0;i<6;i++){
+    const dx=((tt*0.4+i*(hw*2/6))%(hw*2+10))-hw;
+    cx.globalAlpha=0.25+0.2*Math.sin(tt*0.03+i);
+    cx.beginPath();cx.arc(dx,hh2*0.7,1.5,0,Math.PI*2);
     cx.fillStyle='#ccaa44';cx.fill();
   }
   cx.globalAlpha=1;
   cx.textAlign='left';
-  // Screen glare
+  cx.restore(); // undo 180° rotation
+  // Glare
   cx.globalAlpha=0.04;
-  cx.fillStyle='#ffffff';
-  cx.beginPath();cx.moveTo(0,0);cx.lineTo(scrLen*0.5,0);cx.lineTo(0,tftH*0.4);cx.closePath();cx.fill();
+  cx.fillStyle='#fff';
+  cx.beginPath();cx.moveTo(0,0);cx.lineTo(scrLen*0.4,0);cx.lineTo(0,tftH*0.3);cx.closePath();cx.fill();
   cx.globalAlpha=1;
-  // Outer bezel highlight
+  // Bezel edge
   cx.strokeStyle='#333';cx.lineWidth=0.5;
-  cx.strokeRect(-3,-3,scrLen+6,tftH+6);
-  // Wall mount
-  r(scrLen*0.35,-8,scrLen*0.3,4,'#444');
+  cx.strokeRect(-2,-2,scrLen+4,tftH+4);
+  // Mount
+  r(scrLen*0.35,-6,scrLen*0.3,3,'#444');
   cx.restore();
 }
 
