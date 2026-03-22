@@ -12,35 +12,37 @@
     html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:monospace}
     body{display:flex;flex-direction:column;align-items:center;justify-content:center}
     canvas{image-rendering:pixelated;display:block;flex-shrink:1}
-    #bottomBar{display:none;width:100%;max-width:100vw;height:36px;background:#1a1620;border-top:2px solid #aa8844;flex-shrink:0;align-items:center;padding:0 6px;gap:4px;font-family:monospace;color:#bbaa88;font-size:11px;z-index:10}
-    #bottomBar.show{display:flex}
-    #bottomBar button{border:none;padding:4px 12px;border-radius:3px;font-family:monospace;font-size:11px;font-weight:bold;cursor:pointer}
-    #bottomBar .sep{width:1px;height:24px;background:#554433;flex-shrink:0}
-    #bottomBar .stat{display:flex;flex-direction:column;gap:1px}
-    #bottomBar .stat-label{font-size:8px;color:#998877}
-    #bottomBar .stat-val{font-size:12px;font-weight:bold}
+    #topBar{display:none;width:100%;max-width:100vw;height:32px;background:#2a1e10;border-bottom:2px solid #4a3820;flex-shrink:0;align-items:center;padding:0 6px;gap:6px;font-family:monospace;color:#bbaa88;font-size:11px;z-index:10;order:-1}
+    #topBar.show{display:flex}
+    #topBar button{border:none;padding:3px 10px;border-radius:3px;font-family:monospace;font-size:10px;font-weight:bold;cursor:pointer}
+    #topBar .sep{width:1px;height:22px;background:#4a3820;flex-shrink:0}
+    #topBar .stat{display:flex;flex-direction:column;gap:0}
+    #topBar .stat-label{font-size:7px;color:#998877}
+    #topBar .stat-val{font-size:11px;font-weight:bold}
+    #topBar .spacer{flex:1}
     .btn-save{background:#225522;color:#66ff66;border:1px solid #44cc44 !important}
     .btn-edit{background:#332255;color:#bb88ff;border:1px solid #8866cc !important}
     .btn-menu{background:#553311;color:#ffcc66;border:1px solid #cc9933 !important}
   </style>
 </head>
 <body>
-<canvas id="c" width="800" height="500"></canvas>
-<div id="bottomBar">
-  <button class="btn-save" id="btnSave">SAVE</button>
+<div id="topBar">
+  <button class="btn-save" id="btnSave">💾</button>
   <div class="sep"></div>
-  <div class="stat"><span class="stat-label">Yr Sales</span><span class="stat-val" id="bbSales">0€</span></div>
+  <div class="stat"><span class="stat-label">Ventas</span><span class="stat-val" id="bbSales">0€</span></div>
   <div class="sep"></div>
-  <div class="stat"><span class="stat-label">Yr Profit</span><span class="stat-val" id="bbProfit">0€</span></div>
+  <div class="stat"><span class="stat-label">Beneficio</span><span class="stat-val" id="bbProfit">0€</span></div>
   <div class="sep"></div>
   <div class="stat"><span class="stat-label">Sat</span><span class="stat-val" id="bbSat">0%</span></div>
   <div class="sep"></div>
   <div class="stat"><span class="stat-label">Clientes</span><span class="stat-val" id="bbCli">0</span></div>
   <div class="sep"></div>
-  <span id="bbStatus" style="flex:1;text-align:center;color:#88cc88">Idle</span>
-  <button class="btn-edit" id="btnEdit">✏ EDIT</button>
-  <button class="btn-menu" id="btnMenu">MENU</button>
+  <span id="bbStatus" style="color:#88cc88;font-size:10px">Idle</span>
+  <div class="spacer"></div>
+  <button class="btn-edit" id="btnEdit">✏ Edit</button>
+  <button class="btn-menu" id="btnMenu">☰ Menu</button>
 </div>
+<canvas id="c" width="800" height="500"></canvas>
 <script>
 // ═══════════════════════════════════════════════════════════════
 //  XTANCO DIGITAL TWIN — BETA v1.0
@@ -52,7 +54,7 @@ const W=800,H=500;
 // ── RESPONSIVE FULLSCREEN ────────────────────────────────────
 function resizeCanvas(){
   const vw=window.innerWidth, vh=window.innerHeight;
-  const barH=document.getElementById('bottomBar').classList.contains('show')?38:0;
+  const barH=document.getElementById('topBar').classList.contains('show')?34:0;
   const availH=vh-barH;
   const ratio=W/H;
   let cw,ch;
@@ -60,14 +62,14 @@ function resizeCanvas(){
   else { cw=vw; ch=Math.floor(cw/ratio); }
   cv.style.width=cw+'px';
   cv.style.height=ch+'px';
-  const bb=document.getElementById('bottomBar');
-  if(bb) bb.style.width=cw+'px';
+  const tb=document.getElementById('topBar');
+  if(tb) tb.style.maxWidth=cw+'px';
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
 
 // ── HTML BOTTOM BAR — wiring ─────────────────────────────────
-const bbEl=document.getElementById('bottomBar');
+const bbEl=document.getElementById('topBar');
 document.getElementById('btnSave').onclick=()=>{if(G)doAction('save');};
 document.getElementById('btnEdit').onclick=()=>{if(G)doAction('editor');};
 document.getElementById('btnMenu').onclick=()=>{if(G)doAction('menu');};
