@@ -3,6 +3,14 @@
 > Machine-readable project reference for AI agents (Codex, GPT, Claude, etc.).
 > Single-file HTML5 Canvas game. No build step, no dependencies.
 
+## 1. 2. 3. Basic Priority
+
+1. Read `onboarding` and project context first.
+2. Preserve the digital twin direction and avoid random rewrites.
+3. End relevant work with HTML plus a public URL that can be checked.
+
+If `Nomeacuerd0` appears on a public page, treat it only as a light access barrier.
+
 ---
 
 ## 1. Project Overview
