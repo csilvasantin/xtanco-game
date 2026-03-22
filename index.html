@@ -564,16 +564,24 @@ let activeTab=0;
 const keys={};
 const BTNS={};
 
-// ── DEMO MODE — auto-play after 5s idle ──────────────────────
+// ── DEMO MODE — auto-play after 30s idle from menu ───────────
 let lastInput=Date.now();
 let demoMode=false;
 let demoTimer=0;
-let demoActions=['menu','restock','hire','visit','move','menu_tab'];
-let demoActionIdx=0;
-function resetIdleTimer(){lastInput=Date.now();if(demoMode){demoMode=false;demoTimer=0;}}
+const DEMO_IDLE_MS=30000; // 30 seconds idle before demo starts
+function resetIdleTimer(){
+  lastInput=Date.now();
+  if(demoMode){
+    demoMode=false;demoTimer=0;
+    // Return to menu if demo was running
+    if(state===S.GAME||state===S.MODEL_SEL||state===S.TUT){
+      state=S.MENU;
+    }
+  }
+}
 
 // Track all user input
-['keydown','mousedown','touchstart','mousemove'].forEach(ev=>{
+['keydown','mousedown','touchstart'].forEach(ev=>{
   document.addEventListener(ev,resetIdleTimer,{passive:true});
 });
 
@@ -2784,67 +2792,70 @@ function drawElgatoNotify(){
 
 // ── DRAW BOTTOM BAR (GDS style: Yr Sales | Yr Profit | Status | Menu) ──
 function drawBottomBar(){
-  const bh=30, by=H-bh;
-  r(0,by,W,bh,'#2a1e10');
-  cx.strokeStyle='#4a3820';cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(0,by+0.5);cx.lineTo(W,by+0.5);cx.stroke();
+  const bh=32, by=H-bh;
+  // Solid dark background — high contrast against game area
+  r(0,by,W,bh,'#181418');
+  // Bright top border
+  r(0,by,W,2,'#665533');
 
   // Save button (left)
-  r(4,by+4,44,22,'#3a2a18');rx(4,by+4,44,22,'#5a4830',1);
-  tx('Save',26,by+19,'#c0b898',9,'center');
-  BTNS['save']={x:4,y:by+4,w:44,h:22};
+  r(4,by+6,44,22,'#443322');rx(4,by+6,44,22,'#aa8855',1.5);
+  tx('Save',26,by+20,'#eeddbb',9,'center');
+  BTNS['save']={x:4,y:by+6,w:44,h:22};
 
   // Yr Sales
-  tx('Yr Sales',60,by+12,'#a09880',8);
-  tx('€'+(G.yearRevenue|0).toLocaleString(),60,by+24,'#ffdd66',10);
+  tx('Yr Sales',58,by+13,'#bbaa88',8);
+  tx((G.yearRevenue|0).toLocaleString()+'€',58,by+26,'#ffdd66',10);
 
   // Separator
-  cx.strokeStyle='#4a3820';cx.beginPath();cx.moveTo(165,by+4);cx.lineTo(165,by+bh-4);cx.stroke();
+  cx.strokeStyle='#554433';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(155,by+5);cx.lineTo(155,by+bh-3);cx.stroke();
 
   // Yr Profit
   const profit=G.yearRevenue-G.staff.filter(s=>s.hired).reduce((a,s)=>a+CFG.SALARY[s.role]*s.level*G.week,0);
-  tx('Yr Profit',175,by+12,'#a09880',8);
-  const profCol=profit>=0?'#66cc66':'#cc6666';
-  tx('€'+(profit|0).toLocaleString(),175,by+24,profCol,10);
+  tx('Yr Profit',165,by+13,'#bbaa88',8);
+  const profCol=profit>=0?'#66ee66':'#ee6666';
+  tx((profit|0).toLocaleString()+'€',165,by+26,profCol,10);
 
   // Separator
-  cx.beginPath();cx.moveTo(290,by+4);cx.lineTo(290,by+bh-4);cx.stroke();
+  cx.beginPath();cx.moveTo(275,by+5);cx.lineTo(275,by+bh-3);cx.stroke();
 
-  // Satisfaction + Fame compact
-  tx('Sat '+(G.satisfaction|0)+'%',300,by+12,'#a09880',8);
-  const satW=70;
-  r(300,by+16,satW,5,'#1a1208');
-  r(300,by+16,(satW*G.satisfaction/100)|0,5,G.satisfaction>70?'#55aa55':G.satisfaction>40?'#ccaa44':'#cc5555');
-  tx('Fame '+(G.fame|0)+'%',300,by+28,'#a09880',7);
+  // Satisfaction + Fame
+  tx('Sat '+(G.satisfaction|0)+'%',285,by+13,'#bbaa88',8);
+  const satW=60;
+  r(285,by+17,satW,5,'#0a0a0a');
+  r(285,by+17,(satW*G.satisfaction/100)|0,5,G.satisfaction>70?'#55cc55':G.satisfaction>40?'#ccaa44':'#cc5555');
+  tx('Fame '+(G.fame|0)+'%',285,by+28,'#bbaa88',7);
 
   // Separator
-  cx.beginPath();cx.moveTo(400,by+4);cx.lineTo(400,by+bh-4);cx.stroke();
+  cx.beginPath();cx.moveTo(380,by+5);cx.lineTo(380,by+bh-3);cx.stroke();
 
   // Customers today
-  tx(T().customers+': '+G.customersToday,410,by+12,'#a09880',8);
+  tx('Clientes: '+G.customersToday,390,by+13,'#bbaa88',8);
   // Stat bars mini
   for(let i=0;i<4;i++){
     const b=G.bars[i];
-    r(410+i*18,by+17,15,5,'#1a1208');r(410+i*18,by+17,(15*b.val/100)|0,5,b.col);
+    r(390+i*18,by+18,15,5,'#0a0a0a');r(390+i*18,by+18,(15*b.val/100)|0,5,b.col);
   }
 
   // Separator
-  cx.beginPath();cx.moveTo(500,by+4);cx.lineTo(500,by+bh-4);cx.stroke();
+  cx.beginPath();cx.moveTo(480,by+5);cx.lineTo(480,by+bh-3);cx.stroke();
 
-  // New Project / current status
+  // Status
   const hasProject=G.staff.some(s=>s.hired&&s.busy>0);
-  tx(hasProject?'Selling...':'Idle',515,by+18,hasProject?'#88cc88':'#c0b898',10);
+  tx(hasProject?'Vendiendo...':'Idle',490,by+20,hasProject?'#88ee88':'#bbaa88',10);
+
+  // Editor button
+  const edX=W-110;
+  r(edX,by+6,50,22,'#2a2244');rx(edX,by+6,50,22,'#7766aa',1.5);
+  tx('✏ Edit',edX+25,by+20,'#ccbbee',8,'center');
+  BTNS['editor']={x:edX,y:by+6,w:50,h:22};
 
   // Menu button (right)
   const menX=W-52;
-  r(menX,by+4,46,22,'#3a2a18');rx(menX,by+4,46,22,'#5a4830',1);
-  tx('Menu',menX+23,by+19,'#c0b898',9,'center');
-  BTNS['menu']={x:menX,y:by+4,w:46,h:22};
-  // Editor button
-  const edX=menX-54;
-  r(edX,by+4,50,22,'#2a2a3a');rx(edX,by+4,50,22,'#5a5a7a',1);
-  tx('✏️ Edit',edX+25,by+19,'#aaaacc',8,'center');
-  BTNS['editor']={x:edX,y:by+4,w:50,h:22};
+  r(menX,by+6,46,22,'#443322');rx(menX,by+6,46,22,'#aa8855',1.5);
+  tx('Menu',menX+23,by+20,'#eeddbb',9,'center');
+  BTNS['menu']={x:menX,y:by+6,w:46,h:22};
 }
 
 // ── DRAW UI PANEL ─────────────────────────────────────────────
@@ -3338,83 +3349,98 @@ function demoUpdate(){
   if(!demoMode) return;
   demoTimer++;
 
-  // Every ~120 frames (~2 seconds) do an action
-  if(demoTimer%120!==0) return;
-
-  const phase=(demoTimer/120)|0;
-
-  if(state===S.MENU){
-    // Auto-start game: select first model and begin
-    if(phase<=2) doAction('start');
-    return;
-  }
-  if(state===S.MODEL_SEL){
-    doAction('model0');
-    return;
-  }
-  if(state===S.TUT){
-    doAction('skipTut');
-    return;
-  }
-
+  // Phase 1: Auto-start game from menu (first 3 seconds)
+  if(state===S.MENU&&demoTimer>30){doAction('start');return;}
+  if(state===S.MODEL_SEL){doAction('model0');return;}
+  if(state===S.TUT){doAction('skipTut');return;}
   if(state!==S.GAME) return;
 
-  // Cycle through demo actions
-  const actionList=[
-    ()=>{ // Move manager around
-      if(G.staff&&G.staff[0]){
-        const dirs=[[0,-1],[0,1],[-1,0],[1,0]];
-        const d=dirs[(phase)%4];
-        const s=G.staff[0];
-        const nc=s.gridCol+d[0], nr=s.gridRow+d[1];
-        if(nc>=0&&nc<ISO.cols&&nr>=0&&nr<ISO.rows){
-          s.gridCol=nc;s.gridRow=nr;
-          const p=toIso(nc,nr);s.x=p.x-7;s.y=p.y-20;
-          s.dir=d[0]!==0?d[0]:s.dir;s.isWalking=true;s.aTimer=0;
-        }
-      }
+  // Every ~90 frames (~1.5 seconds) do an action
+  if(demoTimer%90!==0) return;
+  const phase=(demoTimer/90)|0;
+
+  // Cycle through actions — simulate a full day
+  const actions=[
+    // Move manager around the shop
+    ()=>{
+      if(!G.staff||!G.staff[0]) return;
+      const dirs=[[0,-1],[1,0],[0,1],[-1,0]];
+      const d=dirs[phase%4];
+      const s=G.staff[0];
+      const nc=Math.max(0,Math.min(ISO.cols-1,s.gridCol+d[0]));
+      const nr=Math.max(0,Math.min(ISO.rows-1,s.gridRow+d[1]));
+      s.gridCol=nc;s.gridRow=nr;
+      const p=toIso(nc,nr);s.x=p.x-7;s.y=p.y-20;
+      s.dir=d[0]||s.dir;s.isWalking=true;s.aTimer=0;
     },
-    ()=>{ // Open menu
+    // Open menu and browse tabs
+    ()=>{
       if(!uiOpen){uiOpen=true;uiTab=0;}
-      else uiTab=(uiTab+1)%4;
+      else{uiTab=(uiTab+1)%4;}
     },
-    ()=>{ // Restock if needed
+    // Restock low products
+    ()=>{
       for(let i=0;i<G.prods.length;i++){
         if(G.prods[i].stock<G.prods[i].max*0.5&&G.money>=CFG.RESTOCK_COST){
-          doAction('rest'+i);break;
+          doAction('rest'+i);return;
         }
       }
     },
-    ()=>{ // Hire if can afford
+    // Hire available staff
+    ()=>{
       for(let i=1;i<G.staff.length;i++){
         if(!G.staff[i].hired&&G.money>=CFG.HIRE_COST[i]){
-          doAction('hire'+i);break;
+          doAction('hire'+i);return;
         }
       }
     },
-    ()=>{ // Show stock on Admira
-      const pi=phase%G.prods.length;
-      G.tftStockIdx=pi;G.tftStockTimer=180;
+    // Show product on Admira screen
+    ()=>{
+      G.tftStockIdx=phase%G.prods.length;
+      G.tftStockTimer=150;
     },
-    ()=>{ // Visit action
-      const visits=['visitCom','visitTec','visitDel','visitGC'];
-      doAction(visits[phase%4]);
+    // Trigger visits
+    ()=>{
+      const v=['visitCom','visitTec','visitDel','visitGC'];
+      doAction(v[phase%4]);
     },
-    ()=>{ // Close menu
-      if(uiOpen) uiOpen=false;
+    // Close menu
+    ()=>{if(uiOpen) uiOpen=false;},
+    // Move again
+    ()=>{
+      if(!G.staff||!G.staff[0]) return;
+      const s=G.staff[0];
+      const nc=Math.max(0,Math.min(ISO.cols-1,s.gridCol+1));
+      s.gridCol=nc;
+      const p=toIso(nc,s.gridRow);s.x=p.x-7;s.y=p.y-20;
+      s.dir=1;s.isWalking=true;
     },
   ];
-
-  actionList[phase%actionList.length]();
+  actions[phase%actions.length]();
 }
 
 function drawDemoBadge(){
   if(!demoMode) return;
   const flash=Math.sin(tt*0.06)>0;
   cx.globalAlpha=0.9;
-  r(W/2-60,4,120,20,flash?'#cc2222':'#881111');
-  rx(W/2-60,4,120,20,'#ff4444',1);
-  tx('▶ DEMO MODE',W/2,17,'#ffffff',10,'center');
+  r(W/2-70,H-60,140,22,flash?'#cc2222':'#991111');
+  rx(W/2-70,H-60,140,22,'#ff4444',2);
+  tx('▶ MODO DEMO — Pulsa para jugar',W/2,H-46,'#ffffff',8,'center');
+  cx.globalAlpha=1;
+}
+
+// Countdown indicator on menu screen
+function drawDemoCountdown(){
+  if(demoMode||state!==S.MENU) return;
+  const elapsed=Date.now()-lastInput;
+  if(elapsed<DEMO_IDLE_MS*0.5) return; // only show after 50%
+  const pct=Math.min(1,(elapsed-DEMO_IDLE_MS*0.5)/(DEMO_IDLE_MS*0.5));
+  cx.globalAlpha=0.5*pct;
+  const barW=100;
+  r(W/2-barW/2,H-20,barW,4,'#333');
+  r(W/2-barW/2,H-20,barW*pct,4,'#cc8844');
+  cx.globalAlpha=0.4*pct;
+  tx('Demo en '+(Math.ceil((DEMO_IDLE_MS-elapsed)/1000))+'s',W/2,H-8,'#ccaa66',7,'center');
   cx.globalAlpha=1;
 }
 
@@ -3422,14 +3448,18 @@ function loop(){
   requestAnimationFrame(loop);
   tt++;
 
-  // Check idle → activate demo mode after 5 seconds
-  if(!demoMode&&Date.now()-lastInput>5000&&(state===S.MENU||state===S.GAME)){
+  // Check idle → activate demo mode after 30 seconds from MENU only
+  if(!demoMode&&state===S.MENU&&Date.now()-lastInput>DEMO_IDLE_MS){
     demoMode=true;demoTimer=0;
-    // If in menu, auto-start
   }
 
   cx.clearRect(0,0,W,H);
-  if(state===S.MENU){drawMenu();drawDemoBadge();if(demoMode)demoUpdate();return;}
+
+  if(state===S.MENU){
+    drawMenu();drawDemoCountdown();drawDemoBadge();
+    if(demoMode) demoUpdate();
+    return;
+  }
   if(state===S.MODEL_SEL){drawModelSelect();drawDemoBadge();if(demoMode)demoUpdate();return;}
   if(state===S.TUT){drawTutorial();drawDemoBadge();if(demoMode)demoUpdate();return;}
   if(state===S.YEAR_END){drawYearEnd();return;}
