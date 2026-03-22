@@ -1907,8 +1907,8 @@ function drawLED(scx,scy){
 
 // ── ALTADIS TFT (big screen below LED, centered on left wall) ─
 function drawAltadisTFT(){
-  // Screen between the two plants on the left wall (rows 1.5→4.5)
-  // Below LED banner, between plant at (0,0) and plant at (0,5)
+  // Draw as a flat parallelogram on the left wall, between the two plants
+  // Use 4 corner points calculated from iso positions on the wall
   cx.save();
   // Clip to left wall
   const wallClipPts=[];
@@ -1918,77 +1918,64 @@ function drawAltadisTFT(){
   for(let i=1;i<wallClipPts.length;i++) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y-ISO.wallH);
   for(let i=wallClipPts.length-1;i>=0;i--) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y);
   cx.closePath();cx.clip();
-
-  // Calculate LED bottom position on the wall
-  const ledStartPt=toIso(0,3); // center of LED span
-  const ledBottomOnWall=ledStartPt.y-ISO.wallH+Math.round(ISO.wallH*0.3)+20;
-
-  // TFT area: from rows 1.5→4.5 on the wall, Y starts below LED
-  const tftPtTop=toIso(0,1.5);
-  const tftPtBot=toIso(0,4.5);
-  const tftTopY=ledBottomOnWall+8; // 8px below LED
-  const tftBotY=tftPtBot.y-12;    // 12px above wall base (between plants)
-  const tftH=Math.max(20,tftBotY-tftTopY);
-
-  // Screen width follows the wall angle between rows 1.5→4.5
-  const scrLen=Math.sqrt((tftPtBot.x-tftPtTop.x)**2+(tftPtBot.y-tftPtTop.y)**2);
-  const angle=Math.atan2(tftPtBot.y-tftPtTop.y,tftPtBot.x-tftPtTop.x);
-
-  // Position at the TOP-LEFT corner of the screen on the wall
-  cx.translate(tftPtTop.x,tftTopY);
-  cx.rotate(angle);
-
-  // Bezel
-  r(-4,-4,scrLen+8,tftH+8,'#1a1a1a');
-  r(-2,-2,scrLen+4,tftH+4,'#222');
-  // Screen bg
-  const scrGrad=cx.createLinearGradient(0,0,0,tftH);
-  scrGrad.addColorStop(0,'#001833');
-  scrGrad.addColorStop(0.5,'#002244');
-  scrGrad.addColorStop(1,'#001830');
-  cx.fillStyle=scrGrad;
-  cx.fillRect(0,0,scrLen,tftH);
+  // 4 corners of the screen on the wall (between plants row 1→5)
+  // Top-left and top-right follow the wall at LED bottom + gap
+  const ledEndY=ISO.wallH*0.3+20; // LED bottom offset from ceiling
+  const pTL=toIso(0,1.5); // top-left wall position
+  const pBL=toIso(0,4.5); // bottom-left wall position
+  const tl={x:pTL.x, y:pTL.y-ISO.wallH+ledEndY+10};
+  const tr={x:pBL.x, y:pBL.y-ISO.wallH+ledEndY+10};
+  const bl={x:pTL.x, y:pTL.y-10};  // near wall base
+  const br={x:pBL.x, y:pBL.y-10};
+  // Draw bezel (black parallelogram)
+  cx.beginPath();
+  cx.moveTo(tl.x-3,tl.y-3);cx.lineTo(tr.x-3,tr.y-3);
+  cx.lineTo(br.x+3,br.y+3);cx.lineTo(bl.x+3,bl.y+3);
+  cx.closePath();cx.fillStyle='#1a1a1a';cx.fill();
+  // Screen (blue parallelogram)
+  cx.beginPath();
+  cx.moveTo(tl.x,tl.y);cx.lineTo(tr.x,tr.y);
+  cx.lineTo(br.x,br.y);cx.lineTo(bl.x,bl.y);
+  cx.closePath();cx.fillStyle='#002244';cx.fill();
+  // Clip text to screen shape
+  cx.save();
+  cx.beginPath();
+  cx.moveTo(tl.x,tl.y);cx.lineTo(tr.x,tr.y);
+  cx.lineTo(br.x,br.y);cx.lineTo(bl.x,bl.y);
+  cx.closePath();cx.clip();
+  // Center of screen
+  const cX=(tl.x+tr.x+bl.x+br.x)/4;
+  const cY=(tl.y+tr.y+bl.y+br.y)/4;
+  const sH=bl.y-tl.y; // screen height
   // Glow
   cx.globalAlpha=0.06;
-  cx.beginPath();cx.ellipse(scrLen/2,tftH/2,scrLen*0.3,tftH*0.3,0,0,Math.PI*2);
-  cx.fillStyle='#4488cc';cx.fill();
-  cx.globalAlpha=1;
-
-  // Text content — NO extra rotation needed, just draw normally
-  // The wall angle already makes it follow the wall perspective
-  cx.textAlign='center';
-  const cxM=scrLen/2;
-  // Gold line
+  cx.beginPath();cx.ellipse(cX,cY,30,sH*0.3,0,0,Math.PI*2);
+  cx.fillStyle='#4488cc';cx.fill();cx.globalAlpha=1;
+  // Gold line top
   cx.strokeStyle='#cc9933';cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(scrLen*0.1,tftH*0.18);cx.lineTo(scrLen*0.9,tftH*0.18);cx.stroke();
+  cx.beginPath();cx.moveTo(cX-25,cY-sH*0.3);cx.lineTo(cX+25,cY-sH*0.3);cx.stroke();
   // ALTADIS
-  cx.fillStyle='#ffffff';cx.font='bold '+Math.max(7,Math.round(tftH*0.25))+'px monospace';
-  cx.fillText('ALTADIS',cxM,tftH*0.42);
+  cx.fillStyle='#ffffff';cx.font='bold '+Math.max(8,Math.round(sH*0.2))+'px monospace';
+  cx.textAlign='center';
+  cx.fillText('ALTADIS',cX,cY-sH*0.08);
   // DISTRIBUCIÓN
-  cx.fillStyle='#ccaa44';cx.font=Math.max(5,Math.round(tftH*0.12))+'px monospace';
-  cx.fillText('DISTRIBUCIÓN',cxM,tftH*0.58);
-  // Gold line
-  cx.beginPath();cx.moveTo(scrLen*0.15,tftH*0.65);cx.lineTo(scrLen*0.85,tftH*0.65);cx.stroke();
+  cx.fillStyle='#ccaa44';cx.font=Math.max(5,Math.round(sH*0.1))+'px monospace';
+  cx.fillText('DISTRIBUCIÓN',cX,cY+sH*0.08);
+  // Gold line bottom
+  cx.beginPath();cx.moveTo(cX-22,cY+sH*0.15);cx.lineTo(cX+22,cY+sH*0.15);cx.stroke();
   // Tagline
-  cx.fillStyle='#8899bb';cx.font=Math.max(4,Math.round(tftH*0.09))+'px monospace';
-  cx.fillText('Tu estanco de confianza',cxM,tftH*0.8);
-  // Dots
-  for(let i=0;i<5;i++){
-    const dx=((tt*0.4+i*(scrLen/5))%(scrLen+10))-5;
-    cx.globalAlpha=0.25+0.15*Math.sin(tt*0.03+i);
-    cx.beginPath();cx.arc(dx,tftH*0.9,1.5,0,Math.PI*2);
-    cx.fillStyle='#ccaa44';cx.fill();
-  }
-  cx.globalAlpha=1;
+  cx.fillStyle='#8899bb';cx.font=Math.max(4,Math.round(sH*0.07))+'px monospace';
+  cx.fillText('Tu estanco',cX,cY+sH*0.28);
+  cx.fillText('de confianza',cX,cY+sH*0.36);
   cx.textAlign='left';
+  cx.restore(); // undo screen clip
   // Glare
-  cx.globalAlpha=0.04;
-  cx.fillStyle='#fff';
-  cx.beginPath();cx.moveTo(0,0);cx.lineTo(scrLen*0.4,0);cx.lineTo(0,tftH*0.3);cx.closePath();cx.fill();
+  cx.globalAlpha=0.04;cx.fillStyle='#fff';
+  cx.beginPath();cx.moveTo(tl.x,tl.y);cx.lineTo((tl.x+tr.x)/2,tl.y);cx.lineTo(bl.x,(tl.y+bl.y)/2);cx.closePath();cx.fill();
   cx.globalAlpha=1;
-  cx.strokeStyle='#333';cx.lineWidth=0.5;
-  cx.strokeRect(-2,-2,scrLen+4,tftH+4);
-  r(scrLen*0.35,-6,scrLen*0.3,3,'#444');
+  // Mount
+  const mx=(tl.x+tr.x)/2, my=tl.y-4;
+  r(mx-8,my,16,3,'#444');
   cx.restore();
 }
 
