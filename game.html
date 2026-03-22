@@ -60,7 +60,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.27
+//  XTANCO DIGITAL TWIN — BETA v1.28
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -467,7 +467,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.27',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.28',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -517,7 +517,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.27',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.28',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -580,15 +580,14 @@ let ledOffset=0;
 // Furniture layout — editable positions
 const DEFAULT_LAYOUT=[
   {id:'counter',type:'counter',col:1,row:2,sx:1,sy:1,label:'Mostrador+Caja+PC'},
-  {id:'shelves',type:'shelves',col:4,row:0,sx:1,sy:1,label:'Estantería'},
-  {id:'wineRack',type:'wineRack',col:8,row:0,sx:1,sy:1,label:'Botellero'},
-  {id:'lottery',type:'lottery',col:6,row:1,sx:1,sy:1,label:'Lotería'},
-  {id:'vending',type:'vending',col:10,row:2,sx:1,sy:1,label:'Vending'},
-  {id:'magazines',type:'magazines',col:3,row:3,sx:1,sy:1,label:'Revistero'},
-  {id:'manager',type:'manager',col:7,row:4,sx:1,sy:1,label:'Escritorio'},
-  {id:'plant1',type:'plant',col:0,row:0,sx:1,sy:1,label:'Planta 1'},
+  {id:'shelves',type:'shelves',col:4,row:1,sx:1,sy:1,label:'Estantería'},
+  {id:'wineRack',type:'wineRack',col:6,row:1,sx:1,sy:1,label:'Botellero'},
+  {id:'lottery',type:'lottery',col:7,row:2,sx:1,sy:1,label:'Lotería'},
+  {id:'vending',type:'vending',col:9,row:2,sx:1,sy:1,label:'Vending'},
+  {id:'magazines',type:'magazines',col:2,row:3,sx:1,sy:1,label:'Revistero'},
+  {id:'manager',type:'manager',col:5,row:4,sx:1,sy:1,label:'Escritorio'},
+  {id:'plant1',type:'plant',col:0,row:1,sx:1,sy:1,label:'Planta 1'},
   {id:'plant3',type:'plant',col:0,row:5,sx:1,sy:1,label:'Planta 2'},
-  {id:'rug',type:'rug',col:5,row:2,sx:1,sy:1,label:'Alfombra'},
   {id:'floorLamp',type:'floorLamp',col:10,row:5,sx:1,sy:1,label:'Lámpara pie'},
   {id:'led',type:'led',col:0,row:0,sx:1,sy:1,label:'LED Banner'},
 ];
@@ -646,10 +645,14 @@ function importLayout(file){
   };
   reader.readAsText(file);
 }
-// Try to load layout.json from server on first visit (fallback to localStorage)
-fetch('layout.json?_='+Date.now()).then(r=>{if(r.ok)return r.json();throw 0;})
-  .then(d=>{if(Array.isArray(d)&&d.length>0&&!localStorage.getItem('xtanco_layout')){shopLayout=d;saveLayout();}})
-  .catch(()=>{});
+// Layout version — when this changes, reset to new DEFAULT_LAYOUT
+const LAYOUT_VERSION='v1.28';
+const savedVer=localStorage.getItem('xtanco_layout_ver');
+if(savedVer!==LAYOUT_VERSION){
+  // New version: reset layout to updated defaults
+  localStorage.removeItem('xtanco_layout');
+  localStorage.setItem('xtanco_layout_ver',LAYOUT_VERSION);
+}
 loadLayout();
 
 // Convert screen coords to iso grid tile
