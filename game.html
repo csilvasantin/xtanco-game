@@ -20,6 +20,9 @@
     #topBar .stat-label{font-size:7px;color:#998877}
     #topBar .stat-val{font-size:11px;font-weight:bold}
     #topBar .spacer{flex:1}
+    .comp-box{display:flex;flex-direction:column;align-items:center;padding:1px 6px;border:1px solid;border-radius:3px;background:#0a0a14;min-width:42px}
+    .comp-name{font-size:6px;color:#888;text-transform:uppercase;letter-spacing:0.5px}
+    .comp-pct{font-size:10px;font-weight:bold;color:#eee}
     .btn-save{background:#225522;color:#66ff66;border:1px solid #44cc44 !important}
     .btn-edit{background:#332255;color:#bb88ff;border:1px solid #8866cc !important}
     .btn-menu{background:#553311;color:#ffcc66;border:1px solid #cc9933 !important}
@@ -38,6 +41,11 @@
   <div class="stat"><span class="stat-label">Clientes</span><span class="stat-val" id="bbCli">0</span></div>
   <div class="sep"></div>
   <span id="bbStatus" style="color:#88cc88;font-size:10px">Idle</span>
+  <div class="sep"></div>
+  <div class="comp-box" style="border-color:#1a3a6a"><span class="comp-name">Altadis</span><span class="comp-pct" id="compAlt">0%</span></div>
+  <div class="comp-box" style="border-color:#cc2222"><span class="comp-name">JTI</span><span class="comp-pct" id="compJTI">0%</span></div>
+  <div class="comp-box" style="border-color:#2266aa"><span class="comp-name">PM</span><span class="comp-pct" id="compPM">0%</span></div>
+  <div class="comp-box" style="border-color:#333399"><span class="comp-name">BAT</span><span class="comp-pct" id="compBAT">0%</span></div>
   <div class="spacer"></div>
   <button class="btn-edit" id="btnEdit">✏ Edit</button>
   <button class="btn-menu" id="btnMenu">☰ Menu</button>
@@ -45,7 +53,7 @@
 <canvas id="c" width="800" height="500"></canvas>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.7
+//  XTANCO DIGITAL TWIN — BETA v1.8
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -89,6 +97,25 @@ function updateHtmlBar(){
   const se=document.getElementById('bbStatus');
   se.textContent=hasProj?'Vendiendo...':'Idle';
   se.style.color=hasProj?'#88ee88':'#bbaa88';
+  // ── Competitor market share (simulated, fluctuates with game time) ──
+  if(G.gameTime){
+    const t=G.gameTime+G.week*12+G.year*52;
+    // Base shares: Altadis ~28%, JTI ~26%, PM ~25%, BAT ~21%
+    const a=28+3*Math.sin(t*0.13)+G.fame*0.05;
+    const j=26+2*Math.sin(t*0.17+1);
+    const p=25+2.5*Math.sin(t*0.11+2);
+    const b=21+2*Math.sin(t*0.15+3);
+    const total=a+j+p+b;
+    document.getElementById('compAlt').textContent=Math.round(a/total*100)+'%';
+    document.getElementById('compJTI').textContent=Math.round(j/total*100)+'%';
+    document.getElementById('compPM').textContent=Math.round(p/total*100)+'%';
+    document.getElementById('compBAT').textContent=Math.round(b/total*100)+'%';
+    // Highlight leader
+    const vals=[a,j,p,b];const maxV=Math.max(...vals);
+    ['compAlt','compJTI','compPM','compBAT'].forEach((id,i)=>{
+      document.getElementById(id).style.color=vals[i]===maxV?'#44ff88':'#cccccc';
+    });
+  }
   resizeCanvas();
 }
 // Mobile touch support
@@ -330,7 +357,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.7',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.8',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -380,7 +407,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.7',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.8',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
