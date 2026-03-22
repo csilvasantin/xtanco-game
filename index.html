@@ -2579,35 +2579,36 @@ function drawHUD(){
   r(0,0,W,hh,'#2a1e10');
   cx.strokeStyle='#4a3820';cx.lineWidth=1;
   cx.beginPath();cx.moveTo(0,hh-0.5);cx.lineTo(W,hh-0.5);cx.stroke();
-  // Year/Week (left)
-  // Show game clock + year/week
+  // Game clock + today's date
   const gh=Math.floor(G.gameTime),gm=Math.floor((G.gameTime%1)*60);
   const timeStr=String(gh).padStart(2,'0')+':'+String(gm).padStart(2,'0');
-  tx(timeStr+' · '+T().yearLbl+G.year+' '+T().weekLbl+G.week,8,19,'#b0a888',11);
+  const now=new Date();
+  const dateStr=String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
+  tx(timeStr+' · '+dateStr,8,19,'#b0a888',11);
   // Week progress dot
-  const dotX=108;
-  r(dotX,10,60,6,'#1a1208');
-  r(dotX,10,(60*G.weekTimer/CFG.WEEK_TICKS)|0,6,'#ccaa44');
-  rx(dotX,10,60,6,'#4a3820',1);
-  // Money (golden, prominent)
-  tx('€'+(G.money|0).toLocaleString(),180,19,'#ffdd66',14);
-  // Objective progress (right side of top bar)
+  const dotX=155;
+  r(dotX,10,50,6,'#1a1208');
+  r(dotX,10,(50*G.weekTimer/CFG.WEEK_TICKS)|0,6,'#ccaa44');
+  rx(dotX,10,50,6,'#4a3820',1);
+  // Money (golden, euro after amount)
+  tx((G.money|0).toLocaleString()+'€',218,19,'#ffdd66',14);
+  // Facturación + progress bar
   const target=CFG.YEAR_TARGETS[G.year-1];
   const prog=Math.min(1,G.yearRevenue/target);
   const bc=prog>=1?P.green:prog>=0.7?'#ccaa44':'#88aa55';
-  tx(T().objective,330,12,'#a09880',7);
-  // Rush / Inspect badge (far right of top bar, prominent)
+  tx('Facturación',350,12,'#a09880',7);
+  r(350,15,130,6,'#1a1208');r(350,15,(130*prog)|0,6,bc);rx(350,15,130,6,'#4a3820',1);
+  tx((G.yearRevenue|0).toLocaleString()+'€/'+(target).toLocaleString()+'€'+(prog>=1?' ✓':''),350,26,'#c0b898',7);
+  // Rush / Inspect badge (far right of top bar)
   if(G.rush.active){
     const f=Math.sin(tt*.08)>.0;
-    r(590,2,120,24,f?'#5a3000':'#4a2800');rx(590,2,120,24,'#ffaa44',2);
-    tx('⚡ HORA PUNTA ⚡',650,18,'#ffcc44',10,'center');
+    r(600,2,120,24,f?'#5a3000':'#4a2800');rx(600,2,120,24,'#ffaa44',2);
+    tx('⚡ HORA PUNTA ⚡',660,18,'#ffcc44',10,'center');
   }
   if(G.inspect.active&&G.inspect.timer>100){
-    r(590,2,120,24,'#4a0010');rx(590,2,120,24,'#ff6688',2);
-    tx('🔍 INSPECCIÓN',650,18,'#ff8899',10,'center');
+    r(600,2,120,24,'#4a0010');rx(600,2,120,24,'#ff6688',2);
+    tx('🔍 INSPECCIÓN',660,18,'#ff8899',10,'center');
   }
-  r(330,15,130,6,'#1a1208');r(330,15,(130*prog)|0,6,bc);rx(330,15,130,6,'#4a3820',1);
-  tx('€'+(G.yearRevenue|0).toLocaleString()+'/€'+target.toLocaleString()+(prog>=1?' ✓':''),330,26,'#c0b898',7);
 }
 
 // ── DRAW EVENT MSG ────────────────────────────────────────────
