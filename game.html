@@ -53,7 +53,7 @@
 <canvas id="c" width="800" height="500"></canvas>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.17
+//  XTANCO DIGITAL TWIN — BETA v1.18
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -139,6 +139,7 @@ let monitorAlert={active:false,timer:0,msg:'',color:''};
 // Day runs from openHour to closeHour in DAY_DURATION_SEC real seconds
 const SHOP_TIME_DEFAULTS={
   openHour:9,closeHour:21,dayDurationSec:300,
+  nowPlaying:'Titi Me Preguntó - Bad Bunny',
   staff:[
     {name:'ANA',role:0},    // Cajera
     {name:'JORGE',role:1},  // Repositor
@@ -357,7 +358,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.17',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.18',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -407,7 +408,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.17',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.18',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -574,6 +575,7 @@ function initGame(){
     money:CFG.START_MONEY, week:1, year:1, weekTimer:0,
     yearRevenue:0, weekRevenue:0, weekExpenses:0,
     satisfaction:65, fame:25, customersToday:0, custIn:0, custOut:0, totalCustomers:0,
+    nowPlaying:shopTimeSettings.nowPlaying||'Titi Me Preguntó - Bad Bunny',
     totalRevenue:0, totalScore:0, yearsCompleted:0,
     rush:{active:false,timer:0}, inspect:{active:false,timer:0,warned:false},
     storeLevel:1,
@@ -942,6 +944,14 @@ function doAction(id){
   if(id==='setCloseUp'){shopTimeSettings.closeHour=Math.min(24,shopTimeSettings.closeHour+1);return;}
   if(id==='setDurDown'){shopTimeSettings.dayDurationSec=Math.max(60,shopTimeSettings.dayDurationSec-30);return;}
   if(id==='setDurUp'){shopTimeSettings.dayDurationSec=Math.min(600,shopTimeSettings.dayDurationSec+30);return;}
+  if(id==='songPrev'||id==='songNext'){
+    const songs=['Titi Me Preguntó - Bad Bunny','Despechá - Rosalía','La Bicicleta - Shakira','Bailando - Enrique Iglesias','Dákiti - Bad Bunny','Vivir Mi Vida - Marc Anthony'];
+    const ci=songs.indexOf(shopTimeSettings.nowPlaying);
+    const ni=id==='songNext'?(ci+1)%songs.length:(ci-1+songs.length)%songs.length;
+    shopTimeSettings.nowPlaying=songs[ni];
+    if(G) G.nowPlaying=songs[ni];
+    return;
+  }
   if(id==='setBack'){saveShopSettings();state=S.MENU;return;}
   // Staff name/role settings
   const staffNames=['ANA','JORGE','LUCÍA','MARCOS','PABLO','ELENA','SARA','DIEGO','MARTA','HUGO','ALBA','INÉS'];
@@ -1518,13 +1528,23 @@ function drawSettings(){
   BTNS['setDurDown']={x:bx+180,y:156,w:18,h:22};
   r(bx+282,156,18,22,'#203a20');rx(bx+282,156,18,22,'#55aa55',1);tx('+',bx+291,172,'#88ee88',12,'center');
   BTNS['setDurUp']={x:bx+282,y:156,w:18,h:22};
+  // Now Playing (music)
+  tx('♪ Hilo musical:',bx,200,'#c0b898',11);
+  r(bx+120,186,180,22,'#2a1a2a');rx(bx+120,186,180,22,'#8a5a8a',1);
+  tx(shopTimeSettings.nowPlaying||'Sin música',bx+130,202,'#cc99dd',8);
+  // Cycle through songs
+  const songs=['Titi Me Preguntó - Bad Bunny','Despechá - Rosalía','La Bicicleta - Shakira','Bailando - Enrique Iglesias','Dákiti - Bad Bunny','Vivir Mi Vida - Marc Anthony'];
+  r(bx+100,186,18,22,'#2a1a2a');rx(bx+100,186,18,22,'#aa55aa',1);tx('◀',bx+109,202,'#cc88cc',12,'center');
+  BTNS['songPrev']={x:bx+100,y:186,w:18,h:22};
+  r(bx+302,186,18,22,'#2a1a2a');rx(bx+302,186,18,22,'#aa55aa',1);tx('▶',bx+311,202,'#cc88cc',12,'center');
+  BTNS['songNext']={x:bx+302,y:186,w:18,h:22};
   // Info
   const dayH=shopTimeSettings.closeHour-shopTimeSettings.openHour;
-  tx('El reloj irá de '+String(shopTimeSettings.openHour).padStart(2,'0')+':00 a '+String(shopTimeSettings.closeHour).padStart(2,'0')+':00',bx,210,'#8a8070',9);
-  tx('('+dayH+'h de tienda) en '+shopTimeSettings.dayDurationSec+' segundos reales ('+(shopTimeSettings.dayDurationSec/60).toFixed(1)+' min)',bx,225,'#8a8070',9);
-  tx('La lámpara se enciende automáticamente a las 19:00',bx,245,'#8a8070',9);
+  tx('El reloj irá de '+String(shopTimeSettings.openHour).padStart(2,'0')+':00 a '+String(shopTimeSettings.closeHour).padStart(2,'0')+':00',bx,230,'#8a8070',9);
+  tx('('+dayH+'h de tienda) en '+shopTimeSettings.dayDurationSec+' segundos reales ('+(shopTimeSettings.dayDurationSec/60).toFixed(1)+' min)',bx,245,'#8a8070',9);
+  tx('La lámpara se enciende automáticamente a las 19:00',bx,260,'#8a8070',9);
   // Sky preview strip
-  tx('Vista del cielo durante el día:',bx,270,'#c0b898',9);
+  tx('Vista del cielo durante el día:',bx,280,'#c0b898',9);
   for(let i=0;i<200;i++){
     const h=shopTimeSettings.openHour+(i/200)*dayH;
     const c=getSkyColors(h);
@@ -2923,22 +2943,24 @@ function drawHUD(){
   rx(dotX,10,50,6,'#4a3820',1);
   // Money (golden, euro after amount)
   tx((G.money|0).toLocaleString()+'€',218,19,'#ffdd66',14);
-  // People counter: camera + inside | entries | exits — all same size near money
+  // People counter right after € — camera + green arrow in + red arrow out
   const insideNow=G.custs?G.custs.length:0;
-  tx('📷 '+insideNow,420,19,'#88ccee',13);
-  tx('🟢 '+(G.custIn||0),470,19,'#66ee88',13);
-  tx('🔴 '+(G.custOut||0),520,19,'#ee8866',13);
+  const moneyEnd=270;
+  tx('📷'+insideNow,moneyEnd,19,'#88ccee',11);
+  tx('▲'+(G.custIn||0),moneyEnd+35,19,'#44dd66',11);
+  tx('▼'+(G.custOut||0),moneyEnd+68,19,'#dd4444',11);
+  // Now playing 🎵
+  tx('♪ '+(G.nowPlaying||''),moneyEnd+105,19,'#cc99dd',9);
   // Ingresos Día
   const dayInc=G.sales.reduce((s,v)=>s+v,0);
-  tx('Ing. Día',330,12,'#a09880',7);
-  tx(dayInc.toLocaleString()+'€',330,24,dayInc>0?'#66ee88':'#888866',10);
+  tx('Ing.',moneyEnd+105,8,'#a09880',6);
+  tx(dayInc.toLocaleString()+'€',moneyEnd+125,8,dayInc>0?'#66ee88':'#888866',6);
   // Facturación + progress bar
   const target=CFG.YEAR_TARGETS[G.year-1];
   const prog=Math.min(1,G.yearRevenue/target);
   const bc=prog>=1?P.green:prog>=0.7?'#ccaa44':'#88aa55';
-  tx('Fact.',570,12,'#a09880',7);
-  r(570,15,90,6,'#1a1208');r(570,15,(90*prog)|0,6,bc);rx(570,15,90,6,'#4a3820',1);
-  tx((G.yearRevenue|0).toLocaleString()+'/'+(target).toLocaleString()+'€',570,26,'#c0b898',7);
+  r(580,10,80,6,'#1a1208');r(580,10,(80*prog)|0,6,bc);rx(580,10,80,6,'#4a3820',1);
+  tx((G.yearRevenue|0).toLocaleString()+'/'+(target).toLocaleString()+'€',580,24,'#c0b898',7);
   // Rush / Inspect badge (far right of top bar)
   if(G.rush.active){
     const f=Math.sin(tt*.08)>.0;
