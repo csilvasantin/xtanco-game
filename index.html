@@ -7,11 +7,23 @@
   <meta http-equiv="Expires" content="0"/>
   <title>XTANCO — Loading...</title>
 </head>
-<body>
+<body style="background:#1a1420;color:#cc99dd;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+<div style="text-align:center">
+  <p>♪ Cargando XTANCO...</p>
+</div>
 <script>
-// Always redirect to game.html with a fresh cache-bust timestamp
-// This ensures the latest version is always loaded
-location.replace('game.html?v=' + Date.now());
+// Register Service Worker to bust CDN cache
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+// Clear all caches then redirect
+if(window.caches){
+  caches.keys().then(k=>k.forEach(n=>caches.delete(n))).finally(()=>{
+    location.replace('game.html?v=' + Date.now());
+  });
+} else {
+  location.replace('game.html?v=' + Date.now());
+}
 </script>
 </body>
 </html>
