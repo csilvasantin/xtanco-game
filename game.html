@@ -60,7 +60,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.28
+//  XTANCO DIGITAL TWIN — BETA v1.29
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -467,7 +467,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.28',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.29',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -517,7 +517,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.28',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.29',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -646,7 +646,7 @@ function importLayout(file){
   reader.readAsText(file);
 }
 // Layout version — when this changes, reset to new DEFAULT_LAYOUT
-const LAYOUT_VERSION='v1.28';
+const LAYOUT_VERSION='v1.29';
 const savedVer=localStorage.getItem('xtanco_layout_ver');
 if(savedVer!==LAYOUT_VERSION){
   // New version: reset layout to updated defaults
@@ -3161,7 +3161,7 @@ function drawHUD(){
 // ── DRAW EVENT MSG ────────────────────────────────────────────
 function drawEvent(){
   if(!G.eventMsg||G.eventTimer<=0) return;
-  const ew=280,eh=26,ex=SHOP.x+SHOP.w/2-ew/2,ey=SHOP.y+22;
+  const ew=220,eh=26,ex=W-ew-10,ey=SHOP.y+8;
   r(ex,ey,ew,eh,'#3a2818ee');rx(ex,ey,ew,eh,'#8a7a50',1);
   tx('  '+G.eventMsg,ex+ew/2,ey+17,'#f0e8c8',10,'center');
 }
@@ -3331,15 +3331,15 @@ function tabSales(py){
 function tabStaff(py){
   const bw=UI.w-10;
   // Role colors and icons
-  const roleColors=['#2a6a4a','#4a5a2a','#5a2a5a','#2a3a6a'];
-  const roleBorders=['#44aa66','#88aa44','#aa44aa','#4466cc'];
+  const roleColors=['#2a6a4a','#4a5a2a','#5a2a5a','#2a3a6a','#6a2a4a'];
+  const roleBorders=['#44aa66','#88aa44','#aa44aa','#4466cc','#cc44aa'];
   const roleIcons=['💰','📦','🎀','👔','🎧'];
   for(let i=0;i<G.staff.length;i++){
     const s=G.staff[i];
     const cardH=Math.min(98,Math.floor((H-py-8)/G.staff.length)-4);
     const ry=py+i*(cardH+4);
-    const rc=roleColors[s.role%4];
-    const rb=roleBorders[s.role%4];
+    const rc=roleColors[s.role%roleColors.length];
+    const rb=roleBorders[s.role%roleBorders.length];
     // Card background with role color
     r(UI.x+4,ry,bw,cardH,s.hired?rc:'#1a1a18');
     rx(UI.x+4,ry,bw,cardH,s.hired?rb:P.gray,s.hired?1.5:1);
