@@ -3540,6 +3540,9 @@ function loop(){
   requestAnimationFrame(loop);
   tt++;
 
+  // Always update HTML bar first (never blocked by canvas errors)
+  try{updateHtmlBar();}catch(e){}
+
   // Check idle → activate demo mode after 30 seconds from MENU only
   if(!demoMode&&state===S.MENU&&Date.now()-lastInput>DEMO_IDLE_MS){
     demoMode=true;demoTimer=0;
@@ -3560,14 +3563,13 @@ function loop(){
   if(state===S.SETTINGS){drawSettings();return;}
   if(state===S.PAUSE){
     r(0,0,W,H,P.bg);drawCityBg();drawShop();drawShopChars();drawHUD();drawUI();
-    drawPause();updateHtmlBar();return;
+    drawPause();return;
   }
   // GAME
   if(demoMode) demoUpdate();
   updateGame();
   r(0,0,W,H,P.bg);
   drawCityBg();drawShop();drawShopChars();drawFloats();drawEvent();drawHUD();drawElgatoNotify();drawDemoBadge();drawUI();
-  updateHtmlBar();
 }
 loop();
 </script>
