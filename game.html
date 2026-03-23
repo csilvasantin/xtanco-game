@@ -61,7 +61,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.49
+//  XTANCO DIGITAL TWIN — BETA v1.50
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -556,7 +556,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.49',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.50',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -606,7 +606,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.49',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.50',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1348,6 +1348,19 @@ function doAction(id){
   if(id==='setDurUp'){shopTimeSettings.dayDurationSec=Math.min(600,shopTimeSettings.dayDurationSec+30);return;}
   if(id==='musicToggle'){toggleMusic();return;}
   if(id==='sfxToggle'){G.sfxVolume=G.sfxVolume>0?0:0.7;return;}
+  if(id==='weather_0'){G.weather={type:null,timer:0};showEv('🌤 '+(lang==='es'?'Tiempo normal':'Normal weather'),'#aaaaaa');return;}
+  if(id==='weather_1'){
+    const dH=shopTimeSettings.closeHour-shopTimeSettings.openHour;
+    const fp=shopTimeSettings.dayDurationSec*60;
+    G.weather={type:'rain',timer:Math.floor(fp/dH*2)};
+    showEv('🌧 '+(lang==='es'?'¡Tormenta activada!':'Storm activated!'),'#6688aa');SFX.thunder();thunderFlash=8;thunderCooldown=300;return;
+  }
+  if(id==='weather_2'){
+    const dH=shopTimeSettings.closeHour-shopTimeSettings.openHour;
+    const fp=shopTimeSettings.dayDurationSec*60;
+    G.weather={type:'sun',timer:Math.floor(fp/dH*2)};
+    showEv('☀ '+(lang==='es'?'¡Sol activado!':'Sun activated!'),P.neon2);return;
+  }
   if(id==='musicPrev'||id==='musicNext'){
     const songs=SONG_LIST;
     const ci=songs.indexOf(G.nowPlaying);
@@ -1528,9 +1541,13 @@ function checkRandomEvents(){
   }
   // Weather
   if(G.weather&&G.weather.timer>0){G.weather.timer--;if(G.weather.timer<=0)G.weather.type=null;}
-  else if(Math.random()<0.0012){
+  else if(Math.random()<0.0004){ // less frequent weather changes
     const wt=Math.random()<0.5?'rain':'sun';
-    G.weather={type:wt,timer:300};
+    // Minimum 2 game-hours: calculate frames for 2h
+    const dayH=shopTimeSettings.closeHour-shopTimeSettings.openHour;
+    const fpd=shopTimeSettings.dayDurationSec*60;
+    const twoHourFrames=Math.floor(fpd/dayH*2); // ~3000 frames at default settings
+    G.weather={type:wt,timer:twoHourFrames};
     if(wt==='rain'){showEv('🌧 ¡Tormenta! Menos clientes','#6688aa');SFX.thunder();thunderFlash=8;thunderCooldown=300;}
     else showEv('☀ Sol radiante: más clientes!',P.neon2);
   }
@@ -2015,7 +2032,7 @@ function drawMenu(){
   tx('? HELP',hx+30,hy+16,'#44ccaa',9,'center');
   BTNS['menuHelp']={x:hx,y:hy,w:60,h:22};
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.49',W-40,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.50',W-40,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -4082,12 +4099,32 @@ function tabStock(py){
   rx(lx,py+14,rw,22,wCol,1.5);
   tx(wIcon+' '+wLabel,lx+8,py+29,wCol,10);
   if(wType&&G.weather.timer>0){
-    const prog=G.weather.timer/300;
-    r(lx+2,py+33,rw-4,3,'#0a0a0a');r(lx+2,py+33,(rw-4)*prog|0,3,wCol);
+    const dayH2=shopTimeSettings.closeHour-shopTimeSettings.openHour;
+    const fpd2=shopTimeSettings.dayDurationSec*60;
+    const maxTimer=Math.floor(fpd2/dayH2*2);
+    const prog=G.weather.timer/maxTimer;
+    r(lx+2,py+33,rw-4,3,'#0a0a0a');r(lx+2,py+33,(rw-4)*Math.min(1,prog)|0,3,wCol);
   }
+  // Weather selection icons
+  const iconY=py+40;
+  const icons=[
+    {type:null,icon:'🌤',label:isEs?'Normal':'Normal',col:'#aaaaaa'},
+    {type:'rain',icon:'🌧',label:isEs?'Lluvia':'Rain',col:'#6688aa'},
+    {type:'sun',icon:'☀',label:isEs?'Sol':'Sun',col:'#ddaa33'},
+  ];
+  const iconW=Math.floor(rw/3);
+  icons.forEach((ic,idx)=>{
+    const ix=lx+idx*iconW;
+    const isActive=(!wType&&!ic.type)||(wType===ic.type);
+    r(ix,iconY,iconW-2,20,isActive?'#2a2a3a':'#0a0a12');
+    rx(ix,iconY,iconW-2,20,isActive?ic.col:'#333',isActive?1.5:0.5);
+    tx(ic.icon,ix+iconW/2-8,iconY+14,ic.col,9);
+    tx(ic.label,ix+iconW/2+4,iconY+14,isActive?'#fff':'#666',6);
+    BTNS['weather_'+idx]={x:ix,y:iconY,w:iconW-2,h:20};
+  });
 
   // ── AFLUENCIA (Footfall) ──
-  tx('— '+(isEs?'AFLUENCIA':'FOOTFALL')+' —',UI.x+UI.w/2,py+50,P.uiT3,8,'center');
+  tx('— '+(isEs?'AFLUENCIA':'FOOTFALL')+' —',UI.x+UI.w/2,py+70,P.uiT3,8,'center');
   const hired=G.staff.filter(s=>s.hired).length;
   const baseRate=0.006*Math.max(1,hired);
   const rushMod=G.rush.active?2:1;
@@ -4096,12 +4133,12 @@ function tabStock(py){
   const totalRate=baseRate*rushMod*weatherMod*holidayMod;
   const afluencia=Math.min(100,totalRate/0.06*100)|0;
   const afCol=afluencia>70?P.green:afluencia>40?P.yellow:P.red;
-  r(lx,py+54,rw,30,'#1a1a1a');rx(lx,py+54,rw,30,afCol,1);
-  tx((isEs?'Clientes/min':'Customers/min'),lx+4,py+66,P.uiT3,6);
-  r(lx+2,py+70,rw-4,6,'#0a0a0a');r(lx+2,py+70,(rw-4)*afluencia/100|0,6,afCol);
-  tx(afluencia+'%',lx+rw-4,py+76,afCol,7,'right');
+  r(lx,py+74,rw,30,'#1a1a1a');rx(lx,py+74,rw,30,afCol,1);
+  tx((isEs?'Clientes/min':'Customers/min'),lx+4,py+86,P.uiT3,6);
+  r(lx+2,py+90,rw-4,6,'#0a0a0a');r(lx+2,py+90,(rw-4)*afluencia/100|0,6,afCol);
+  tx(afluencia+'%',lx+rw-4,py+96,afCol,7,'right');
   // Modifiers
-  let modY=py+88;
+  let modY=py+108;
   if(G.rush.active){tx('⚡ Rush x2',lx+4,modY,'#ffaa44',6);modY+=10;}
   if(wType==='rain'){tx('🌧 Lluvia -50%',lx+4,modY,'#6688aa',6);modY+=10;}
   if(wType==='sun'){tx('☀ Sol +30%',lx+4,modY,'#ddaa33',6);modY+=10;}
