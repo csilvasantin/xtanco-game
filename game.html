@@ -61,7 +61,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.48
+//  XTANCO DIGITAL TWIN — BETA v1.49
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -556,7 +556,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.48',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.49',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -565,7 +565,7 @@ const LANGS={
       {title:'EVENTOS ESPECIALES',lines:['⚡ HORA PUNTA: ventas x2.4 durante un tiempo.','🔍 INSPECCIÓN: mantén stock y personal o penalización.','📦 Repón stock regularmente (pestaña STOCK).','👁 Vigila la barra de OBJETIVO del año en el HUD.']},
     ],
     tutNext:'SIGUIENTE →',tutStart:'¡EMPEZAR!',
-    tabs:['VENTAS','PERSONAL','STOCK','LOCAL'],
+    tabs:['VENTAS','PERSONAL','CON','LOCAL'],
     money:'CAJA',week:'SEMANA',year:'AÑO',objective:'OBJETIVO',
     satisfaction:'SATISFACCIÓN',fame:'FAMA',customers:'CLIENTES HOY',
     hire:'CONTRATAR',train:'FORMAR',fire:'DESPEDIR',
@@ -606,7 +606,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.48',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.49',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -615,7 +615,7 @@ const LANGS={
       {title:'SPECIAL EVENTS',lines:['⚡ RUSH HOUR: sales x2.4 for a period.','🔍 INSPECTION: keep stock & staff or get fined.','📦 Restock products regularly (STOCK tab).','👁 Watch the OBJECTIVE bar in the HUD.']},
     ],
     tutNext:'NEXT →',tutStart:'LET\'S GO!',
-    tabs:['SALES','STAFF','STOCK','STORE'],
+    tabs:['SALES','STAFF','CON','STORE'],
     money:'CASH',week:'WEEK',year:'YEAR',objective:'TARGET',
     satisfaction:'SATISFACTION',fame:'FAME',customers:'CUSTOMERS TODAY',
     hire:'HIRE',train:'TRAIN',fire:'FIRE',
@@ -1232,6 +1232,18 @@ function doAction(id){
   if(id.startsWith('stockShow')){
     const si=parseInt(id.slice(9));
     G.tftStockIdx=si;G.tftStockTimer=600; // show on Admira for 10 seconds
+    return;
+  }
+  if(id==='restockAll'){
+    let count=0;
+    for(let i=0;i<G.prods.length;i++){
+      const p=G.prods[i];
+      if(p.stock<p.max&&G.money>=CFG.RESTOCK_COST){
+        G.money-=CFG.RESTOCK_COST;G.weekExpenses+=CFG.RESTOCK_COST;
+        p.stock=p.max;count++;
+      }
+    }
+    if(count>0){updateBars();showEv('📦 '+count+' productos repuestos',P.neonB);SFX.restockThud();}
     return;
   }
   if(id.startsWith('rest')){
@@ -2003,7 +2015,7 @@ function drawMenu(){
   tx('? HELP',hx+30,hy+16,'#44ccaa',9,'center');
   BTNS['menuHelp']={x:hx,y:hy,w:60,h:22};
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.48',W-40,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.49',W-40,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -4058,25 +4070,78 @@ function tabStaff(py){
 }
 
 function tabStock(py){
-  const stockCardH=Math.min(70,Math.floor((H-py-8)/G.prods.length)-2);
-  for(let i=0;i<G.prods.length;i++){
-    const p=G.prods[i];
-    const ry=py+i*stockCardH;
-    const stk=p.stock/p.max;
-    const isSel=G.tftStockIdx===i;
-    r(UI.x+4,ry,UI.w-8,62,isSel?'#2a3a4a':P.uiB);
-    rx(UI.x+4,ry,UI.w-8,62,isSel?'#66aacc':(stk<0.2?P.red:P.gray),isSel?2:1);
-    r(UI.x+8,ry+4,12,12,p.color);
-    tx(T().prodLabel[i],UI.x+24,ry+13,isSel?'#88ccee':P.white,8);
-    tx(p.price+'/u',UI.x+24,ry+23,P.uiT3,7);
-    r(UI.x+6,ry+30,UI.w-12,7,P.uiB);
-    r(UI.x+6,ry+30,(UI.w-12)*stk|0,7,stk>0.5?P.green:stk>0.2?P.yellow:P.red);
-    rx(UI.x+6,ry+30,UI.w-12,7,P.gray,1);
-    tx(p.stock+'/'+p.max,UI.x+UI.w-6,ry+36,P.uiT3,7,'right');
-    // Click on product card → show on Admira screen
-    BTNS['stockShow'+i]={x:UI.x+4,y:ry,w:UI.w-8,h:28};
-    mkBtn('rest'+i,UI.x+6,ry+42,UI.w-12,16,'RESTOCK '+CFG.RESTOCK_COST+'€',P.neonB,G.money>=CFG.RESTOCK_COST&&p.stock<p.max);
+  const lx=UI.x+6,rw=UI.w-12;
+  const isEs=lang==='es';
+  // ── TIEMPO (Weather) ──
+  tx('— '+(isEs?'TIEMPO':'WEATHER')+' —',UI.x+UI.w/2,py+10,P.uiT3,8,'center');
+  const wType=G.weather&&G.weather.type;
+  const wIcon=wType==='rain'?'🌧':wType==='sun'?'☀':'🌤';
+  const wLabel=wType==='rain'?(isEs?'Tormenta':'Storm'):wType==='sun'?(isEs?'Soleado':'Sunny'):(isEs?'Normal':'Normal');
+  const wCol=wType==='rain'?'#6688aa':wType==='sun'?'#ddaa33':'#aaaaaa';
+  r(lx,py+14,rw,22,wType==='rain'?'#0a1a2a':wType==='sun'?'#2a2a0a':'#1a1a1a');
+  rx(lx,py+14,rw,22,wCol,1.5);
+  tx(wIcon+' '+wLabel,lx+8,py+29,wCol,10);
+  if(wType&&G.weather.timer>0){
+    const prog=G.weather.timer/300;
+    r(lx+2,py+33,rw-4,3,'#0a0a0a');r(lx+2,py+33,(rw-4)*prog|0,3,wCol);
   }
+
+  // ── AFLUENCIA (Footfall) ──
+  tx('— '+(isEs?'AFLUENCIA':'FOOTFALL')+' —',UI.x+UI.w/2,py+50,P.uiT3,8,'center');
+  const hired=G.staff.filter(s=>s.hired).length;
+  const baseRate=0.006*Math.max(1,hired);
+  const rushMod=G.rush.active?2:1;
+  const weatherMod=wType==='rain'?0.5:wType==='sun'?1.3:1;
+  const holidayMod=G.holiday&&G.holiday.active?1.5:1;
+  const totalRate=baseRate*rushMod*weatherMod*holidayMod;
+  const afluencia=Math.min(100,totalRate/0.06*100)|0;
+  const afCol=afluencia>70?P.green:afluencia>40?P.yellow:P.red;
+  r(lx,py+54,rw,30,'#1a1a1a');rx(lx,py+54,rw,30,afCol,1);
+  tx((isEs?'Clientes/min':'Customers/min'),lx+4,py+66,P.uiT3,6);
+  r(lx+2,py+70,rw-4,6,'#0a0a0a');r(lx+2,py+70,(rw-4)*afluencia/100|0,6,afCol);
+  tx(afluencia+'%',lx+rw-4,py+76,afCol,7,'right');
+  // Modifiers
+  let modY=py+88;
+  if(G.rush.active){tx('⚡ Rush x2',lx+4,modY,'#ffaa44',6);modY+=10;}
+  if(wType==='rain'){tx('🌧 Lluvia -50%',lx+4,modY,'#6688aa',6);modY+=10;}
+  if(wType==='sun'){tx('☀ Sol +30%',lx+4,modY,'#ddaa33',6);modY+=10;}
+  if(G.holiday&&G.holiday.active){tx('🎉 '+G.holiday.name+' +50%',lx+4,modY,'#cc8800',6);modY+=10;}
+
+  // ── HORARIO TIENDA (Shop Hours) ──
+  tx('— '+(isEs?'HORARIO':'HOURS')+' —',UI.x+UI.w/2,modY+6,P.uiT3,8,'center');
+  const openH=shopTimeSettings.openHour,closeH=shopTimeSettings.closeHour;
+  const gameH=G.gameTime||openH;
+  const dayProg=Math.max(0,Math.min(1,(gameH-openH)/(closeH-openH)));
+  r(lx,modY+10,rw,28,'#1a1a1a');rx(lx,modY+10,rw,28,P.gray,1);
+  tx('🕐 '+Math.floor(gameH)+':'+(('0'+Math.floor((gameH%1)*60)).slice(-2)),lx+4,modY+24,'#ffdd66',9);
+  tx(openH+':00 — '+closeH+':00',lx+rw-4,modY+24,P.uiT3,6,'right');
+  r(lx+2,modY+30,rw-4,4,'#0a0a0a');r(lx+2,modY+30,(rw-4)*dayProg|0,4,'#ffdd66');
+  tx((isEs?'Semana ':'Week ')+G.week+'/'+CFG.WEEKS_PER_YEAR,lx+4,modY+42,P.uiT3,7);
+
+  // ── FRECUENCIA VISITA (Visit Frequency) ──
+  const vY=modY+52;
+  tx('— '+(isEs?'FRECUENCIA VISITA':'VISIT FREQ.')+' —',UI.x+UI.w/2,vY+6,P.uiT3,8,'center');
+  r(lx,vY+10,rw,50,'#1a1a1a');rx(lx,vY+10,rw,50,P.gray,1);
+  const avgCust=G.customersToday||0;
+  const totalCust=G.totalCustomers||0;
+  const weekNum=Math.max(1,(G.year-1)*CFG.WEEKS_PER_YEAR+G.week);
+  const avgPerWeek=Math.round(totalCust/weekNum);
+  tx((isEs?'Hoy: ':'Today: ')+avgCust,lx+4,vY+24,'#88ccee',8);
+  tx((isEs?'Media/sem: ':'Avg/week: ')+avgPerWeek,lx+4,vY+36,P.uiT3,7);
+  tx((isEs?'Total: ':'Total: ')+totalCust.toLocaleString(),lx+4,vY+48,P.uiT3,7);
+  tx('📊',lx+rw-14,vY+24,'#fff',10);
+
+  // ── STOCK RÁPIDO (Quick restock) ──
+  const sY=vY+66;
+  tx('— STOCK —',UI.x+UI.w/2,sY+6,P.uiT3,8,'center');
+  const avgStk=G.prods.reduce((a,p)=>a+(p.stock/p.max),0)/G.prods.length;
+  const stkCol=avgStk>0.5?P.green:avgStk>0.2?P.yellow:P.red;
+  r(lx,sY+10,rw,20,'#1a1a1a');rx(lx,sY+10,rw,20,stkCol,1);
+  tx((isEs?'Stock medio: ':'Avg stock: ')+Math.round(avgStk*100)+'%',lx+4,sY+24,stkCol,8);
+  r(lx+2,sY+27,rw-4,3,'#0a0a0a');r(lx+2,sY+27,(rw-4)*avgStk|0,3,stkCol);
+  // Restock all button
+  const allCost=G.prods.filter(p=>p.stock<p.max).length*CFG.RESTOCK_COST;
+  if(allCost>0) mkBtn('restockAll',lx,sY+34,rw,16,(isEs?'REPONER TODO ':'RESTOCK ALL ')+allCost+'€',P.neonB,G.money>=allCost);
 }
 
 function tabStore(py){
