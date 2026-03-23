@@ -61,7 +61,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.46
+//  XTANCO DIGITAL TWIN — BETA v1.47
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -93,6 +93,8 @@ const SFX=(()=>{
     gameOver(){tone(400,0.2);tone(300,0.2,'sine',0.12,0.22);tone(200,0.3,'sine',0.14,0.44);},
     levelUp(){tone(784,0.08);tone(988,0.08,'sine',0.1,0.1);tone(1175,0.12,'sine',0.12,0.2);},
     eventChime(){tone(880,0.08,'sine',0.08);tone(1100,0.1,'sine',0.1,0.1);},
+    thunder(){tone(60,0.4,'sawtooth',0.2);tone(40,0.6,'sawtooth',0.15,0.15);tone(80,0.3,'triangle',0.1,0.4);tone(30,0.5,'sawtooth',0.08,0.6);},
+    rainLoop(){tone(200,0.05,'triangle',0.02);tone(350,0.04,'triangle',0.015,0.03);tone(150,0.06,'triangle',0.01,0.06);},
   };
 })();
 
@@ -554,7 +556,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.46',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.47',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -604,7 +606,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.46',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.47',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -666,6 +668,11 @@ function startTransition(toState){if(tran.active)return;tran={active:true,from:s
 function updateTransition(){if(!tran.active)return;tran.timer++;if(tran.timer===Math.floor(tran.dur/2))state=tran.to;if(tran.timer>=tran.dur)tran.active=false;}
 function drawTransition(){if(!tran.active)return;const half=tran.dur/2;const alpha=tran.timer<=half?tran.timer/half:1-(tran.timer-half)/half;cx.globalAlpha=Math.max(0,Math.min(1,alpha));cx.fillStyle='#000';cx.fillRect(0,0,W,H);cx.globalAlpha=1;}
 let ledOffset=0;
+// ── RAIN/THUNDER VISUAL STATE ────────────────────────────────
+let rainDrops=[];
+let thunderFlash=0; // countdown frames for lightning flash
+let thunderCooldown=0; // prevent rapid thunder
+for(let i=0;i<80;i++) rainDrops.push({x:Math.random()*W,y:Math.random()*H*0.6,sp:3+Math.random()*4,len:8+Math.random()*12});
 
 // ── GUIDED TUTORIAL (in-game) ────────────────────────────────
 let guidedTut={active:false,step:0,timer:0};
@@ -1512,7 +1519,7 @@ function checkRandomEvents(){
   else if(Math.random()<0.0012){
     const wt=Math.random()<0.5?'rain':'sun';
     G.weather={type:wt,timer:300};
-    if(wt==='rain') showEv('🌧 Lluvia: menos clientes',P.gray);
+    if(wt==='rain'){showEv('🌧 ¡Tormenta! Menos clientes','#6688aa');SFX.thunder();thunderFlash=8;thunderCooldown=300;}
     else showEv('☀ Sol radiante: más clientes!',P.neon2);
   }
   // VIP customer
@@ -1996,7 +2003,7 @@ function drawMenu(){
   tx('? HELP',hx+30,hy+16,'#44ccaa',9,'center');
   BTNS['menuHelp']={x:hx,y:hy,w:60,h:22};
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.46',W-40,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.47',W-40,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -2456,15 +2463,44 @@ function drawCityBg(){
   cx.fillStyle=skyGrad;
   cx.fillRect(0,skyTop,W,skyH);
 
-  // Clouds
-  cx.fillStyle='#d0e8f8';
-  const ct=tt*0.12;
-  for(let i=0;i<4;i++){
-    const cx2=((i*220+ct)%1000)-50;
-    const cy2=skyTop+12+i*14;
-    cx.beginPath();cx.arc(cx2,cy2,10+i*2,0,Math.PI*2);cx.fill();
-    cx.beginPath();cx.arc(cx2+14,cy2-3,8+i,0,Math.PI*2);cx.fill();
-    cx.beginPath();cx.arc(cx2+26,cy2+1,9+i,0,Math.PI*2);cx.fill();
+  // Clouds (darker when raining)
+  const isRaining=G&&G.weather&&G.weather.type==='rain';
+  cx.fillStyle=isRaining?'#6a7080':'#d0e8f8';
+  const ct=tt*(isRaining?0.06:0.12); // clouds move slower in rain
+  for(let i=0;i<(isRaining?7:4);i++){ // more clouds when raining
+    const cx2=((i*180+ct)%(isRaining?1200:1000))-50;
+    const cy2=skyTop+8+i*12;
+    const cSize=isRaining?14+i*2:10+i*2;
+    cx.beginPath();cx.arc(cx2,cy2,cSize,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(cx2+14,cy2-3,cSize-2,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(cx2+26,cy2+1,cSize-1,0,Math.PI*2);cx.fill();
+    if(isRaining){cx.beginPath();cx.arc(cx2+40,cy2-1,cSize-3,0,Math.PI*2);cx.fill();}
+  }
+  // Rain effect (outside shop area — sky + street)
+  if(isRaining){
+    // Darken sky overlay
+    cx.globalAlpha=0.15;cx.fillStyle='#1a2a3a';cx.fillRect(0,skyTop,W,skyH);cx.globalAlpha=1;
+    // Rain drops
+    cx.strokeStyle='rgba(180,200,220,0.5)';cx.lineWidth=1;
+    for(const drop of rainDrops){
+      drop.y+=drop.sp;
+      if(drop.y>skyTop+skyH+20){drop.y=skyTop-10;drop.x=Math.random()*W;}
+      // Only draw drops in sky area (not inside shop)
+      if(drop.y>=skyTop&&drop.y<skyTop+skyH){
+        cx.beginPath();cx.moveTo(drop.x,drop.y);cx.lineTo(drop.x-1,drop.y+drop.len);cx.stroke();
+      }
+    }
+    // Rain sound (subtle, every ~30 frames)
+    if(tt%30===0) SFX.rainLoop();
+    // Thunder (random flash + sound)
+    if(thunderCooldown>0) thunderCooldown--;
+    if(thunderFlash>0){
+      cx.globalAlpha=thunderFlash/8;cx.fillStyle='#eeeeff';cx.fillRect(0,skyTop,W,skyH);cx.globalAlpha=1;
+      thunderFlash--;
+    } else if(thunderCooldown<=0&&Math.random()<0.003){
+      thunderFlash=8;thunderCooldown=300; // flash for 8 frames, cooldown 5 sec
+      SFX.thunder();
+    }
   }
 
   // Draw isometric city buildings (behind shop)
@@ -2477,6 +2513,21 @@ function drawCityBg(){
     for(let rr=-2;rr<0;rr++){
       drawIsoTile(c,rr,'#8a8878','#7a786810');
     }
+  }
+  // Rain on streets (outside shop)
+  if(isRaining){
+    cx.strokeStyle='rgba(160,180,200,0.35)';cx.lineWidth=0.8;
+    for(let i=0;i<20;i++){
+      const rx2=Math.random()*W, ry2=skyTop+skyH+Math.random()*60;
+      cx.beginPath();cx.moveTo(rx2,ry2);cx.lineTo(rx2-0.5,ry2+6+Math.random()*6);cx.stroke();
+    }
+    // Puddle reflections on street
+    cx.globalAlpha=0.08;
+    for(let i=0;i<5;i++){
+      cx.beginPath();cx.ellipse(100+i*160+Math.sin(tt*0.02+i)*10,skyTop+skyH+30,20+i*5,3,0,0,Math.PI*2);
+      cx.fillStyle='#8ab8d8';cx.fill();
+    }
+    cx.globalAlpha=1;
   }
   // Grass tiles around the shop exterior (bottom and right sides)
   for(let c=-3;c<ISO.cols+5;c++){
