@@ -61,11 +61,40 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.39
+//  XTANCO DIGITAL TWIN — BETA v1.40
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
 const W=800,H=500;
+
+// ── SFX ENGINE (must be early — used throughout) ─────────────
+const SFX=(()=>{
+  let ac=null;
+  const vol=()=>(typeof G!=='undefined'&&G&&G.sfxVolume!==undefined)?G.sfxVolume:0.7;
+  function ctx(){if(!ac)try{ac=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}return ac;}
+  function tone(freq,dur,type='sine',gain=0.15,delay=0){
+    const a=ctx();if(!a)return;
+    const o=a.createOscillator(),g=a.createGain();
+    o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(gain*vol(),a.currentTime+delay);
+    g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+delay+dur);
+    o.connect(g);g.connect(a.destination);
+    o.start(a.currentTime+delay);o.stop(a.currentTime+delay+dur);
+  }
+  return{
+    cashRegister(){tone(1200,0.06);tone(1600,0.06,'sine',0.12,0.07);tone(2200,0.1,'sine',0.1,0.14);},
+    doorBell(){tone(659,0.15);tone(784,0.15,'sine',0.12,0.16);},
+    salePop(){tone(500,0.04);tone(800,0.04,'sine',0.1,0.05);},
+    hireFanfare(){tone(523,0.1);tone(659,0.1,'sine',0.12,0.12);tone(784,0.12,'sine',0.14,0.24);},
+    restockThud(){tone(120,0.12,'triangle',0.2);tone(80,0.08,'triangle',0.1,0.1);},
+    rushSiren(){tone(600,0.15,'sawtooth',0.08);tone(800,0.15,'sawtooth',0.08,0.16);tone(600,0.15,'sawtooth',0.08,0.32);},
+    inspectionAlarm(){tone(1000,0.08,'square',0.06);tone(1000,0.08,'square',0.06,0.12);tone(1000,0.08,'square',0.06,0.24);},
+    weekEnd(){tone(523,0.15,'sine',0.1);tone(659,0.12,'sine',0.08,0.16);tone(784,0.2,'sine',0.12,0.3);},
+    gameOver(){tone(400,0.2);tone(300,0.2,'sine',0.12,0.22);tone(200,0.3,'sine',0.14,0.44);},
+    levelUp(){tone(784,0.08);tone(988,0.08,'sine',0.1,0.1);tone(1175,0.12,'sine',0.12,0.2);},
+    eventChime(){tone(880,0.08,'sine',0.08);tone(1100,0.1,'sine',0.1,0.1);},
+  };
+})();
 
 // ── RESPONSIVE FULLSCREEN ────────────────────────────────────
 function resizeCanvas(){
@@ -538,7 +567,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.39',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.40',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -588,7 +617,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.39',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.40',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2013,7 +2042,7 @@ function drawMenu(){
   tx('? HELP',hx+30,hy+16,'#44ccaa',9,'center');
   BTNS['menuHelp']={x:hx,y:hy,w:60,h:22};
   // Version tag
-  cx.globalAlpha=0.4;tx('v1.39',W-6,H-6,P.gray,7,'right');cx.globalAlpha=1;
+  cx.globalAlpha=0.4;tx('v1.40',W-6,H-6,P.gray,7,'right');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -4201,35 +4230,6 @@ function playSaveBeep(){
     o2.start(ac.currentTime+0.12);o2.stop(ac.currentTime+0.3);
   }catch(e){}
 }
-
-// ── SFX ENGINE ───────────────────────────────────────────────
-const SFX=(()=>{
-  let ac=null;
-  const vol=()=>(G&&G.sfxVolume!==undefined)?G.sfxVolume:0.7;
-  function ctx(){if(!ac)try{ac=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}return ac;}
-  function tone(freq,dur,type='sine',gain=0.15,delay=0){
-    const a=ctx();if(!a)return;
-    const o=a.createOscillator(),g=a.createGain();
-    o.type=type;o.frequency.value=freq;
-    g.gain.setValueAtTime(gain*vol(),a.currentTime+delay);
-    g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+delay+dur);
-    o.connect(g);g.connect(a.destination);
-    o.start(a.currentTime+delay);o.stop(a.currentTime+delay+dur);
-  }
-  return{
-    cashRegister(){tone(1200,0.06);tone(1600,0.06,'sine',0.12,0.07);tone(2200,0.1,'sine',0.1,0.14);},
-    doorBell(){tone(659,0.15);tone(784,0.15,'sine',0.12,0.16);},
-    salePop(){tone(500,0.04);tone(800,0.04,'sine',0.1,0.05);},
-    hireFanfare(){tone(523,0.1);tone(659,0.1,'sine',0.12,0.12);tone(784,0.12,'sine',0.14,0.24);},
-    restockThud(){tone(120,0.12,'triangle',0.2);tone(80,0.08,'triangle',0.1,0.1);},
-    rushSiren(){tone(600,0.15,'sawtooth',0.08);tone(800,0.15,'sawtooth',0.08,0.16);tone(600,0.15,'sawtooth',0.08,0.32);},
-    inspectionAlarm(){tone(1000,0.08,'square',0.06);tone(1000,0.08,'square',0.06,0.12);tone(1000,0.08,'square',0.06,0.24);},
-    weekEnd(){tone(523,0.15,'sine',0.1);tone(659,0.12,'sine',0.08,0.16);tone(784,0.2,'sine',0.12,0.3);},
-    gameOver(){tone(400,0.2);tone(300,0.2,'sine',0.12,0.22);tone(200,0.3,'sine',0.14,0.44);},
-    levelUp(){tone(784,0.08);tone(988,0.08,'sine',0.1,0.1);tone(1175,0.12,'sine',0.12,0.2);},
-    eventChime(){tone(880,0.08,'sine',0.08);tone(1100,0.1,'sine',0.1,0.1);},
-  };
-})();
 
 function drawEditor(){
   // Clip entire editor to avoid overlapping outside canvas
