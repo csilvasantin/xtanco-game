@@ -61,7 +61,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.47
+//  XTANCO DIGITAL TWIN — BETA v1.48
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -556,7 +556,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.47',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.48',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -606,7 +606,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.47',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.48',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2003,7 +2003,7 @@ function drawMenu(){
   tx('? HELP',hx+30,hy+16,'#44ccaa',9,'center');
   BTNS['menuHelp']={x:hx,y:hy,w:60,h:22};
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.47',W-40,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.48',W-40,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -3135,27 +3135,92 @@ function drawAltadisTFT(){
     cx.fillText('DELEGACIÓN',cX,cY+sH*0.42);
     cx.textAlign='left';
   } else {
-    // ── NORMAL ALTADIS SCREEN ──
-    // Background fill
-    cx.fillStyle='#002244';cx.fillRect(0,0,vW,vH);
-    // Subtle glow
-    cx.globalAlpha=0.08;cx.fillStyle='#4488cc';
-    cx.beginPath();cx.ellipse(cX,cY,40,30,0,0,Math.PI*2);cx.fill();cx.globalAlpha=1;
-    // Gold line
-    cx.strokeStyle='#cc9933';cx.lineWidth=0.5;
-    cx.beginPath();cx.moveTo(15,28);cx.lineTo(85,28);cx.stroke();
-    // ALTADIS
-    cx.fillStyle='#ffffff';cx.font='bold 14px monospace';cx.textAlign='center';
-    cx.fillText('ALTADIS',cX,42);
-    // DISTRIBUCIÓN
-    cx.fillStyle='#ccaa44';cx.font='8px monospace';
-    cx.fillText('DISTRIBUCIÓN',cX,55);
-    // Line
-    cx.beginPath();cx.moveTo(20,60);cx.lineTo(80,60);cx.stroke();
-    // Slogan
-    cx.fillStyle='#8899bb';cx.font='6px monospace';
-    cx.fillText('Tu estanco',cX,72);
-    cx.fillText('de confianza',cX,82);
+    // ── WEATHER-CONDITIONED ADMIRA ADS ──
+    const isRainAd=G&&G.weather&&G.weather.type==='rain';
+    const isSunAd=G&&G.weather&&G.weather.type==='sun';
+    cx.textAlign='center';
+    if(isRainAd){
+      // ── RAIN AD: Vapeadores ──
+      cx.fillStyle='#0a1a2a';cx.fillRect(0,0,vW,vH);
+      // Rain drops decoration
+      cx.strokeStyle='rgba(100,160,220,0.3)';cx.lineWidth=0.5;
+      for(let i=0;i<8;i++){cx.beginPath();cx.moveTo(10+i*12,0);cx.lineTo(6+i*12,20);cx.stroke();}
+      // ADMIRA header
+      cx.fillStyle='#ccaa44';cx.font='bold 6px monospace';
+      cx.fillText('ADMIRA',cX,12);
+      // Vape icon (simplified)
+      cx.fillStyle='#556688';cx.fillRect(cX-3,22,6,25); // body
+      cx.fillStyle='#aabbcc';cx.fillRect(cX-4,20,8,4); // mouthpiece
+      cx.fillStyle='#334466';cx.fillRect(cX-2,42,4,6); // base
+      // Vapor clouds
+      cx.globalAlpha=0.3+0.2*Math.sin(tt*0.08);
+      cx.fillStyle='#aaccee';
+      cx.beginPath();cx.arc(cX-4,16,3,0,Math.PI*2);cx.fill();
+      cx.beginPath();cx.arc(cX+2,13,2.5,0,Math.PI*2);cx.fill();
+      cx.beginPath();cx.arc(cX-1,10,2,0,Math.PI*2);cx.fill();
+      cx.globalAlpha=1;
+      // Text
+      cx.fillStyle='#88ccee';cx.font='bold 8px monospace';
+      cx.fillText('VAPEADORES',cX,60);
+      cx.fillStyle='#ffffff';cx.font='bold 7px monospace';
+      cx.fillText('Día de lluvia,',cX,72);
+      cx.fillText('día de vapor',cX,82);
+      cx.fillStyle='#ccaa44';cx.font='6px monospace';
+      cx.fillText('★ OFERTA ★',cX,94);
+    } else if(isSunAd){
+      // ── SUN AD: Paquete de cigarrillos ──
+      cx.fillStyle='#1a1a08';cx.fillRect(0,0,vW,vH);
+      // Sun rays decoration
+      cx.globalAlpha=0.15;cx.fillStyle='#ffdd44';
+      cx.beginPath();cx.arc(80,10,20,0,Math.PI*2);cx.fill();cx.globalAlpha=1;
+      // ADMIRA header
+      cx.fillStyle='#ccaa44';cx.font='bold 6px monospace';
+      cx.fillText('ADMIRA',cX,12);
+      // Cigarette pack (simplified)
+      cx.fillStyle='#cc2222';cx.fillRect(cX-10,20,20,28); // red pack
+      cx.fillStyle='#ffffff';cx.fillRect(cX-10,20,20,8); // white top flip
+      cx.fillStyle='#eeddcc';cx.fillRect(cX-7,28,2,16); // cigarettes visible
+      cx.fillStyle='#eeddcc';cx.fillRect(cX-3,26,2,18);
+      cx.fillStyle='#eeddcc';cx.fillRect(cX+1,28,2,16);
+      cx.fillStyle='#eeddcc';cx.fillRect(cX+5,27,2,17);
+      // Gold band
+      cx.fillStyle='#ccaa44';cx.fillRect(cX-10,40,20,3);
+      // Text
+      cx.fillStyle='#ffdd44';cx.font='bold 9px monospace';
+      cx.fillText('TABACO',cX,62);
+      cx.fillStyle='#ffffff';cx.font='7px monospace';
+      cx.fillText('Sol y terraza,',cX,74);
+      cx.fillText('mejor momento',cX,84);
+      cx.fillStyle='#ccaa44';cx.font='6px monospace';
+      cx.fillText('☀ DISFRUTA ☀',cX,95);
+    } else {
+      // ── DEFAULT: Compra Fortuna (random slogans) ──
+      cx.fillStyle='#002244';cx.fillRect(0,0,vW,vH);
+      cx.globalAlpha=0.08;cx.fillStyle='#4488cc';
+      cx.beginPath();cx.ellipse(cX,cY,40,30,0,0,Math.PI*2);cx.fill();cx.globalAlpha=1;
+      // ADMIRA header
+      cx.fillStyle='#ccaa44';cx.font='bold 6px monospace';
+      cx.fillText('ADMIRA',cX,12);
+      // Fortuna pack
+      cx.fillStyle='#1a4a8a';cx.fillRect(cX-10,18,20,26); // blue pack
+      cx.fillStyle='#ffffff';cx.fillRect(cX-10,18,20,6); // white top
+      cx.fillStyle='#ccaa44';cx.fillRect(cX-8,30,16,2); // gold band
+      cx.fillStyle='#ffffff';cx.font='bold 5px monospace';
+      cx.fillText('FORTUNA',cX,28);
+      // Rotating slogans
+      const slogans=lang==='es'?
+        ['Tu marca de siempre','Sabor auténtico','Calidad Fortuna','Desde 1924','El clásico español']:
+        ['Your classic brand','Authentic flavor','Fortuna quality','Since 1924','The Spanish classic'];
+      const si=Math.floor(tt/180)%slogans.length;
+      cx.fillStyle='#ffffff';cx.font='bold 8px monospace';
+      cx.fillText('FORTUNA',cX,58);
+      cx.fillStyle='#8899bb';cx.font='7px monospace';
+      cx.fillText(slogans[si],cX,72);
+      cx.strokeStyle='#cc9933';cx.lineWidth=0.5;
+      cx.beginPath();cx.moveTo(15,78);cx.lineTo(85,78);cx.stroke();
+      cx.fillStyle='#ccaa44';cx.font='6px monospace';
+      cx.fillText('Compra Fortuna',cX,90);
+    }
     cx.textAlign='left';
   }
   cx.restore(); // undo screen clip + transform
