@@ -570,8 +570,8 @@ let lang='es';
 const T=()=>LANGS[lang];
 
 // ── STATE ─────────────────────────────────────────────────────
-const S={MENU:'menu',MODEL_SEL:'modelSel',TUT:'tutorial',GAME:'game',PAUSE:'pause',YEAR_END:'yearEnd',GAME_END:'gameEnd',EDITOR:'editor',SETTINGS:'settings'};
-let state=S.MENU, menuSel=0, modelSel=0, tutPage=0;
+const S={MENU:'menu',MODEL_SEL:'modelSel',TUT:'tutorial',GAME:'game',PAUSE:'pause',YEAR_END:'yearEnd',GAME_END:'gameEnd',EDITOR:'editor',SETTINGS:'settings',HELP:'help'};
+let state=S.MENU, menuSel=0, modelSel=0, tutPage=0, helpPage=0;
 let tt=0;
 let ledOffset=0;
 
@@ -826,6 +826,12 @@ document.addEventListener('keydown',e=>{
     if(e.code==='Escape'){saveShopSettings();state=S.MENU;}
     return;
   }
+  if(state===S.HELP){
+    if(e.code==='Escape'){state=S.MENU;}
+    if(e.code==='ArrowLeft'){helpPage=Math.max(0,helpPage-1);}
+    if(e.code==='ArrowRight'){helpPage=Math.min(HELP_PAGES.length-1,helpPage+1);}
+    return;
+  }
   if(state===S.MODEL_SEL){
     if(e.code==='ArrowLeft')  modelSel=(modelSel+3)%4;
     if(e.code==='ArrowRight') modelSel=(modelSel+1)%4;
@@ -916,7 +922,7 @@ cv.addEventListener('click',e=>{
   if(state===S.PAUSE){state=S.GAME;return;}
   if(state===S.YEAR_END&&G.yearEndAnim>80){advanceYear();return;}
   if(state===S.GAME_END){state=S.MENU;menuSel=0;return;}
-  if(state!==S.GAME&&state!==S.EDITOR&&state!==S.SETTINGS&&state!==S.MENU) return;
+  if(state!==S.GAME&&state!==S.EDITOR&&state!==S.SETTINGS&&state!==S.MENU&&state!==S.HELP) return;
   const r2=cv.getBoundingClientRect();
   const mx=(e.clientX-r2.left)*(W/r2.width)|0, my=(e.clientY-r2.top)*(H/r2.height)|0;
   // Check buttons first
@@ -1087,6 +1093,10 @@ function doAction(id){
   if(id==='menuLangEs'){menuSel=0;return;}
   if(id==='menuLangEn'){menuSel=1;return;}
   if(id==='menuSettings'){state=S.SETTINGS;return;}
+  if(id==='menuHelp'){helpPage=0;state=S.HELP;return;}
+  if(id==='helpBack'){state=S.MENU;return;}
+  if(id==='helpPrev'){helpPage=Math.max(0,helpPage-1);return;}
+  if(id==='helpNext'){helpPage=Math.min(HELP_PAGES.length-1,helpPage+1);return;}
   // ── Model selection touch/click ──
   if(id.startsWith('model')&&id!=='modelConfirm'){
     const mi=parseInt(id.slice(5));
@@ -1677,10 +1687,185 @@ function drawMenu(){
   // Mini chibi preview
   for(let i=0;i<4;i++) chibi(W/2-60+i*40,oy+100,1,i,i,Math.floor(tt/12)%2,false,tt);
   // Settings button
-  const setX=W/2-40,setY=oy+140;
+  const setX=W/2-50,setY=oy+140;
   r(setX,setY,80,22,'#0a0a18');rx(setX,setY,80,22,P.gray,1);
-  tx('⚙ SETTINGS',W/2,setY+16,P.gray,9,'center');
+  tx('⚙ SETTINGS',setX+40,setY+16,P.gray,9,'center');
   BTNS['menuSettings']={x:setX,y:setY,w:80,h:22};
+  // Help button
+  const hx=setX+90,hy=setY;
+  r(hx,hy,60,22,'#0a0a18');rx(hx,hy,60,22,'#44ccaa',1);
+  tx('? HELP',hx+30,hy+16,'#44ccaa',9,'center');
+  BTNS['menuHelp']={x:hx,y:hy,w:60,h:22};
+}
+
+// ── HELP / MANUAL SCREEN ─────────────────────────────────────
+const HELP_PAGES=[
+  { title:'XTANCO — MANUAL DE USUARIO', lines:[
+    '','Bienvenido a XTANCO, el simulador de',
+    'estanco digital (Digital Twin).','',
+    'Gestiona tu estanco durante 5 años.',
+    'Contrata personal, repón stock,',
+    'lanza publicidad y alcanza los',
+    'objetivos de ventas anuales.','',
+    'Si facturas menos del 55% del objetivo,',
+    '¡game over!',
+  ]},
+  { title:'CONTROLES DE TECLADO', lines:[
+    '','Q / A / O / P — Mover personaje',
+    '  (NW / SE / SW / NE isométrico)','',
+    'M — Abrir/cerrar menú lateral',
+    'E — Editor de layout (mover muebles)',
+    'L — Encender/apagar lámpara Elgato',
+    '1-4 — Abrir tab directo (Ventas,',
+    '       Personal, Stock, Tienda)',
+    'Escape — Pausa / cerrar panel',
+    'S (en editor) — Guardar layout',
+    'R (en editor) — Resetear layout',
+  ]},
+  { title:'GESTIÓN DEL ESTANCO', lines:[
+    '','PERSONAL (tab 2):',
+    '  Contratar, entrenar (nivel 1-5),',
+    '  despedir. Roles: Cajero, Repositor,',
+    '  Azafata, Manager, DJ.','',
+    'STOCK (tab 3):',
+    '  Reponer productos individualmente.',
+    '  Tabaco, Vapes, Lotería, Prensa...','',
+    'PUBLICIDAD: Básica, Media, Premium.',
+    '  Aumenta fama y satisfacción.',
+    'MEJORA: Upgrade tienda a nivel 2.',
+  ]},
+  { title:'ECONOMÍA Y EVENTOS', lines:[
+    '','INGRESOS: Ventas de productos.',
+    'GASTOS: Salarios + reposiciones.','',
+    'RUSH HOUR: Periodo con ventas x2.4.',
+    '  ¡Aprovecha para facturar!','',
+    'INSPECCIÓN: Si tienes personal y',
+    '  stock > 30%, pasas (+satisfacción).',
+    '  Si no, multa de 400-1000€.','',
+    'RATING ANUAL: S(+2500€) A(+1200€)',
+    '  B(+400€) C(0€) D(-600€)',
+  ]},
+  { title:'MODELOS DE XTANCO', lines:[
+    '','GENERIC ★★★ Normal',
+    '  5 empleados, 6 productos, 3.500€','',
+    'GOOD ★★ Fácil',
+    '  2 empleados, 4 productos, 2.800€','',
+    'BETTER ★★★★ Difícil',
+    '  5 empleados, 6 productos, 4.500€','',
+    'BEST ★★★★★ Experto',
+    '  6 empleados, 8 productos, 6.000€',
+  ]},
+  { title:'VISITAS', lines:[
+    '','Desde el tab Tienda (4):','',
+    'VISITA COMERCIAL (verde)',
+    '  +12 fama, +5 satisfacción','',
+    'VISITA TÉCNICO (azul)',
+    '  +15 satisfacción, +30% stock','',
+    'VISITA DELEGACIÓN (rosa)',
+    '  +500-1000€ subsidio, +8 fama','',
+    'VISITA GUARDIA CIVIL (negro)',
+    '  Inspección: pasa o multa',
+  ]},
+  { title:'COMANDOS DE VOZ "ADMIRA"', lines:[
+    '','Desde la CLI de Claude, pulsa espacio',
+    'y di "Admira" + acción:','',
+    'Admira contrata DJ',
+    'Admira contrata a todos',
+    'Admira repón tabaco',
+    'Admira repón todo',
+    'Admira estado',
+    'Admira guarda',
+    'Admira publicidad premium',
+    'Admira visita comercial',
+    'Admira entrena a todos',
+  ]},
+  { title:'xtAPI — REFERENCIA CLI', lines:[
+    '','CONSULTAS:',
+    '  xtAPI.status()  — Estado general',
+    '  xtAPI.staff()   — Lista personal',
+    '  xtAPI.stock()   — Inventario','',
+    'ACCIONES:',
+    '  xtAPI.hire(slot) / hireDJ()',
+    '  xtAPI.train(slot) / trainAll()',
+    '  xtAPI.restock(slot) / restockAll()',
+    '  xtAPI.advertise(0|1|2)',
+    '  xtAPI.visit(Com|Tec|Del|GC)',
+    '  xtAPI.save() / xtAPI.help()',
+  ]},
+];
+
+function drawHelp(){
+  // Background
+  r(0,0,W,H,'#0a0a14');
+  // Grid
+  cx.globalAlpha=0.06;
+  for(let i=0;i<W;i+=40) r(i,0,1,H,'#44ccaa');
+  for(let i=0;i<H;i+=40) r(0,i,W,1,'#44ccaa');
+  cx.globalAlpha=1;
+
+  const pg=HELP_PAGES[helpPage];
+  const bw=520,bh=380;
+  const bx=(W-bw)/2, by=(H-bh)/2-10;
+
+  // Box shadow + border
+  r(bx+4,by+4,bw,bh,'#000');
+  r(bx,by,bw,bh,'#0c0c1a');
+  glow('#44ccaa',8);rx(bx,by,bw,bh,'#44ccaa',2);nog();
+
+  // Page indicator dots
+  const dotY=by+12;
+  for(let i=0;i<HELP_PAGES.length;i++){
+    const dx=W/2-((HELP_PAGES.length-1)*10)/2+i*10;
+    if(i===helpPage){ glow('#44ccaa',6);r(dx-3,dotY-3,6,6,'#44ccaa');nog(); }
+    else { r(dx-2,dotY-2,4,4,'#335555'); }
+  }
+
+  // Title
+  const titleY=by+38;
+  glow('#44ccaa',4);tx(pg.title,W/2,titleY,'#44ccaa',12,'center');nog();
+  // Separator
+  r(bx+30,titleY+6,bw-60,1,'#44ccaa');
+
+  // Content lines
+  const startY=titleY+22;
+  for(let i=0;i<pg.lines.length;i++){
+    const ly=startY+i*22;
+    if(ly>by+bh-50) break;
+    const line=pg.lines[i];
+    if(line.startsWith('  ')){ tx(line,bx+40,ly,'#99bbaa',9); }
+    else if(line===''){ /* skip blank */ }
+    else if(line.includes('—')){ tx(line,bx+30,ly,'#ccddcc',9); }
+    else { tx(line,bx+30,ly,'#bbccbb',9); }
+  }
+
+  // Page number
+  tx((helpPage+1)+'/'+HELP_PAGES.length,W/2,by+bh-12,'#556666',8,'center');
+
+  // Navigation buttons
+  const btnW=90,btnH=26;
+  const navY=by+bh-42;
+
+  // Back to menu
+  const backX=bx+15;
+  r(backX,navY,60,btnH,'#1a0a0a');rx(backX,navY,60,btnH,'#cc6666',1);
+  tx('✕ BACK',backX+30,navY+18,'#cc6666',9,'center');
+  BTNS['helpBack']={x:backX,y:navY,w:60,h:btnH};
+
+  // Prev
+  if(helpPage>0){
+    const prevX=W/2-btnW-10;
+    r(prevX,navY,btnW,btnH,'#0a0a18');rx(prevX,navY,btnW,btnH,'#88aaaa',1);
+    tx('◀ ANTERIOR',prevX+btnW/2,navY+18,'#88aaaa',9,'center');
+    BTNS['helpPrev']={x:prevX,y:navY,w:btnW,h:btnH};
+  } else { delete BTNS['helpPrev']; }
+
+  // Next
+  if(helpPage<HELP_PAGES.length-1){
+    const nextX=W/2+10;
+    r(nextX,navY,btnW,btnH,'#0a0a18');rx(nextX,navY,btnW,btnH,'#44ccaa',1);
+    tx('SIGUIENTE ▶',nextX+btnW/2,navY+18,'#44ccaa',9,'center');
+    BTNS['helpNext']={x:nextX,y:navY,w:btnW,h:btnH};
+  } else { delete BTNS['helpNext']; }
 }
 
 // ── SETTINGS SCREEN ──────────────────────────────────────────
@@ -3924,6 +4109,7 @@ function loop(){
   if(state===S.GAME_END){drawGameEnd();return;}
   if(state===S.EDITOR){drawEditor();return;}
   if(state===S.SETTINGS){drawSettings();return;}
+  if(state===S.HELP){drawHelp();return;}
   if(state===S.PAUSE){
     r(0,0,W,H,P.bg);
     cx.save();try{drawCityBg();}catch(e){}cx.restore();
