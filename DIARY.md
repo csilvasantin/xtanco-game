@@ -2,6 +2,149 @@
 
 ---
 
+## [v2.5] — 2026-03-23
+
+### Sesión completa: 8 mejoras mayores + condiciones + IoT (Hue + Elgato)
+
+**20 commits, de v1.38 a v1.55.** El Xtanco pasa de beta funcional a experiencia inmersiva con sonido, pathfinding, eventos dinámicos, IoT real y panel de condiciones.
+
+---
+
+### 1. Sistema de Sonido (SFX Engine)
+
+- Motor SFX con Web Audio API — 11 sonidos sintetizados sin archivos externos
+- Sonidos: cashRegister, doorBell, salePop, hireFanfare, restockThud, rushSiren, inspectionAlarm, weekEnd, gameOver, levelUp, eventChime, thunder, rainLoop
+- Botón FX en el HUD para activar/desactivar efectos sonoros
+- Volumen controlado por `G.sfxVolume` (persiste en save)
+
+### 2. Pathfinding A*
+
+- Los clientes ahora navegan entre muebles con pathfinding real
+- `buildWalkGrid()` genera mapa 13x7 desde `isTileBlocked()`
+- `astarPath()` con heurística Manhattan, 4 direcciones
+- Path se recalcula al entrar/salir del editor
+- Clientes siguen waypoints para ir y volver a la puerta
+
+### 3. Eventos Variados (6 nuevos)
+
+| Evento | Prob/tick | Efecto |
+|--------|----------|--------|
+| Festivo | 0.001 | Ventas x1.8, +50% clientes, 200 ticks |
+| Oferta Proveedor | 0.0008 | Restock -50% un producto, 300 ticks |
+| Lluvia | 0.0004 | -50% clientes, efectos visuales y sonoros |
+| Sol | 0.0004 | +30% clientes |
+| Cliente VIP | 0.0005 | Cliente dorado, ventas x5 |
+| Robo | 0.0004 | -30% stock (prevenible con ≥3 staff) |
+| Empleado del Mes | 0.0003 | +30 moral, +1 nivel staff random |
+
+### 4. Gráficos de Progreso
+
+- Mini chart de revenue/semana en la pestaña Ventas
+- Línea de progreso con área rellena
+- Línea discontinua roja para el target semanal
+- Datos guardados en `G.weekHistory[]`
+
+### 5. Animaciones de Transición
+
+- Fade-to-black entre estados del juego
+- Aplicado en: menú→selección, juego→fin de año, fin→menú
+- No aplicado en pause (instantáneo)
+
+### 6. Tutorial Interactivo Guiado
+
+- 9 pasos sobre el juego real (no slides estáticas)
+- Guía: contratar → reponer → publicidad → entrenar → guardar
+- Auto-avance en pasos de espera, espera input en pasos de acción
+- Botón SKIP disponible
+
+### 7. Mobile UX
+
+- Detección automática de dispositivo móvil
+- Swipe izq/der para cambiar tabs
+- Swipe arriba/abajo para abrir/cerrar menú
+- D-pad virtual para movimiento (Q/A/O/P)
+- Indicador de swipe en pantalla
+
+### 8. Leaderboard Local
+
+- Top 10 puntuaciones por modelo en localStorage
+- Medallas 🥇🥈🥉 para top 3
+- Mostrado en pantalla de Game End
+- Entrada actual resaltada si entra en ranking
+
+### 9. Pestaña CON (Condiciones) — reemplaza STOCK
+
+Nueva pestaña con 5 secciones:
+
+**TIEMPO** — Estado meteorológico + 3 botones selectores
+- 🌤 Normal | 🌧 Lluvia | ☀ Sol
+- El tiempo dura mínimo 2 horas de juego
+- Selector manual activa efectos inmediatamente
+
+**AFLUENCIA** — Tasa de clientes en tiempo real
+- Barra de porcentaje con modificadores activos
+- 4 botones de tipo de visitante:
+  - ⭐ VIP (gasta x5, habanos)
+  - 🔁 Frecuente (fiel, tabaco habitual)
+  - 👤 Casual (lotería, vapes)
+  - ❓ Desconocido (primera visita)
+- Tipo seleccionado se muestra en el monitor del mostrador
+
+**HORARIO** — Reloj + 3 botones de periodo
+- 🌅 Mañana (9-13h): café y prensa
+- ☀️ Tarde (14-18h): tabaco y lotería
+- 🌙 Noche (19-21h): vapes y recargas
+- Saltar entre periodos cambia hora del juego
+
+**FRECUENCIA VISITA** — Estadísticas de clientes
+- Hoy / Media por semana / Total acumulado
+
+**STOCK** — Stock medio + botón REPONER TODO
+
+### 10. Tormenta Visual y Sonora
+
+- Gotas de lluvia animadas en el cielo y calles
+- Nubes oscuras y pesadas (7 nubes vs 4 normal)
+- Cielo oscurecido con overlay azul-gris
+- Relámpagos (flash blanco aleatorio cada ~5s)
+- Trueno SFX (sawtooth grave) con cada rayo
+- Sonido ambiental de lluvia (triangle wave sutil)
+- Charcos con reflejos en las calles
+
+### 11. Publicidad Condicionada en Pantalla Admira
+
+| Tiempo | Anuncio Admira |
+|--------|---------------|
+| 🌧 Lluvia | Vapeadores + nubes de vapor + "Día de lluvia, día de vapor" |
+| ☀ Sol | Paquete cigarrillos + sol + "Sol y terraza, mejor momento" |
+| Normal | Fortuna con eslóganes rotativos (5 mensajes) |
+
+### 12. Integración IoT
+
+**Elgato Key Light** (192.168.0.109)
+- Sincronizada con hora del juego
+- Mañana: OFF | Tarde: gradual 20→80% | Noche: ON 100%
+- Botones de periodo envían comandos inmediatos
+
+**Philips Hue** (Bridge 192.168.1.37)
+- Lampara Despacho (#9) y Lampara Comedor (#8)
+- Sync cada 2 segundos con hora del juego:
+  - Mañana: luz fría natural (ct=250)
+  - Tarde: cálida progresiva
+  - Noche: cálida máxima (ct=366, bri=254)
+- Tormenta: flash azul frío (xy=[0.18,0.18], alert=lselect)
+- API Key: `fsj2dkVBF0wOtDUvdMnisfdyBZHSqPHULmQ3ehQ0`
+
+### 13. UI/UX
+
+- Botón Quit en barra superior (guarda + para música + vuelve al menú)
+- Cursor pointer sobre elementos clickables
+- Versión visible en esquina del menú
+- Bottom bar ajustada a 34px sin overlap
+- Store Manager reposicionado delante de pantalla Admira
+
+---
+
 ## [v2.4] — 2026-03-22
 
 ### Sesión maratón: DJ, música, persistencia, contador, competencia y mejoras masivas
