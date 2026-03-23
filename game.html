@@ -61,7 +61,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.43
+//  XTANCO DIGITAL TWIN — BETA v1.44
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -554,7 +554,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.43',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.44',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -604,7 +604,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.43',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.44',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1154,10 +1154,13 @@ cv.addEventListener('click',e=>{
 });
 // Mouse move for editor hover
 cv.addEventListener('mousemove',e=>{
-  if(state!==S.EDITOR) return;
   const r2=cv.getBoundingClientRect();
   const mx=(e.clientX-r2.left)*(W/r2.width)|0, my=(e.clientY-r2.top)*(H/r2.height)|0;
-  edHoverTile=screenToIso(mx,my);
+  // Cursor: pointer over any clickable button
+  let overBtn=false;
+  for(const id in BTNS){const b=BTNS[id];if(mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h){overBtn=true;break;}}
+  cv.style.cursor=overBtn?'pointer':'default';
+  if(state===S.EDITOR) edHoverTile=screenToIso(mx,my);
 });
 
 // ── ACTIONS ───────────────────────────────────────────────────
@@ -1993,7 +1996,7 @@ function drawMenu(){
   tx('? HELP',hx+30,hy+16,'#44ccaa',9,'center');
   BTNS['menuHelp']={x:hx,y:hy,w:60,h:22};
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.43',W-40,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.44',W-40,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
