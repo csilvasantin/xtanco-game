@@ -54,6 +54,7 @@
   <button class="btn-menu" id="btnMenu">☰ Menu</button>
   <button class="btn-menu" id="btnQuit" style="background:#551111;color:#ff6666;border:1px solid #cc3333 !important">✕ Quit</button>
 </div>
+<div id="eventBanner" style="display:none;position:absolute;right:6px;top:36px;min-width:200px;max-width:320px;padding:5px 14px;border-radius:4px;font-family:monospace;font-size:11px;font-weight:bold;color:#fff;text-align:center;z-index:15;pointer-events:none;transition:opacity 0.3s"></div>
 <audio id="bgMusic" loop preload="auto"><source src="music/titi.mp3" type="audio/mpeg"></audio>
 <canvas id="c" width="800" height="500"></canvas>
 <div id="videoMonitor" style="display:none;position:absolute;overflow:hidden;border:2px solid #333;border-radius:2px;background:#000;z-index:5;pointer-events:auto">
@@ -64,7 +65,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.68 — 2026-03-25 12:45
+//  XTANCO DIGITAL TWIN — BETA v1.69 — 2026-03-25 12:45
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -715,7 +716,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.68',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.69',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -765,7 +766,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.68',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.69',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1665,7 +1666,19 @@ function doAction(id){
   }
 }
 
-function showEv(msg,col){G.eventMsg=msg;G.eventTimer=160;G.eventColor=col||P.neon1;}
+function showEv(msg,col){
+  G.eventMsg=msg;G.eventTimer=160;G.eventColor=col||P.neon1;
+  // Show HTML banner below topBar EDIT/MENU/QUIT
+  const eb=document.getElementById('eventBanner');
+  if(eb){
+    eb.textContent=msg;
+    eb.style.background=col||'#3a2818';
+    eb.style.display='block';eb.style.opacity='1';
+    clearTimeout(eb._fadeT);clearTimeout(eb._hideT);
+    eb._fadeT=setTimeout(()=>{eb.style.opacity='0';},2400);
+    eb._hideT=setTimeout(()=>{eb.style.display='none';},2800);
+  }
+}
 function addFloat(x,y,txt,col){G.floats.push({x,y,txt,col,life:65,vy:-0.65});}
 function openPause(){
   G.pauseData={rev:G.weekRevenue,exp:G.weekExpenses,cust:G.customersToday,sat:G.satisfaction,fame:G.fame};
@@ -2279,7 +2292,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.68 · 2026-03-25 13:40',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.69 · 2026-03-25 13:50',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -4193,19 +4206,9 @@ function drawHUD(){
 
 // ── DRAW EVENT MSG ────────────────────────────────────────────
 function drawEvent(){
-  if(!G.eventMsg||G.eventTimer<=0) return;
-  // Position: bottom-right, just above EDIT/MENU buttons in the bottom bar
-  const bh=34, by=H-bh;
-  const ew=260,eh=22;
-  const ex=W-ew-4, ey=by-eh-4; // just above the bottom bar
-  const alpha=Math.min(1,G.eventTimer/30);
-  cx.globalAlpha=alpha;
-  r(ex,ey,ew,eh,G.eventColor||'#3a2818');
-  cx.globalAlpha=alpha*0.8;
-  rx(ex,ey,ew,eh,'#f0e8c8',1);
-  cx.globalAlpha=alpha;
-  tx(G.eventMsg,ex+ew/2,ey+15,'#ffffff',9,'center');
-  cx.globalAlpha=1;
+  // Event banner is now rendered as HTML overlay (see showEv)
+  // Just decrement timer here
+  if(G.eventTimer>0) G.eventTimer--;
 }
 
 // ── LIGHT NOTIFICATIONS (Elgato + Hue) ────────────────────────
