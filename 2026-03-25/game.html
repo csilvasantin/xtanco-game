@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.12 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.13 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -874,7 +874,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.12',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.13',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -929,7 +929,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.12',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.13',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2495,7 +2495,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v2.12 · 2026-03-25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v2.13 · 2026-03-25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -3370,7 +3370,7 @@ function drawShop(){
   if(ledItem) drawLED(ledItem.sx||1,ledItem.sy||1);
   // ── LED on BACK WALL (top edge, continues from left wall) ──
   drawBackWallLED();
-  // ── TFT ALTADIS (big screen below LED on left wall) ──
+  // ── TFT ALTADIS (16:9 screen on back wall, above 2nd window) ──
   drawAltadisTFT();
 
   // ── FURNITURE & ENTITIES (sorted by screen Y for correct occlusion) ──
@@ -3596,26 +3596,31 @@ function drawBackWallLED(){
 
 // ── ALTADIS TFT (big screen below LED, centered on left wall) ─
 function drawAltadisTFT(){
-  // Draw as a flat parallelogram on the left wall, between the two plants
-  // Use 4 corner points calculated from iso positions on the wall
+  // Draw as a flat parallelogram on the BACK WALL (row=0), above 2nd window (col~6), 16:9
   cx.save();
-  // Clip to left wall
-  const wallClipPts=[];
-  for(let rr=0;rr<=ISO.rows;rr++) wallClipPts.push(toIso(0,rr));
+  // Clip to back wall area
+  const bwClipPts=[];
+  for(let cc=0;cc<=ISO.cols+4;cc++) bwClipPts.push(toIso(cc,0));
   cx.beginPath();
-  cx.moveTo(wallClipPts[0].x,wallClipPts[0].y-ISO.wallH);
-  for(let i=1;i<wallClipPts.length;i++) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y-ISO.wallH);
-  for(let i=wallClipPts.length-1;i>=0;i--) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y);
+  cx.moveTo(bwClipPts[0].x,bwClipPts[0].y-ISO.wallH);
+  for(let i=1;i<bwClipPts.length;i++) cx.lineTo(bwClipPts[i].x,bwClipPts[i].y-ISO.wallH);
+  for(let i=bwClipPts.length-1;i>=0;i--) cx.lineTo(bwClipPts[i].x,bwClipPts[i].y);
   cx.closePath();cx.clip();
-  // Screen corners on left wall — centered, no overlap with DS screens
-  const ledEndY=ISO.wallH*0.25;
-  const pR=toIso(0,2.0); // starts after DS1 ends at 1.8 (gap 0.2)
-  const pL=toIso(0,4.0); // ends before DS2 starts at 4.2 (gap 0.2)
-  // Bezel corners (outer frame)
-  const bzTL={x:pL.x, y:pL.y-ISO.wallH+ledEndY+14};
-  const bzTR={x:pR.x, y:pR.y-ISO.wallH+ledEndY+14};
-  const bzBL={x:pL.x, y:pL.y-14};
-  const bzBR={x:pR.x, y:pR.y-14};
+  // Screen spans cols 4.5 to 8.0 on back wall (above 2nd window at col 6)
+  const pL=toIso(4.5,0);
+  const pR=toIso(8.0,0);
+  // 16:9 aspect ratio: height = width * 9/16, adjusted for wall perspective
+  const screenW=pR.x-pL.x;
+  const screenH16x9=screenW*9/16;
+  // Position screen in upper portion of wall, below LED
+  const wallTopY=pL.y-ISO.wallH;
+  const screenTopY=wallTopY+ISO.wallH*0.15; // 15% from top
+  // Bezel corners (outer frame) — flat on back wall (same Y for left and right)
+  const wallSlope=(pR.y-pL.y)/(pR.x-pL.x); // back wall angle
+  const bzTL={x:pL.x, y:screenTopY};
+  const bzTR={x:pR.x, y:screenTopY+(pR.y-pL.y)};
+  const bzBL={x:pL.x, y:screenTopY+screenH16x9};
+  const bzBR={x:pR.x, y:screenTopY+screenH16x9+(pR.y-pL.y)};
   // Draw bezel (black parallelogram)
   cx.beginPath();
   cx.moveTo(bzTL.x,bzTL.y);cx.lineTo(bzTR.x,bzTR.y);
@@ -3646,13 +3651,13 @@ function drawAltadisTFT(){
   cx.moveTo(tl.x,tl.y);cx.lineTo(tr.x,tr.y);
   cx.lineTo(br.x,br.y);cx.lineTo(bl.x,bl.y);
   cx.closePath();cx.fillStyle='#001833';cx.fill();
-  // Clip + affine transform: virtual 100×100 → screen parallelogram
+  // Clip + affine transform: virtual 160×90 (16:9) → screen parallelogram
   cx.save();
   cx.beginPath();
   cx.moveTo(tl.x,tl.y);cx.lineTo(tr.x,tr.y);
   cx.lineTo(br.x,br.y);cx.lineTo(bl.x,bl.y);
   cx.closePath();cx.clip();
-  const vW=100,vH=100;
+  const vW=160,vH=90;
   const ax=(tr.x-tl.x)/vW, ay=(tr.y-tl.y)/vW;
   const bx=(bl.x-tl.x)/vH, by=(bl.y-tl.y)/vH;
   cx.setTransform(ax,ay,bx,by,tl.x,tl.y);
@@ -3675,17 +3680,16 @@ function drawAltadisTFT(){
     const dashIdx=dsArtist.indexOf(' - ');
     const artistName=dashIdx>0?dsArtist.substring(0,dashIdx):dsArtist;
     const songName=dashIdx>0?dsArtist.substring(dashIdx+3):'';
-    cx.fillStyle='#ffee44';cx.font='bold 7px monospace';
-    cx.fillText('Este video está',cX,16);
-    cx.fillText('patrocinado por...',cX,26);
-    cx.fillStyle='#ffffff';cx.font='bold 14px monospace';
-    cx.fillText(artistName,cX,46);
+    cx.fillStyle='#ffee44';cx.font='bold 9px monospace';
+    cx.fillText('Este video está patrocinado por...',cX,16);
+    cx.fillStyle='#ffffff';cx.font='bold 16px monospace';
+    cx.fillText(artistName,cX,40);
     if(songName){
-      cx.fillStyle='#ffccee';cx.font='bold 10px monospace';
-      cx.fillText(songName,cX,62);
+      cx.fillStyle='#ffccee';cx.font='bold 12px monospace';
+      cx.fillText(songName,cX,58);
     }
-    cx.fillStyle='#fff';cx.font='8px monospace';
-    cx.fillText('🎉🎊🎉',cX,80);
+    cx.fillStyle='#fff';cx.font='10px monospace';
+    cx.fillText('🎉🎊🎉',cX,78);
     cx.textAlign='left';
   } else if(G&&G.tftStockIdx>=0&&G.tftStockIdx<G.prods.length&&G.tftStockTimer>0){
     // ── ADMIRA: Product stock display (virtual 100x100 coords) ──
@@ -3698,26 +3702,23 @@ function drawAltadisTFT(){
     cx.fillStyle=prod.color;cx.fillRect(0,0,vW,6);
     cx.textAlign='center';
     // ADMIRA header
-    cx.fillStyle='#ccaa44';cx.font='bold 7px monospace';
-    cx.fillText('ADMIRA',cX,16);
+    cx.fillStyle='#ccaa44';cx.font='bold 8px monospace';
+    cx.fillText('ADMIRA',cX,14);
     // Product name
-    cx.fillStyle='#ffffff';cx.font='bold 12px monospace';
-    cx.fillText(prodName,cX,34);
+    cx.fillStyle='#ffffff';cx.font='bold 14px monospace';
+    cx.fillText(prodName,cX,32);
     // Product color block
-    cx.fillStyle=prod.color;cx.fillRect(cX-6,40,12,10);
+    cx.fillStyle=prod.color;cx.fillRect(cX-8,38,16,10);
     // Stock bar
-    cx.fillStyle='#1a1a2a';cx.fillRect(15,56,70,5);
-    cx.fillStyle=stk>0.5?P.green:stk>0.2?P.yellow:P.red;cx.fillRect(15,56,70*stk,5);
+    cx.fillStyle='#1a1a2a';cx.fillRect(30,54,100,6);
+    cx.fillStyle=stk>0.5?P.green:stk>0.2?P.yellow:P.red;cx.fillRect(30,54,100*stk,6);
     // Stock numbers
-    cx.fillStyle='#ffffff';cx.font='8px monospace';
-    cx.fillText(prod.stock+'/'+prod.max,cX,72);
+    cx.fillStyle='#ffffff';cx.font='10px monospace';
+    cx.fillText(prod.stock+'/'+prod.max,cX,70);
     // Percentage
     cx.fillStyle=stk>0.5?'#66ee66':stk>0.2?'#eecc44':'#ee4444';
-    cx.font='bold 8px monospace';
-    cx.fillText(Math.round(stk*100)+'%',cX,84);
-    // Price
-    cx.fillStyle='#8899bb';cx.font='6px monospace';
-    cx.fillText(prod.price+'€/ud',cX,94);
+    cx.font='bold 10px monospace';
+    cx.fillText(Math.round(stk*100)+'%',cX,82);
     cx.textAlign='left';
   } else if(G&&G.tftOgre>0){
     // ── OGRE PIXEL ART (Visita Delegación, virtual 100x100 coords) ──
@@ -3798,27 +3799,26 @@ function drawAltadisTFT(){
       cx.strokeStyle='rgba(100,160,220,0.3)';cx.lineWidth=0.5;
       for(let i=0;i<8;i++){cx.beginPath();cx.moveTo(10+i*12,0);cx.lineTo(6+i*12,20);cx.stroke();}
       // ADMIRA header
-      cx.fillStyle='#ccaa44';cx.font='bold 6px monospace';
+      cx.fillStyle='#ccaa44';cx.font='bold 8px monospace';
       cx.fillText('ADMIRA',cX,12);
       // Vape icon (simplified)
-      cx.fillStyle='#556688';cx.fillRect(cX-3,22,6,25); // body
-      cx.fillStyle='#aabbcc';cx.fillRect(cX-4,20,8,4); // mouthpiece
-      cx.fillStyle='#334466';cx.fillRect(cX-2,42,4,6); // base
+      cx.fillStyle='#556688';cx.fillRect(cX-4,20,8,28); // body
+      cx.fillStyle='#aabbcc';cx.fillRect(cX-5,18,10,5); // mouthpiece
+      cx.fillStyle='#334466';cx.fillRect(cX-3,44,6,6); // base
       // Vapor clouds
       cx.globalAlpha=0.3+0.2*Math.sin(tt*0.08);
       cx.fillStyle='#aaccee';
-      cx.beginPath();cx.arc(cX-4,16,3,0,Math.PI*2);cx.fill();
-      cx.beginPath();cx.arc(cX+2,13,2.5,0,Math.PI*2);cx.fill();
-      cx.beginPath();cx.arc(cX-1,10,2,0,Math.PI*2);cx.fill();
+      cx.beginPath();cx.arc(cX-5,14,4,0,Math.PI*2);cx.fill();
+      cx.beginPath();cx.arc(cX+3,11,3,0,Math.PI*2);cx.fill();
+      cx.beginPath();cx.arc(cX-1,8,2.5,0,Math.PI*2);cx.fill();
       cx.globalAlpha=1;
       // Text
-      cx.fillStyle='#88ccee';cx.font='bold 8px monospace';
+      cx.fillStyle='#88ccee';cx.font='bold 10px monospace';
       cx.fillText('VAPEADORES',cX,60);
-      cx.fillStyle='#ffffff';cx.font='bold 7px monospace';
-      cx.fillText('Día de lluvia,',cX,72);
-      cx.fillText('día de vapor',cX,82);
-      cx.fillStyle='#ccaa44';cx.font='6px monospace';
-      cx.fillText('★ OFERTA ★',cX,94);
+      cx.fillStyle='#ffffff';cx.font='bold 9px monospace';
+      cx.fillText('Día de lluvia, día de vapor',cX,74);
+      cx.fillStyle='#ccaa44';cx.font='7px monospace';
+      cx.fillText('★ OFERTA ★',cX,86);
     } else if(isSunAd){
       // ── SUN AD: Paquete de cigarrillos ──
       cx.fillStyle='#1a1a08';cx.fillRect(0,0,vW,vH);
@@ -3826,44 +3826,43 @@ function drawAltadisTFT(){
       cx.globalAlpha=0.15;cx.fillStyle='#ffdd44';
       cx.beginPath();cx.arc(80,10,20,0,Math.PI*2);cx.fill();cx.globalAlpha=1;
       // ADMIRA header
-      cx.fillStyle='#ccaa44';cx.font='bold 6px monospace';
+      cx.fillStyle='#ccaa44';cx.font='bold 8px monospace';
       cx.fillText('ADMIRA',cX,12);
       // Cigarette pack (simplified)
-      cx.fillStyle='#cc2222';cx.fillRect(cX-10,20,20,28); // red pack
-      cx.fillStyle='#ffffff';cx.fillRect(cX-10,20,20,8); // white top flip
-      cx.fillStyle='#eeddcc';cx.fillRect(cX-7,28,2,16); // cigarettes visible
-      cx.fillStyle='#eeddcc';cx.fillRect(cX-3,26,2,18);
-      cx.fillStyle='#eeddcc';cx.fillRect(cX+1,28,2,16);
-      cx.fillStyle='#eeddcc';cx.fillRect(cX+5,27,2,17);
+      cx.fillStyle='#cc2222';cx.fillRect(cX-12,18,24,30); // red pack
+      cx.fillStyle='#ffffff';cx.fillRect(cX-12,18,24,8); // white top flip
+      cx.fillStyle='#eeddcc';cx.fillRect(cX-8,28,3,16);
+      cx.fillStyle='#eeddcc';cx.fillRect(cX-3,26,3,18);
+      cx.fillStyle='#eeddcc';cx.fillRect(cX+2,28,3,16);
+      cx.fillStyle='#eeddcc';cx.fillRect(cX+7,27,3,17);
       // Gold band
-      cx.fillStyle='#ccaa44';cx.fillRect(cX-10,40,20,3);
+      cx.fillStyle='#ccaa44';cx.fillRect(cX-12,40,24,3);
       // Text
-      cx.fillStyle='#ffdd44';cx.font='bold 9px monospace';
-      cx.fillText('TABACO',cX,62);
-      cx.fillStyle='#ffffff';cx.font='7px monospace';
-      cx.fillText('Sol y terraza,',cX,74);
-      cx.fillText('mejor momento',cX,84);
-      cx.fillStyle='#ccaa44';cx.font='6px monospace';
-      cx.fillText('☀ DISFRUTA ☀',cX,95);
+      cx.fillStyle='#ffdd44';cx.font='bold 11px monospace';
+      cx.fillText('TABACO',cX,60);
+      cx.fillStyle='#ffffff';cx.font='9px monospace';
+      cx.fillText('Sol y terraza, mejor momento',cX,74);
+      cx.fillStyle='#ccaa44';cx.font='7px monospace';
+      cx.fillText('☀ DISFRUTA ☀',cX,86);
     } else {
       // ── DEFAULT: Compra Fortuna (random slogans) ──
       cx.fillStyle='#002244';cx.fillRect(0,0,vW,vH);
       cx.globalAlpha=0.08;cx.fillStyle='#4488cc';
       cx.beginPath();cx.ellipse(cX,cY,40,30,0,0,Math.PI*2);cx.fill();cx.globalAlpha=1;
-      cx.fillStyle='#ccaa44';cx.font='bold 6px monospace';cx.fillText('ADMIRA',cX,12);
-      cx.fillStyle='#1a4a8a';cx.fillRect(cX-10,18,20,26);
-      cx.fillStyle='#ffffff';cx.fillRect(cX-10,18,20,6);
-      cx.fillStyle='#ccaa44';cx.fillRect(cX-8,30,16,2);
-      cx.fillStyle='#ffffff';cx.font='bold 5px monospace';cx.fillText('FORTUNA',cX,28);
+      cx.fillStyle='#ccaa44';cx.font='bold 8px monospace';cx.fillText('ADMIRA',cX,12);
+      cx.fillStyle='#1a4a8a';cx.fillRect(cX-12,16,24,28);
+      cx.fillStyle='#ffffff';cx.fillRect(cX-12,16,24,7);
+      cx.fillStyle='#ccaa44';cx.fillRect(cX-10,30,20,2);
+      cx.fillStyle='#ffffff';cx.font='bold 7px monospace';cx.fillText('FORTUNA',cX,28);
       const slogans=lang==='es'?
         ['Tu marca de siempre','Sabor auténtico','Calidad Fortuna','Desde 1924','El clásico español']:
         ['Your classic brand','Authentic flavor','Fortuna quality','Since 1924','The Spanish classic'];
       const si=Math.floor(tt/180)%slogans.length;
-      cx.fillStyle='#ffffff';cx.font='bold 8px monospace';cx.fillText('FORTUNA',cX,58);
-      cx.fillStyle='#8899bb';cx.font='7px monospace';cx.fillText(slogans[si],cX,72);
+      cx.fillStyle='#ffffff';cx.font='bold 11px monospace';cx.fillText('FORTUNA',cX,56);
+      cx.fillStyle='#8899bb';cx.font='9px monospace';cx.fillText(slogans[si],cX,72);
       cx.strokeStyle='#cc9933';cx.lineWidth=0.5;
-      cx.beginPath();cx.moveTo(15,78);cx.lineTo(85,78);cx.stroke();
-      cx.fillStyle='#ccaa44';cx.font='6px monospace';cx.fillText('Compra Fortuna',cX,90);
+      cx.beginPath();cx.moveTo(20,78);cx.lineTo(140,78);cx.stroke();
+      cx.fillStyle='#ccaa44';cx.font='7px monospace';cx.fillText('Compra Fortuna',cX,86);
     }
     cx.textAlign='left';
   }
