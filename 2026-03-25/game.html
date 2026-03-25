@@ -65,7 +65,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.73 — 2026-03-25 12:45
+//  XTANCO DIGITAL TWIN — BETA v1.74 — 2026-03-25 12:45
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -754,7 +754,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.73',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.74',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -809,7 +809,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.73',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.74',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2368,7 +2368,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.73 · 2026-03-25 14:25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.74 · 2026-03-25 14:25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -4094,33 +4094,69 @@ function drawIsoWineRack(col,row){
 
 // ── MAGAZINE RACK (revistero) ────────────────────────────────
 function drawIsoMagazineRack(col,row){
-  // Metal/wood rack: 2 wide, 1 deep, 40px tall
-  drawIsoBlock(col,row,2,1,40,'#c8c0b0','#8a8478','#a09890',null);
+  const hw=ISO.tileW/2, hh=ISO.tileH/2;
+  const p0=toIso(col,row);
   const p=toIso(col+1,row+0.5);
-  // Magazine slots (angled display)
-  const magColors=['#dd3333','#3366cc','#33aa55','#dd8822','#cc33aa','#4488aa','#ddcc22'];
+  const rackH=42;
+  const magColors=['#dd3333','#3366cc','#33aa55','#dd8822','#cc33aa','#4488aa','#ddcc22','#ee5566','#3388bb'];
+  // Rack frame
+  drawIsoBlock(col,row,2,1,rackH,'#c8c0b0','#8a8478','#a09890',null);
+  // ── RIGHT FACE: magazine spines (lomos) on isometric right face ──
+  // Right face corners: top-front, top-back, bottom-back, bottom-front
+  const rTF={x:p0.x+2*hw, y:p0.y+2*hh-rackH};       // top front
+  const rTB={x:p0.x+2*hw-hw, y:p0.y+2*hh+hh-rackH};  // top back
+  const rBF={x:p0.x+2*hw, y:p0.y+2*hh};               // bottom front
+  const rBB={x:p0.x+2*hw-hw, y:p0.y+2*hh+hh};         // bottom back
+  for(let shelf=0;shelf<3;shelf++){
+    const t0=shelf/3, t1=(shelf+1)/3;
+    // Top and bottom edges of this shelf band
+    const sTopF={x:rTF.x,y:rTF.y+(rBF.y-rTF.y)*t0};
+    const sTopB={x:rTB.x,y:rTB.y+(rBB.y-rTB.y)*t0};
+    const sBotF={x:rTF.x,y:rTF.y+(rBF.y-rTF.y)*t1};
+    const sBotB={x:rTB.x,y:rTB.y+(rBB.y-rTB.y)*t1};
+    const shH=sBotF.y-sTopF.y;
+    // Draw 5 spines per shelf as parallelograms following the wall
+    for(let i=0;i<5;i++){
+      const f0=i/5, f1=(i+1)/5;
+      const mc=magColors[(shelf*5+i)%magColors.length];
+      // Interpolate position along back edge
+      const x0=sTopF.x+(sTopB.x-sTopF.x)*f0, y0=sTopF.y+(sTopB.y-sTopF.y)*f0;
+      const x1=sTopF.x+(sTopB.x-sTopF.x)*f1, y1=sTopF.y+(sTopB.y-sTopF.y)*f1;
+      cx.beginPath();
+      cx.moveTo(x0,y0+2);
+      cx.lineTo(x1,y1+2);
+      cx.lineTo(x1,y1+shH-2);
+      cx.lineTo(x0,y0+shH-2);
+      cx.closePath();
+      cx.fillStyle=mc;cx.fill();
+      // Page edge highlight
+      cx.fillStyle='#f0eee8';
+      cx.beginPath();
+      cx.moveTo(x0,y0+shH-3);cx.lineTo(x1,y1+shH-3);
+      cx.lineTo(x1,y1+shH-2);cx.lineTo(x0,y0+shH-2);
+      cx.closePath();cx.fill();
+    }
+    // Shelf divider line
+    cx.strokeStyle='#6a6458';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(sBotF.x,sBotF.y);cx.lineTo(sBotB.x,sBotB.y);cx.stroke();
+  }
+  // ── FRONT: magazine covers (on top face, visible from above) ──
   for(let row2=0;row2<3;row2++){
     const ry=p.y-14-row2*10;
-    const numMags=4;
-    for(let i=0;i<numMags;i++){
+    for(let i=0;i<4;i++){
       const mx=p.x-15+i*8;
       const mc=magColors[(row2*4+i)%magColors.length];
-      // Magazine cover (slightly angled/overlapping)
       r(mx,ry-6,7,8,mc);
-      // White page edge at bottom
       r(mx,ry+1,7,1,'#f0eee8');
-      // Title bar on cover
       r(mx+1,ry-5,5,2,'#ffffff55');
-      // Small image block on cover
       r(mx+1,ry-2,5,3,'#00000022');
     }
-    // Shelf lip
     cx.strokeStyle='#9a9488';cx.lineWidth=1;
     cx.beginPath();cx.moveTo(p.x-17,ry+2);cx.lineTo(p.x+17,ry+2);cx.stroke();
   }
   // Top label
-  r(p.x-12,p.y-44,24,7,'#f0e8d0');
-  tx('PRENSA',p.x,p.y-39,'#3a3a5a',6,'center');
+  r(p.x-12,p.y-46,24,7,'#f0e8d0');
+  tx('PRENSA',p.x,p.y-41,'#3a3a5a',6,'center');
 }
 
 // ── DRAW STAFF (ISOMETRIC) ───────────────────────────────────
