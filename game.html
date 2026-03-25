@@ -54,6 +54,7 @@
   <button class="btn-menu" id="btnMenu">☰ Menu</button>
   <button class="btn-menu" id="btnQuit" style="background:#551111;color:#ff6666;border:1px solid #cc3333 !important">✕ Quit</button>
 </div>
+<div id="empMonthBadge" style="display:none;position:absolute;right:6px;top:36px;padding:2px 8px;border-radius:3px;background:#2a1a08;border:1px solid #cc9900;font-family:monospace;font-size:9px;font-weight:bold;color:#ffd700;z-index:14;pointer-events:none;text-align:center;white-space:nowrap">🏆 <span id="empMonthName"></span></div>
 <div id="eventBanner" style="display:none;position:absolute;right:6px;top:36px;min-width:200px;max-width:320px;padding:5px 14px;border-radius:4px;font-family:monospace;font-size:11px;font-weight:bold;color:#fff;text-align:center;z-index:15;pointer-events:none;transition:opacity 0.3s"></div>
 <audio id="bgMusic" loop preload="auto"><source src="music/titi.mp3" type="audio/mpeg"></audio>
 <canvas id="c" width="800" height="500"></canvas>
@@ -65,7 +66,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.75 — 2026-03-25 12:45
+//  XTANCO DIGITAL TWIN — BETA v1.76 — 2026-03-25 12:45
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -308,6 +309,26 @@ function updateHtmlBar(){
     ['compAlt','compJTI','compPM','compBAT'].forEach((id,i)=>{
       document.getElementById(id).style.color=vals[i]===maxV?'#44ff88':'#cccccc';
     });
+  }
+  // Employee of the Month badge — fixed below Edit/Menu/Quit
+  const empBadge=document.getElementById('empMonthBadge');
+  if(empBadge){
+    if(G.empOfMonth){
+      const editBtn2=document.getElementById('btnEdit');
+      const quitBtn2=document.getElementById('btnQuit');
+      if(editBtn2&&quitBtn2){
+        const eR=editBtn2.getBoundingClientRect();
+        const qR=quitBtn2.getBoundingClientRect();
+        empBadge.style.left=eR.left+'px';
+        empBadge.style.width=(qR.right-eR.left)+'px';
+        empBadge.style.right='auto';
+        empBadge.style.top=(eR.bottom+2)+'px';
+        empBadge.style.display='block';
+        document.getElementById('empMonthName').textContent=G.empOfMonth;
+      }
+    } else {
+      empBadge.style.display='none';
+    }
   }
   resizeCanvas();
 }
@@ -754,7 +775,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.75',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.76',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -809,7 +830,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.75',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.76',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1127,6 +1148,7 @@ function initGame(){
     holiday:{active:false,timer:0,name:''},
     supplierDeal:{active:false,timer:0,prodIdx:-1},
     weather:{type:null,timer:0},
+    empOfMonth:null,
   };
   // Staff from model — convert grid positions to isometric screen coords
   // Staff positions on the iso grid based on their role
@@ -1730,6 +1752,10 @@ function showEv(msg,col){
     eb.style.right='auto';
     eb.style.minWidth='0';
     eb.style.maxWidth='none';
+    // Position below empMonthBadge if visible
+    const empB=document.getElementById('empMonthBadge');
+    const topOffset=(empB&&empB.style.display!=='none')?empB.getBoundingClientRect().bottom+2:editRect.bottom+2;
+    eb.style.top=topOffset+'px';
     eb.style.display='block';eb.style.opacity='1';
     clearTimeout(eb._fadeT);clearTimeout(eb._hideT);
     eb._fadeT=setTimeout(()=>{eb.style.opacity='0';},2400);
@@ -1875,6 +1901,7 @@ function checkRandomEvents(){
     if(hired.length>0){
       const emp=hired[Math.floor(Math.random()*hired.length)];
       emp.morale=Math.min(100,emp.morale+30);emp.level=Math.min(5,emp.level+1);
+      G.empOfMonth=emp.name;
       showEv('🏆 '+emp.name+' empleado del mes!',P.neon1);SFX.levelUp();
       addFloat(emp.x,emp.y-40,'⭐ +LVL',P.neon1);
     }
@@ -2368,7 +2395,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.75 · 2026-03-25 14:25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.76 · 2026-03-25 14:25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
