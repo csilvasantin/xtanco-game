@@ -3384,9 +3384,6 @@ function drawShop(){
 
   // ── RIGHT WALL door drawn AFTER furniture (see drawGlassDoor below) ──
 
-  // ── AIR CONDITIONING on left wall (centered) ──
-  drawAirConditioning();
-
   // ── CLOCK on left wall ──
   drawWallClock();
   // ── LED on LEFT WALL (top edge) ──
@@ -3394,6 +3391,8 @@ function drawShop(){
   if(ledItem) drawLED(ledItem.sx||1,ledItem.sy||1);
   // ── LED on BACK WALL (top edge, continues from left wall) ──
   drawBackWallLED();
+  // ── AIR CONDITIONING on left wall (drawn AFTER LED so it's visible) ──
+  drawAirConditioning();
   // ── TFT ALTADIS (16:9 screen on back wall, above 2nd window) ──
   drawAltadisTFT();
 
@@ -3597,18 +3596,18 @@ function drawLED(scx,scy){
   const totalLen=leftLen+backLen;
   ledUnifiedOffset=(ledUnifiedOffset+0.7)%(msgW+80);
 
-  // Left wall LED sits at wall top edge
-  const lwLedY=-ISO.wallH;
+  // Left wall LED sits ABOVE wall top edge (raised so it doesn't cover clock)
+  const lwLedY=-ISO.wallH-lh;
   _drawLedSegment(
     lB.x, lB.y+lwLedY,
     lT.x, lT.y+lwLedY,
     lh, 0, totalLen, fullMsg, msgW
   );
 
-  // Back wall LED sits at wall top edge
+  // Back wall LED sits ABOVE wall top edge
   _drawLedSegment(
-    bL.x, bL.y-ISO.wallH,
-    bR.x, bR.y-ISO.wallH,
+    bL.x, bL.y-ISO.wallH-lh,
+    bR.x, bR.y-ISO.wallH-lh,
     lh, leftLen, totalLen, fullMsg, msgW
   );
 }
@@ -3903,40 +3902,32 @@ function drawAltadisTFT(){
 // ── WALL CLOCK (above LED on left wall) ──────────────────────
 // ── AIR CONDITIONING UNIT on left wall ──
 function drawAirConditioning(){
-  // Position: top-left area of left wall, at row 7 (screen-left end), near ceiling
-  const acP=toIso(0,7);
-  const acX=acP.x;
-  const acY=acP.y-ISO.wallH+25; // near top of wall, just below LED
+  // Position: top-left area of left wall, between LED and top DS screen
+  const acP=toIso(0,5.5);
+  const acX=acP.x+15;
+  const acY=acP.y-ISO.wallH+18; // just below ceiling line
 
-  // Clip to left wall
   cx.save();
-  const wClip=[];
-  for(let rr=0;rr<=ISO.rows;rr++) wClip.push(toIso(0,rr));
-  cx.beginPath();
-  cx.moveTo(wClip[0].x,wClip[0].y-ISO.wallH);
-  for(let i=1;i<wClip.length;i++) cx.lineTo(wClip[i].x,wClip[i].y-ISO.wallH);
-  for(let i=wClip.length-1;i>=0;i--) cx.lineTo(wClip[i].x,wClip[i].y);
-  cx.closePath();cx.clip();
 
-  const aw=50, ah=16;
-  // Shadow behind unit
-  r(acX-aw/2+2,acY+2,aw,ah,'rgba(0,0,0,0.15)');
-  // Main body (white/light gray)
-  r(acX-aw/2,acY,aw,ah,'#f0f0f0');
+  const aw=70, ah=24;
+  // Shadow behind unit (stronger)
+  r(acX-aw/2+3,acY+3,aw,ah,'rgba(0,0,0,0.35)');
+  // Main body (bright white)
+  r(acX-aw/2,acY,aw,ah,'#ffffff');
   // Top edge highlight
-  r(acX-aw/2,acY,aw,2,'#ffffff');
-  // Bottom vent grille
-  for(let v=0;v<3;v++){
-    r(acX-aw/2+4,acY+ah-5+v*2,aw-8,1,'#d8d8d8');
+  r(acX-aw/2,acY,aw,4,'#e8e8e8');
+  // Bottom vent grille (darker slats for visibility)
+  for(let v=0;v<5;v++){
+    r(acX-aw/2+5,acY+ah-10+v*2,aw-10,1,'#aaa');
   }
-  // Side borders
-  rx(acX-aw/2,acY,aw,ah,'#c0c0c0',1);
+  // Strong border
+  rx(acX-aw/2,acY,aw,ah,'#888',2);
   // Small indicator light (green = running)
-  cx.fillStyle='#44dd44';
-  cx.beginPath();cx.arc(acX+aw/2-6,acY+4,1.5,0,Math.PI*2);cx.fill();
+  cx.fillStyle='#22cc22';
+  cx.beginPath();cx.arc(acX+aw/2-8,acY+5,2.5,0,Math.PI*2);cx.fill();
   // Brand label
-  cx.fillStyle='#999';cx.font='4px monospace';
-  cx.fillText('DAIKIN',acX-10,acY+6);
+  cx.fillStyle='#666';cx.font='bold 6px monospace';
+  cx.fillText('DAIKIN',acX-14,acY+9);
 
   cx.restore();
 }
