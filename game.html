@@ -54,7 +54,7 @@
   <button class="btn-menu" id="btnMenu">☰ Menu</button>
   <button class="btn-menu" id="btnQuit" style="background:#551111;color:#ff6666;border:1px solid #cc3333 !important">✕ Quit</button>
 </div>
-<div id="topBarSub" style="display:none;position:absolute;right:6px;top:36px;z-index:15;display:flex;flex-direction:column;align-items:flex-end;gap:2px;pointer-events:none">
+<div id="topBarSub" style="display:none;position:fixed;z-index:15;display:flex;flex-direction:column;align-items:flex-end;gap:2px;pointer-events:none">
   <div id="empMonthBadge" style="display:none;padding:2px 8px;border-radius:3px;background:#2a1a08;border:1px solid #cc9900;font-family:monospace;font-size:9px;font-weight:bold;color:#ffd700;text-align:center;white-space:nowrap">🏆 <span id="empMonthName"></span></div>
   <div id="eventBanner" style="display:none;padding:4px 12px;border-radius:4px;font-family:monospace;font-size:11px;font-weight:bold;color:#fff;text-align:center;white-space:nowrap;transition:opacity 0.3s"></div>
 </div>
@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.80 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v1.81 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -119,6 +119,7 @@ function resizeCanvas(){
   cv.style.height=ch+'px';
   const tb=document.getElementById('topBar');
   if(tb) tb.style.maxWidth=cw+'px';
+  if(typeof repositionTopBarSub==='function') repositionTopBarSub();
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
@@ -351,6 +352,18 @@ document.getElementById('btnSave').onclick=()=>{if(G)doAction('save');};
 document.getElementById('btnEdit').onclick=()=>{if(G)doAction('editor');};
 document.getElementById('btnMenu').onclick=()=>{if(G)doAction('menu');};
 document.getElementById('btnQuit').onclick=()=>{if(G)doAction('quit');};
+
+// ── Position topBarSub always anchored below Edit/Menu/Quit buttons ──
+function repositionTopBarSub(){
+  const subBar=document.getElementById('topBarSub');
+  const editBtn=document.getElementById('btnEdit');
+  const quitBtn=document.getElementById('btnQuit');
+  if(!subBar||!editBtn||!quitBtn) return;
+  const qr=quitBtn.getBoundingClientRect();
+  const er=editBtn.getBoundingClientRect();
+  subBar.style.top=(qr.bottom+2)+'px';
+  subBar.style.right=(window.innerWidth-qr.right)+'px';
+}
 function updateHtmlBar(){
   const show=state===S.GAME||state===S.PAUSE||state===S.EDITOR;
   bbEl.classList.toggle('show',show);
@@ -401,6 +414,7 @@ function updateHtmlBar(){
       empBadge.style.display='block';
       document.getElementById('empMonthName').textContent=G.empOfMonth;
       if(subBar) subBar.style.display='flex';
+      repositionTopBarSub();
     } else {
       empBadge.style.display='none';
     }
@@ -1829,9 +1843,10 @@ function showEv(msg,col){
     eb.textContent=msg;
     eb.style.background=col||'#3a2818';
     eb.style.display='block';eb.style.opacity='1';
-    // Show the sub-bar container
+    // Show the sub-bar container anchored to buttons
     const subBar=document.getElementById('topBarSub');
     if(subBar) subBar.style.display='flex';
+    repositionTopBarSub();
     clearTimeout(eb._fadeT);clearTimeout(eb._hideT);
     eb._fadeT=setTimeout(()=>{eb.style.opacity='0';},2400);
     eb._hideT=setTimeout(()=>{eb.style.display='none';},2800);
