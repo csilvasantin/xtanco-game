@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.10 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.11 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -874,7 +874,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.10',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.11',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -929,7 +929,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.10',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.11',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2495,7 +2495,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v2.10 · 2026-03-25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v2.11 · 2026-03-25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -3210,7 +3210,7 @@ function drawShop(){
   for(const wc of winCols){
     const wp1=toIso(wc,0), wp2=toIso(wc+1.2,0);
     const whei=Math.floor((ISO.wallH-50)*0.55);
-    const wy=wp1.y-ISO.wallH+Math.floor((ISO.wallH-whei)/2)+Math.floor(ISO.wallH*0.05); // centered, below LED banner
+    const wy=wp1.y-ISO.wallH+Math.floor((ISO.wallH-whei)/2)-Math.floor(ISO.wallH*0.15); // raised above furniture line
     const wwid=wp2.x-wp1.x;
     // Window frame outer
     r(wp1.x-3,wy-3,wwid+6,whei+6,'#e8e4dc');
