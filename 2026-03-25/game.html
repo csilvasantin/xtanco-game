@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.89 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v1.90 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -316,7 +316,7 @@ function positionDSOnLeftWall(el,rowT,rowB){
   const canvasRect=cv.getBoundingClientRect();
   const scaleX=canvasRect.width/W, scaleY=canvasRect.height/H;
   // Vertical band on wall (between LED and baseboard)
-  const midWallFrac=0.30; // 30% from top of wall (below clock, LED is now at top)
+  const midWallFrac=0.25; // 25% from top (just below clock)
   const screenH=ISO.wallH*0.52; // +40% height
   // pT is top-right corner, pB is bottom-left corner (iso left wall)
   const x1=pB.x, y1top=pB.y-ISO.wallH+ISO.wallH*midWallFrac;
@@ -3495,8 +3495,8 @@ function drawLED(scx,scy){
   const start=0.5+(5-span)/2;
   const lp1=toIso(0,start+span); // bottom (text starts here)
   const lp2=toIso(0,start);      // top (text ends here)
-  // Position at top of wall (above clock)
-  const ledYoff=Math.round(ISO.wallH*0.08);
+  // Position at very top edge of wall (above clock)
+  const ledYoff=2; // flush with top of wall
   const ledY=lp1.y-ISO.wallH+ledYoff;
   const lh=Math.round(16*scy);
   cx.save();
@@ -3554,8 +3554,8 @@ function drawAltadisTFT(){
   for(let i=1;i<wallClipPts.length;i++) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y-ISO.wallH);
   for(let i=wallClipPts.length-1;i>=0;i--) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y);
   cx.closePath();cx.clip();
-  // Screen corners on left wall — maximized, LED now at top
-  const ledEndY=ISO.wallH*0.22;
+  // Screen corners on left wall — maximized, below clock
+  const ledEndY=ISO.wallH*0.25; // aligned with DS screens
   const pR=toIso(0,1.4); // visually RIGHT (maximized)
   const pL=toIso(0,4.6); // visually LEFT (maximized)
   // Bezel corners (outer frame)
@@ -3830,10 +3830,10 @@ function drawAltadisTFT(){
 let _clockH=9,_clockM=0;
 
 function drawWallClock(){
-  // Position: centered on left wall, below the LED banner
+  // Position: centered on left wall, just below the LED banner
   const cp=toIso(0,3);
   const clockX=cp.x;
-  const clockY=cp.y-ISO.wallH+Math.round(ISO.wallH*0.18);
+  const clockY=cp.y-ISO.wallH+36; // just below LED (2 + 16 LED + gap)
   const radius=14;
   cx.save();
   // Clip to left wall
