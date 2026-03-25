@@ -61,7 +61,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.65 — 2026-03-25 12:45
+//  XTANCO DIGITAL TWIN — BETA v1.66 — 2026-03-25 12:45
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -162,16 +162,16 @@ const ytFrame=document.getElementById('ytPlayer');
 
 function updateVideoPosition(){
   if(!videoPlaying||!G||state!==S.GAME){videoEl.style.display='none';return;}
-  // Find counter position in screen coords
-  const counterItem=shopLayout.find(i=>i.id==='counter');
-  if(!counterItem){videoEl.style.display='none';return;}
-  const p=toIso(counterItem.col,counterItem.row);
-  // Monitor is on top of counter, slightly offset
+  // Position YouTube on the BACK WALL between windows (cols 4–5.5)
+  const pL=toIso(4,0), pR=toIso(5.5,0);
   const canvasRect=cv.getBoundingClientRect();
   const scaleX=canvasRect.width/W, scaleY=canvasRect.height/H;
-  // Monitor position in canvas coords (above counter)
-  const mx=p.x-8, my=p.y-50;
-  const mw=45, mh=30;
+  // Center of the wall segment, below LED, above baseboard
+  const mx=pL.x;
+  const mw=pR.x-pL.x;
+  const wallTop=pL.y-ISO.wallH;
+  const my=wallTop+ISO.wallH*0.25; // 25% from top of wall
+  const mh=ISO.wallH*0.35;         // 35% of wall height
   // Convert to screen coords
   const sx=canvasRect.left+mx*scaleX;
   const sy=canvasRect.top+my*scaleY;
@@ -701,7 +701,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.65',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.66',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -751,7 +751,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.65',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.66',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2265,7 +2265,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.65 · 2026-03-25 13:10',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.66 · 2026-03-25 13:20',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
