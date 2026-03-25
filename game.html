@@ -61,7 +61,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.64 — 2026-03-25 12:45
+//  XTANCO DIGITAL TWIN — BETA v1.65 — 2026-03-25 12:45
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -701,7 +701,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.64',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.65',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -751,7 +751,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.64',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.65',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2265,7 +2265,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.64 · 2026-03-25 13:00',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.65 · 2026-03-25 13:10',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -5051,9 +5051,10 @@ function loop(){
   try{updateHtmlBar();}catch(e){}
   try{if(videoPlaying)updateVideoPosition();}catch(e){}
 
-  // Auto-start game after 5 seconds idle on MENU (before demo kicks in)
+  // Auto-start game after 5 seconds idle on MENU — skip straight to game
   if(!demoMode&&state===S.MENU&&Date.now()-menuEnteredAt>=AUTOSTART_MS){
-    lang=menuSel===0?'es':'en';modelSel=0;startTransition(S.MODEL_SEL);
+    lang=menuSel===0?'es':'en';modelSel=0;initGame();
+    state=S.GAME;startVideo();startMusic();guidedTut={active:false,step:0,timer:0};
     menuEnteredAt=Date.now(); // prevent re-trigger
   }
   // Check idle → activate demo mode after 30 seconds from MENU only
