@@ -65,7 +65,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.69 — 2026-03-25 12:45
+//  XTANCO DIGITAL TWIN — BETA v1.70 — 2026-03-25 12:45
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -166,34 +166,45 @@ const ytFrame=document.getElementById('ytPlayer');
 const videoEl2=document.getElementById('videoMonitor2');
 const ytFrame2=document.getElementById('ytPlayer2');
 
-// Digital Signage screen positions on back wall (between windows)
-// Windows at cols 2.5, 6, 9.5 — screens fit between them
+// Digital Signage screens on LEFT WALL, flanking Admira TFT (rows 2-4)
+// DS1: rows 0.3–1.8 (above Admira), DS2: rows 4.2–5.7 (below Admira)
 const DS_SCREENS=[
-  {colL:4,  colR:5.5},  // Screen 1: between window 1 (2.5) and window 2 (6)
-  {colL:7.5,colR:9.0},  // Screen 2: between window 2 (6) and window 3 (9.5)
+  {rowT:0.3, rowB:1.8},  // Screen 1: above Admira
+  {rowT:4.2, rowB:5.7},  // Screen 2: below Admira
 ];
 
-function positionDSScreen(el,colL,colR){
-  const pL=toIso(colL,0), pR=toIso(colR,0);
+function positionDSOnLeftWall(el,rowT,rowB){
+  // Left wall col=0: as row↑ → x goes left, y goes down
+  const pT=toIso(0,rowT), pB=toIso(0,rowB);
   const canvasRect=cv.getBoundingClientRect();
   const scaleX=canvasRect.width/W, scaleY=canvasRect.height/H;
-  const mx=pL.x, mw=pR.x-pL.x;
-  const wallTop=pL.y-ISO.wallH;
-  const my=wallTop+ISO.wallH*0.25;
-  const mh=ISO.wallH*0.35;
+  // Vertical band on wall (between LED and baseboard)
+  const midWallFrac=0.35; // 35% from top of wall
+  const screenH=ISO.wallH*0.38;
+  // pT is top-right corner, pB is bottom-left corner (iso left wall)
+  const x1=pB.x, y1top=pB.y-ISO.wallH+ISO.wallH*midWallFrac;
+  const x2=pT.x, y2top=pT.y-ISO.wallH+ISO.wallH*midWallFrac;
+  const mw=x2-x1;
+  // Skew angle: wall goes down as x decreases → negative slope
+  const wallAngle=Math.atan2((pB.y-pT.y),(pB.x-pT.x))*180/Math.PI;
+  // Position at leftmost point, apply skewY so it follows the wall
   el.style.display='block';
-  el.style.left=(canvasRect.left+mx*scaleX)+'px';
-  el.style.top=(canvasRect.top+my*scaleY)+'px';
+  el.style.left=(canvasRect.left+x1*scaleX)+'px';
+  el.style.top=(canvasRect.top+y1top*scaleY)+'px';
   el.style.width=(mw*scaleX)+'px';
-  el.style.height=(mh*scaleY)+'px';
+  el.style.height=(screenH*scaleY)+'px';
+  el.style.transformOrigin='bottom left';
+  // Wall goes from bottom-left to top-right; skewY tilts the right edge up
+  const skew=Math.atan2(pT.y-pB.y,pT.x-pB.x)*180/Math.PI;
+  el.style.transform='skewY('+skew+'deg)';
 }
 
 function updateVideoPosition(){
   if(!videoPlaying||!G||state!==S.GAME){
     videoEl.style.display='none';videoEl2.style.display='none';return;
   }
-  positionDSScreen(videoEl, DS_SCREENS[0].colL, DS_SCREENS[0].colR);
-  positionDSScreen(videoEl2,DS_SCREENS[1].colL, DS_SCREENS[1].colR);
+  positionDSOnLeftWall(videoEl, DS_SCREENS[0].rowT, DS_SCREENS[0].rowB);
+  positionDSOnLeftWall(videoEl2,DS_SCREENS[1].rowT, DS_SCREENS[1].rowB);
 }
 
 function startVideo(){
@@ -716,7 +727,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.69',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.70',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -766,7 +777,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.69',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.70',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2292,7 +2303,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.69 · 2026-03-25 13:50',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.70 · 2026-03-25 14:00',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
