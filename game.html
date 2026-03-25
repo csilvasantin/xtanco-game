@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.11 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.12 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -306,8 +306,8 @@ function updateDSCanvases(){
 // Digital Signage screens on LEFT WALL, flanking Admira TFT (rows 2-4)
 // DS1: rows 0.3–1.8 (above Admira), DS2: rows 4.2–5.7 (below Admira)
 const DS_SCREENS=[
-  {rowT:0.0, rowB:1.8},  // Screen 1: original position
-  {rowT:4.2, rowB:6.0},  // Screen 2: original position (restored)
+  {rowT:0.0, rowB:2.5},  // Screen 1: wider span
+  {rowT:4.0, rowB:6.5},  // Screen 2: wider span
 ];
 
 function positionDSOnLeftWall(el,rowT,rowB){
@@ -316,8 +316,8 @@ function positionDSOnLeftWall(el,rowT,rowB){
   const canvasRect=cv.getBoundingClientRect();
   const scaleX=canvasRect.width/W, scaleY=canvasRect.height/H;
   // Vertical band on wall (between LED and baseboard)
-  const midWallFrac=0.25; // 25% from top (just below clock)
-  const screenH=ISO.wallH*0.52; // +40% height
+  const midWallFrac=0.12; // 12% from top (higher on wall)
+  const screenH=ISO.wallH*0.75; // tall screens to fill wall
   // pT is top-right corner, pB is bottom-left corner (iso left wall)
   const x1=pB.x, y1top=pB.y-ISO.wallH+ISO.wallH*midWallFrac;
   const x2=pT.x, y2top=pT.y-ISO.wallH+ISO.wallH*midWallFrac;
@@ -874,7 +874,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.11',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.12',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -929,7 +929,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.11',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.12',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2495,7 +2495,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v2.11 · 2026-03-25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v2.12 · 2026-03-25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────

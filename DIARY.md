@@ -2,6 +2,40 @@
 
 ---
 
+## [v2.12] — 2026-03-25
+
+### Correcciones finales + Video evolución + Diario completo
+
+**3 commits adicionales sobre v2.10.** Cierre de sesión con correcciones visuales y producción de material para cliente.
+
+---
+
+### 1. Ventanas de la pared del fondo elevadas
+
+- Las 3 ventanas de la pared larga (back wall) subidas un 20% para que no las tapen los muebles
+- Offset cambiado de `+5%` a `-15%` respecto al centro de la pared
+- Ahora se ven perfectamente por encima de estanterías y mostradores
+
+### 2. Pantallas Digital Signage ampliadas
+
+- Las 2 pantallas DS (HTML overlays) eran demasiado pequeñas y se confundían con la pared
+- `midWallFrac` reducido de 0.25 a 0.12 (más arriba en la pared)
+- `screenH` aumentado de `ISO.wallH*0.52` a `ISO.wallH*0.75` (pantallas más altas)
+- DS1 ampliado de rows 0.0–1.8 a 0.0–2.5 (más ancho)
+- DS2 ampliado de rows 4.2–6.0 a 4.0–6.5 (más ancho)
+- Resultado: pantallas de 81×129px vs 59×70px anteriores (+80% superficie)
+
+### 3. Video de Evolución para Cliente (60s)
+
+- `xtanco_evolution_60s.mp4` — 1280×720, H.264, 3.1 MB
+- 15 capturas reales tomadas de commits históricos via git worktrees + Puppeteer headless
+- Progresión visual: v0.1 (Mario) → v0.3 (Game Dev Story) → v1.0 (beta) → v2.0 (isométrico) → v2.11 (actual)
+- Cada slide ~4s con crossfade, barra de progreso, labels de versión
+- Música de fondo: dj-novah.mp3 con fade in/out
+- También generado `xtanco_evolution_30s.mp4` (versión corta, 649 KB)
+
+---
+
 ## [v2.10] — 2026-03-25
 
 ### Sesión épica: Digital Signage con videoclips, Store Manager bailarín, LED panorámico y ampliación de tienda
