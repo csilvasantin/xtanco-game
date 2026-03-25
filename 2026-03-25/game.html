@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.01 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.02 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -2323,10 +2323,10 @@ let uiOpen=false; // toggle with Menu button
 // Grid 12x6 → sum=18, tileW=800*2/18≈88, tileH=270*2/18=30
 const ISO={
   tileW:80,tileH:28,    // slightly smaller tiles to fit +1 col/row
-  cols:13,rows:7,        // +1 each direction for bigger shop
+  cols:14,rows:8,        // +1 more each direction for bigger shop
   ox:270,oy:185,         // adjusted for larger grid
   wallH:165,             // walls
-  doorCol:12,doorRow:3,  // door far right (moved with cols)
+  doorCol:13,doorRow:3,  // door far right (moved with cols)
 };
 // Cart→Iso: convert grid (col,row) to screen pixel
 function toIso(col,row){
