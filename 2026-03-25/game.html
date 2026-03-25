@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.16 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.17 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -874,7 +874,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.16',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.17',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -929,7 +929,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.16',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.17',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2495,7 +2495,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v2.16 · 2026-03-25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v2.17 · 2026-03-25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -3175,7 +3175,7 @@ function drawShop(){
 
   // ── BACK WALL (cream/beige, Kairosoft style) ──
   const wallPts=[];
-  for(let c=0;c<=ISO.cols+4;c++) wallPts.push(toIso(c,0)); // extend right to cover full view
+  for(let c=-2;c<=ISO.cols+4;c++) wallPts.push(toIso(c,0)); // extend left to cover corner + right to cover full view
   // Wall body
   cx.beginPath();
   cx.moveTo(wallPts[0].x,wallPts[0].y);
@@ -3365,6 +3365,8 @@ function drawShop(){
 
   // ── CLOCK on left wall ──
   drawWallClock();
+  // ── AIR CONDITIONING on left wall (center) ──
+  drawAirConditioning();
   // ── LED on LEFT WALL (top edge) ──
   const ledItem=shopLayout.find(i=>i.id==='led');
   if(ledItem) drawLED(ledItem.sx||1,ledItem.sy||1);
@@ -3589,6 +3591,63 @@ function drawLED(scx,scy){
 
 function drawBackWallLED(){
   // Now handled inside drawLED() as unified banner — this is a no-op
+}
+
+// ── AIR CONDITIONING UNIT on left wall (center) ──
+function drawAirConditioning(){
+  cx.save();
+  // Position in the center of the left wall (row ~4)
+  const acRow=4.0;
+  const pT=toIso(0,acRow-0.6);
+  const pB=toIso(0,acRow+0.6);
+  // Wall position — high on the wall
+  const acTopFrac=0.18; // 18% from wall top
+  const acY=pT.y-ISO.wallH+ISO.wallH*acTopFrac;
+  const acW=pB.x-pT.x; // negative because iso goes left
+  const acX=pT.x;
+  const acH=20;
+  const wallAngle=Math.atan2(pB.y-pT.y,pB.x-pT.x);
+  // Transform to follow wall angle
+  cx.translate(acX,acY);
+  cx.transform(1,Math.tan(wallAngle),0,1,0,0);
+  // Unit body (white/light gray rectangle)
+  cx.fillStyle='#f0ece6';
+  cx.fillRect(0,0,pB.x-pT.x,acH);
+  cx.strokeStyle='#c8c0b0';cx.lineWidth=1;
+  cx.strokeRect(0,0,pB.x-pT.x,acH);
+  // Top edge highlight
+  cx.fillStyle='#fafaf5';
+  cx.fillRect(1,1,pB.x-pT.x-2,3);
+  // Ventilation grilles (horizontal lines)
+  const unitW=pB.x-pT.x;
+  cx.strokeStyle='#d0c8b8';cx.lineWidth=0.5;
+  for(let gy=8;gy<acH-3;gy+=2.5){
+    cx.beginPath();
+    cx.moveTo(4,gy);
+    cx.lineTo(unitW-4,gy);
+    cx.stroke();
+  }
+  // Air flow indicator (small LED dot)
+  const blinkOn=Math.sin(tt*0.05)>0;
+  cx.fillStyle=blinkOn?'#44cc44':'#228822';
+  cx.beginPath();cx.arc(unitW-8,5,1.5,0,Math.PI*2);cx.fill();
+  // Brand label
+  cx.fillStyle='#aaa89a';cx.font='bold 3px monospace';cx.textAlign='center';
+  cx.fillText('DAIKIN',unitW/2,6);
+  cx.textAlign='left';
+  // Bottom air flow visual (subtle animated lines when "on")
+  cx.globalAlpha=0.15+0.1*Math.sin(tt*0.06);
+  cx.strokeStyle='#88bbdd';cx.lineWidth=0.5;
+  for(let i=0;i<3;i++){
+    const fx=8+i*(unitW-16)/2;
+    const fy=acH+2+Math.sin(tt*0.04+i)*2;
+    cx.beginPath();
+    cx.moveTo(fx,acH);
+    cx.quadraticCurveTo(fx+5,fy+4,fx+10,acH+8+Math.sin(tt*0.03+i)*3);
+    cx.stroke();
+  }
+  cx.globalAlpha=1;
+  cx.restore();
 }
 
 // ── ALTADIS TFT (big screen below LED, centered on left wall) ─
