@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.98 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v1.99 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -306,8 +306,8 @@ function updateDSCanvases(){
 // Digital Signage screens on LEFT WALL, flanking Admira TFT (rows 2-4)
 // DS1: rows 0.3–1.8 (above Admira), DS2: rows 4.2–5.7 (below Admira)
 const DS_SCREENS=[
-  {rowT:0.0, rowB:1.8},  // Screen 1: back to original position
-  {rowT:4.7, rowB:6.5},  // Screen 2: shifted right, more gap to TFT
+  {rowT:0.0, rowB:1.8},  // Screen 1: original position
+  {rowT:4.2, rowB:6.0},  // Screen 2: original position (restored)
 ];
 
 function positionDSOnLeftWall(el,rowT,rowB){
