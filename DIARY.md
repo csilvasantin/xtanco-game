@@ -2,6 +2,116 @@
 
 ---
 
+## [v2.10] — 2026-03-25
+
+### Sesión épica: Digital Signage con videoclips, Store Manager bailarín, LED panorámico y ampliación de tienda
+
+**49 commits, de v1.56 a v2.10.** El Xtanco incorpora un sistema completo de Digital Signage con reproducción de videoclips reales, control de audio, reacciones del Store Manager, banner LED panorámico de doble pared y ampliación del suelo de la tienda.
+
+---
+
+### 1. Sistema de Digital Signage (Video Playback)
+
+- **2 pantallas DS** en la pared izquierda reproduciendo videoclips MP4 a 160×90px
+- Reproductor basado en `<video>` oculto con renderizado frame-by-frame a `<canvas>`
+- Cuando no hay video cargado: slides animados con texto corporativo
+- Preset de compresión automático: 160×90, H.264, CRF 28, AAC 64kbps, faststart
+
+### 2. Playlist de Videoclips
+
+| Artista | Canción | Archivo |
+|---------|---------|---------|
+| Dire Straits | Money For Nothing | signage_money_for_nothing_160x90.mp4 |
+| a-ha | Take On Me | signage_take_on_me_160x90.mp4 |
+| Michael Jackson | Thriller | signage_thriller_160x90.mp4 |
+| Wham! | Last Christmas | signage_last_christmas_160x90.mp4 |
+| Rick Astley | Never Gonna Give You Up | signage_never_gonna_give_you_up_160x90.mp4 |
+
+- Videos descargados con **yt-dlp** y comprimidos con **ffmpeg** al preset DS
+- 3 slots adicionales reservados para contenido comercial (Anuncio Tabaco, Lotería Navidad, Promo Vapes)
+
+### 3. Selector de Video (UI)
+
+- Panel selector similar al selector de música existente
+- Dropdown con toda la playlist de videoclips
+- Cambio de video en tiempo real en las 2 pantallas DS simultáneamente
+- Los videoclips se reproducen en loop continuo
+
+### 4. Control de Audio DS
+
+- Botón **mute/unmute** para el audio de los videoclips
+- Estado de mute persistente entre cambios de video
+- Audio independiente del hilo musical principal del Xtanco
+
+### 5. Pantalla Admira TFT — Patrocinio Dinámico
+
+- La pantalla central Admira muestra: **"Este video está patrocinado por..."** + artista y canción actual del DS
+- Contenido dinámico que cambia automáticamente con cada cambio de videoclip
+- Texto en castellano con estilo corporativo
+
+### 6. Store Manager — Reacciones a Videoclips
+
+- **Baile**: Al cambiar de videoclip, el Store Manager empieza a bailar (bob/jump/sway) durante 5 segundos
+- **Bocadillo de canción**: Muestra "Esta es la canción que más me gustaba en los 80 !! ♪ [nombre] ♪" durante 5 segundos
+- Prioridad del bocadillo de canción sobre el bocadillo de "¡Vendiendo!"
+- Emojis flotantes (🎵🎶✨) durante el baile
+
+### 7. Banner LED Panorámico (Doble Pared)
+
+- El banner LED con texto scrolling ahora recorre **toda la pared izquierda + toda la pared del fondo**
+- `drawLED()` renderiza la pared izquierda (row -0.5 a ISO.rows+1)
+- `drawBackWallLED()` renderiza la pared del fondo (col -0.5 a ISO.cols+0.5)
+- Continuidad visual perfecta entre las dos paredes
+- Posición: justo encima del borde superior de la pared (fuera del muro)
+
+### 8. Reposicionamiento de Pantallas
+
+- Las 3 pantallas de la pared izquierda (DS1 + Admira TFT + DS2) redistribuidas sin solapamiento:
+  - DS1: rows 0.0 — 1.8
+  - Admira TFT: rows 2.0 — 4.0
+  - DS2: rows 4.2 — 6.0
+- Reloj de pared reposicionado más arriba para ganar espacio
+- Todas las pantallas elevadas +20% respecto a posición original
+
+### 9. Ampliación del Suelo de Tienda
+
+- Grid expandido de **13×7 a 14×8 tiles** (+1 columna, +1 fila)
+- ISO config: `{tileW:80, tileH:28, cols:14, rows:8, ox:270, oy:185}`
+- Puerta reposicionada a `doorCol:13`
+- Mayor superficie útil para muebles y tráfico de clientes
+
+### 10. Mejoras del Entorno Exterior
+
+- **Pared del fondo extendida** (+4 columnas extra) para cubrir toda la ciudad
+- **Césped expandido**: cols -5 a cols+8, rows a rows+8 (cubre toda el área verde visible)
+- **Ventanas del fondo** bajadas un 5% para no ser tapadas por el banner LED
+- **Branding XTANCO** en el césped de la esquina inferior derecha (perspectiva isométrica)
+
+### 11. Correcciones UI
+
+- **Botón ENTER** ampliado a 300px para que quepa "PULSA ENTER PARA EMPEZAR"
+- **Notificaciones topBarSub** (Empleado del Mes, eventos) ancladas dinámicamente debajo de Edit/Menu/Quit con `position:fixed` + `getBoundingClientRect()`
+- **Versión v2.10** visible en: home ES, home EN, footer, sw.js y header del código
+- **Empleado del Mes**: badge persistente en barra superior (v1.76)
+- **Revistero mejorado**: spines isométricos con detalle (v1.75)
+
+### 12. Integración Philips Hue Completa
+
+- Sincronización tiempo real con hora del juego (mañana/tarde/noche)
+- Toggle por click en lámpara + botones de periodo en pestaña CON
+- DJ strobe mode (parpadeo rápido)
+- Debug logging para diagnóstico
+- Detección HTTPS automática
+
+### 13. Digital Signage Canvas Nativo
+
+- Antes de los videoclips MP4, se implementó un sistema DS con slides animados en canvas
+- 6 slides con texto corporativo rotando cada 4 segundos
+- Gradientes animados de fondo
+- Este sistema sigue activo como fallback cuando no hay video cargado
+
+---
+
 ## [v2.5] — 2026-03-23
 
 ### Sesión completa: 8 mejoras mayores + condiciones + IoT (Hue + Elgato)
@@ -595,8 +705,9 @@ Tabaco, Vapes, Lotería, Prensa, Chuches, Recarga móvil
 | v2.2 | Ciclo de dia, cielo dinamico, iluminacion progresiva | ✅ |
 | v2.3 | Fecha real, ingresos dia, contador personas | ✅ |
 | v2.4 | DJ, musica, competencia, persistencia, cesped | ✅ |
-| v2.5 | Dialogos con clientes, misiones diarias | 🔜 |
-| v2.6 | Muebles Altadis especificos (gondolas, vitrinas) | 🔜 |
+| v2.5 | SFX, pathfinding, eventos, IoT Hue, condiciones | ✅ |
+| v2.10 | Digital Signage video, LED panorámico, tienda +1 tile | ✅ |
+| v2.11 | Muebles Altadis específicos (góndolas, vitrinas) | 🔜 |
 | v3.0 | Datos en tiempo real via API | 🔜 |
 
 ---
