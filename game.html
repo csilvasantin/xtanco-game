@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.86 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v1.87 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -166,6 +166,7 @@ let dsVideoIdx=0; // current video index
 let dsMode='slides'; // 'slides' | 'video'
 let dsAudioMuted=true; // DS audio starts muted
 let mgrDanceTimer=0; // Store Manager dances at start of each new video
+let mgrSongBubbleTimer=0; // Timer for "La canción que me gusta !!" bubble
 
 // ── VIDEO LIST (like SONG_LIST for music) ──
 const VIDEO_LIST=[
@@ -205,6 +206,7 @@ function switchDSVideo(idx){
     dsVideoEl.currentTime=0;
     dsVideoEl.play().catch(()=>{});
     mgrDanceTimer=240; // Manager dances for ~4 seconds
+    mgrSongBubbleTimer=240; // Show song bubble for ~4 seconds
   } else {
     dsMode='slides';
     dsVideoEl.pause();
@@ -304,8 +306,8 @@ function updateDSCanvases(){
 // Digital Signage screens on LEFT WALL, flanking Admira TFT (rows 2-4)
 // DS1: rows 0.3–1.8 (above Admira), DS2: rows 4.2–5.7 (below Admira)
 const DS_SCREENS=[
-  {rowT:0.1, rowB:2.0},  // Screen 1: above Admira (+20%)
-  {rowT:4.0, rowB:5.9},  // Screen 2: below Admira (+20%)
+  {rowT:0.0, rowB:2.2},  // Screen 1: above Admira (+40%)
+  {rowT:3.8, rowB:6.1},  // Screen 2: below Admira (+40%)
 ];
 
 function positionDSOnLeftWall(el,rowT,rowB){
@@ -315,7 +317,7 @@ function positionDSOnLeftWall(el,rowT,rowB){
   const scaleX=canvasRect.width/W, scaleY=canvasRect.height/H;
   // Vertical band on wall (between LED and baseboard)
   const midWallFrac=0.55; // 55% from top of wall (below LED banner)
-  const screenH=ISO.wallH*0.46; // +20% height
+  const screenH=ISO.wallH*0.52; // +40% height
   // pT is top-right corner, pB is bottom-left corner (iso left wall)
   const x1=pB.x, y1top=pB.y-ISO.wallH+ISO.wallH*midWallFrac;
   const x2=pT.x, y2top=pT.y-ISO.wallH+ISO.wallH*midWallFrac;
@@ -4366,6 +4368,17 @@ function drawIsoStaff(s){
     const bw=msg.length*6+8,bh=14,bx2=s.x+7-bw/2,by2=s.y-24;
     r(bx2,by2,bw,bh,'#ffffffe8');rx(bx2,by2,bw,bh,'#8a7a60',1);
     tx(msg,bx2+4,by2+10,'#4a3a20',8);r(s.x+4,by2+bh,4,4,'#ffffffe8');
+  } else if(s.role===3 && mgrSongBubbleTimer>0){
+    // Store Manager: "La canción que me gusta !!" when video changes
+    mgrSongBubbleTimer--;
+    const msg='La canción que me gusta !!';
+    const bw=msg.length*5+10,bh=14,bx2=s.x+7-bw/2,by2=s.y-24;
+    const pulse=Math.sin(tt*0.15)*0.3+0.7;
+    r(bx2,by2,bw,bh,'#ff44aadd');rx(bx2,by2,bw,bh,'#ffcc00',1.5);
+    cx.globalAlpha=pulse;
+    tx(msg,bx2+4,by2+10,'#ffffff',7);
+    cx.globalAlpha=1;
+    r(s.x+4,by2+bh,4,4,'#ff44aadd');
   } else if(s.role===3 && videoPlaying && !videoPaused && dsMode==='video'){
     // Store Manager shows current DS video title in bubble
     const dsN=VIDEO_LIST[dsVideoIdx]||'';
