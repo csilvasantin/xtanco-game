@@ -416,48 +416,113 @@ async function toggleStudioLight(){
   }catch(e){
     console.log('[Elgato] Real light unavailable (game lamp still works)');
   }
+  // Also toggle Hue lights
+  try{
+    HUE.on=newOn;
+    HUE.notify=120;
+    if(newOn) await hueAll({on:true,bri:254,ct:300});
+    else await hueAll({on:false});
+    console.log(`[Hue] Lights: ${newOn?'ON':'OFF'}`);
+  }catch(e){
+    console.log('[Hue] Lights unavailable');
+  }
   elgatoState.busy=false;
 }
 
 // ── PHILIPS HUE INTEGRATION ─────────────────────────────────
-const HUE={
+const HUE_DEFAULTS={
   bridgeIP:'192.168.1.37',
   apiKey:'fsj2dkVBF0wOtDUvdMnisfdyBZHSqPHULmQ3ehQ0',
-  lights:{despacho:9,comedor:8}, // reachable lights
-  lastSent:0, // throttle: frame of last send
+  lights:{despacho:9,comedor:8},
+  enabled:true,
 };
+const HUE={
+  ...JSON.parse(JSON.stringify(HUE_DEFAULTS)),
+  lastSent:0,
+  on:false,
+  notify:0,
+  error:false,
+};
+// Load/save Hue settings
+function loadHueSettings(){
+  try{const d=localStorage.getItem('xtanco_hue');if(d){const p=JSON.parse(d);HUE.bridgeIP=p.bridgeIP||HUE_DEFAULTS.bridgeIP;HUE.apiKey=p.apiKey||HUE_DEFAULTS.apiKey;HUE.lights=p.lights||JSON.parse(JSON.stringify(HUE_DEFAULTS.lights));HUE.enabled=p.enabled!==false;}}catch(e){}
+}
+function saveHueSettings(){
+  try{localStorage.setItem('xtanco_hue',JSON.stringify({bridgeIP:HUE.bridgeIP,apiKey:HUE.apiKey,lights:HUE.lights,enabled:HUE.enabled}));}catch(e){}
+}
+loadHueSettings();
+
+async function hueSend(lightId,state){
+  if(!HUE.enabled) return;
+  try{
+    const isLocal=location.hostname==='localhost'||location.hostname==='127.0.0.1';
+    const urls=isLocal
+      ? [`${location.origin}/hue/lights/${lightId}/state`]
+      : [`http://localhost:${ELGATO.proxyPort}/hue/lights/${lightId}/state`,
+         `http://${HUE.bridgeIP}/api/${HUE.apiKey}/lights/${lightId}/state`];
+    for(const url of urls){
+      try{
+        await fetch(url,{method:'PUT',body:JSON.stringify(state),signal:AbortSignal.timeout(2000)});
+        HUE.error=false;
+        return;
+      }catch(e){continue;}
+    }
+    HUE.error=true;
+  }catch(e){HUE.error=true;}
+}
 async function hueSet(lightId,state){
   if(tt-HUE.lastSent<30) return; // throttle: max every 0.5s
   HUE.lastSent=tt;
-  try{
-    const url=`http://${HUE.bridgeIP}/api/${HUE.apiKey}/lights/${lightId}/state`;
-    await fetch(url,{method:'PUT',body:JSON.stringify(state),signal:AbortSignal.timeout(2000)});
-  }catch(e){}
+  await hueSend(lightId,state);
 }
 async function hueAll(state){
-  for(const id of Object.values(HUE.lights)) hueSet(id,state);
+  if(!HUE.enabled) return;
+  if(tt-HUE.lastSent<30) return;
+  HUE.lastSent=tt;
+  const promises=Object.values(HUE.lights).map(id=>hueSend(id,state));
+  await Promise.allSettled(promises);
+}
+async function hueToggle(){
+  const newOn=!HUE.on;
+  HUE.on=newOn;
+  HUE.notify=120;
+  if(newOn){
+    await hueAll({on:true,bri:254,ct:300});
+  } else {
+    await hueAll({on:false});
+  }
 }
 // Sync Hue lights with game state (called from updateGame, throttled)
 function hueSyncWithGame(){
+  if(!HUE.enabled) return;
   if(tt%120!==0) return; // every 2 seconds
   if(!G||!G.gameTime) return;
   const h=G.gameTime;
+  // DJ strobe: sync Hue with strobe effect
+  const djOn=G.staff&&G.staff.some(st=>st.hired&&st.role===4);
+  if(djOn&&tt%30===0){
+    const flash=Math.sin(tt*0.3)>0;
+    hueAll({on:true,bri:flash?254:25,xy:[Math.random()*0.3+0.15,Math.random()*0.3+0.1],transitiontime:1});
+    return;
+  }
   // Night: warm white, full brightness
   if(h>=19){
+    HUE.on=true;
     hueAll({on:true,bri:254,ct:366});
   }
   // Late afternoon: dimmer warm
   else if(h>=17){
+    HUE.on=true;
     const bri=Math.round(100+(h-17)*77); // 100→254
     hueAll({on:true,bri:bri,ct:340});
   }
-  // Morning/midday: off
+  // Morning/midday: cool daylight
   else {
-    hueAll({on:true,bri:254,ct:250}); // cool daylight
+    hueAll({on:true,bri:254,ct:250});
   }
   // Storm: blue flash
   if(G.weather&&G.weather.type==='rain'&&thunderFlash>4){
-    hueAll({on:true,bri:254,xy:[0.18,0.18],alert:'select'}); // cold blue flash
+    hueAll({on:true,bri:254,xy:[0.18,0.18],alert:'select'});
   }
 }
 
@@ -1080,7 +1145,7 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(state===S.SETTINGS){
-    if(e.code==='Escape'){saveShopSettings();state=S.MENU;}
+    if(e.code==='Escape'){saveShopSettings();saveHueSettings();state=S.MENU;}
     return;
   }
   if(state===S.HELP){
@@ -1450,7 +1515,37 @@ function doAction(id){
     if(G) G.nowPlaying=songs[ni];
     return;
   }
-  if(id==='setBack'){saveShopSettings();state=S.MENU;return;}
+  if(id==='setTab0'){settingsTab=0;return;}
+  if(id==='setTab1'){settingsTab=1;return;}
+  if(id==='setBack'){saveShopSettings();saveHueSettings();state=S.MENU;return;}
+  // ── Hue settings actions ──
+  if(id==='hueToggleEnabled'){HUE.enabled=!HUE.enabled;return;}
+  if(id==='hueIpDown'){
+    const p=HUE.bridgeIP.split('.');let o=parseInt(p[3])||0;o=Math.max(1,o-1);p[3]=String(o);HUE.bridgeIP=p.join('.');return;
+  }
+  if(id==='hueIpUp'){
+    const p=HUE.bridgeIP.split('.');let o=parseInt(p[3])||0;o=Math.min(254,o+1);p[3]=String(o);HUE.bridgeIP=p.join('.');return;
+  }
+  if(id.startsWith('hueLightDown')){
+    const i=parseInt(id.slice(12));const entries=Object.entries(HUE.lights);
+    if(entries[i]){const k=entries[i][0];HUE.lights[k]=Math.max(1,HUE.lights[k]-1);}return;
+  }
+  if(id.startsWith('hueLightUp')){
+    const i=parseInt(id.slice(10));const entries=Object.entries(HUE.lights);
+    if(entries[i]){const k=entries[i][0];HUE.lights[k]=Math.min(50,HUE.lights[k]+1);}return;
+  }
+  if(id==='hueAddLight'){
+    const n=Object.keys(HUE.lights).length;HUE.lights['luz'+(n+1)]=1;return;
+  }
+  if(id==='hueRemoveLight'){
+    const keys=Object.keys(HUE.lights);if(keys.length>1) delete HUE.lights[keys[keys.length-1]];return;
+  }
+  if(id==='hueTestAll'){
+    hueAll({on:true,bri:254,alert:'lselect'});HUE.notify=120;return;
+  }
+  if(id==='hueTestElgato'){
+    toggleStudioLight();return;
+  }
   // Staff name/role settings
   const staffNames=['ANA','JORGE','LUCÍA','MARCOS','PABLO','ELENA','SARA','DIEGO','MARTA','HUGO','ALBA','INÉS'];
   if(id.startsWith('staffNamePrev')){
@@ -1569,6 +1664,9 @@ function endWeek(){
   elgatoState.manualOff=false;
   elgatoState.on=false;
   try{elgatoFetch('/elgato/lights',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({numberOfLights:1,lights:[{on:0}]})});}catch(e){}
+  // Reset Hue to cool daylight for morning
+  HUE.on=false;
+  try{hueAll({on:true,bri:254,ct:250});}catch(e){}
   G.week++;
   if(G.week>CFG.WEEKS_PER_YEAR){
     // Year end
@@ -2123,7 +2221,7 @@ const HELP_PAGES=[
     '  (NW / SE / SW / NE isométrico)','',
     'M — Abrir/cerrar menú lateral',
     'E — Editor de layout (mover muebles)',
-    'L — Encender/apagar lámpara Elgato',
+    'L — Encender/apagar luces (Elgato+Hue)',
     '1-4 — Abrir tab directo (Ventas,',
     '       Personal, Stock, Tienda)',
     'Escape — Pausa / cerrar panel',
@@ -2277,95 +2375,185 @@ function drawHelp(){
 }
 
 // ── SETTINGS SCREEN ──────────────────────────────────────────
+let settingsTab=0; // 0=Tienda, 1=Luces
 function drawSettings(){
   r(0,0,W,H,'#1a1420');
   cx.globalAlpha=0.1;
   for(let x=0;x<W;x+=32){cx.strokeStyle=P.wall;cx.lineWidth=1;cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke();}
   cx.globalAlpha=1;
-  nt('⚙ AJUSTES DE TIENDA',W/2,40,P.neon3,16);
+  nt('⚙ AJUSTES',W/2,30,P.neon3,16);
   const bw=300,bx=W/2-bw/2;
-  // Open hour
-  tx('Hora de apertura:',bx,90,'#c0b898',11);
-  r(bx+180,76,40,22,'#3a2a18');rx(bx+180,76,40,22,'#8a7a50',1);
-  tx(String(shopTimeSettings.openHour).padStart(2,'0')+':00',bx+200,92,'#ffdd66',12,'center');
-  r(bx+140,76,18,22,'#3a2020');rx(bx+140,76,18,22,'#aa5555',1);tx('−',bx+149,92,'#ee8888',12,'center');
-  BTNS['setOpenDown']={x:bx+140,y:76,w:18,h:22};
-  r(bx+232,76,18,22,'#203a20');rx(bx+232,76,18,22,'#55aa55',1);tx('+',bx+241,92,'#88ee88',12,'center');
-  BTNS['setOpenUp']={x:bx+232,y:76,w:18,h:22};
-  // Close hour
-  tx('Hora de cierre:',bx,130,'#c0b898',11);
-  r(bx+180,116,40,22,'#3a2a18');rx(bx+180,116,40,22,'#8a7a50',1);
-  tx(String(shopTimeSettings.closeHour).padStart(2,'0')+':00',bx+200,132,'#ffdd66',12,'center');
-  r(bx+140,116,18,22,'#3a2020');rx(bx+140,116,18,22,'#aa5555',1);tx('−',bx+149,132,'#ee8888',12,'center');
-  BTNS['setCloseDown']={x:bx+140,y:116,w:18,h:22};
-  r(bx+232,116,18,22,'#203a20');rx(bx+232,116,18,22,'#55aa55',1);tx('+',bx+241,132,'#88ee88',12,'center');
-  BTNS['setCloseUp']={x:bx+232,y:116,w:18,h:22};
-  // Day duration
-  tx('Duración del día (segundos):',bx,170,'#c0b898',11);
-  r(bx+220,156,50,22,'#3a2a18');rx(bx+220,156,50,22,'#8a7a50',1);
-  tx(shopTimeSettings.dayDurationSec+'s',bx+245,172,'#ffdd66',12,'center');
-  r(bx+180,156,18,22,'#3a2020');rx(bx+180,156,18,22,'#aa5555',1);tx('−',bx+189,172,'#ee8888',12,'center');
-  BTNS['setDurDown']={x:bx+180,y:156,w:18,h:22};
-  r(bx+282,156,18,22,'#203a20');rx(bx+282,156,18,22,'#55aa55',1);tx('+',bx+291,172,'#88ee88',12,'center');
-  BTNS['setDurUp']={x:bx+282,y:156,w:18,h:22};
-  // Now Playing (music)
-  tx('♪ Hilo musical:',bx,200,'#c0b898',11);
-  r(bx+120,186,180,22,'#2a1a2a');rx(bx+120,186,180,22,'#8a5a8a',1);
-  tx(shopTimeSettings.nowPlaying||'Sin música',bx+130,202,'#cc99dd',8);
-  // Cycle through songs
-  const songs=SONG_LIST;
-  r(bx+100,186,18,22,'#2a1a2a');rx(bx+100,186,18,22,'#aa55aa',1);tx('◀',bx+109,202,'#cc88cc',12,'center');
-  BTNS['songPrev']={x:bx+100,y:186,w:18,h:22};
-  r(bx+302,186,18,22,'#2a1a2a');rx(bx+302,186,18,22,'#aa55aa',1);tx('▶',bx+311,202,'#cc88cc',12,'center');
-  BTNS['songNext']={x:bx+302,y:186,w:18,h:22};
-  // Info
-  const dayH=shopTimeSettings.closeHour-shopTimeSettings.openHour;
-  tx('El reloj irá de '+String(shopTimeSettings.openHour).padStart(2,'0')+':00 a '+String(shopTimeSettings.closeHour).padStart(2,'0')+':00',bx,230,'#8a8070',9);
-  tx('('+dayH+'h de tienda) en '+shopTimeSettings.dayDurationSec+' segundos reales ('+(shopTimeSettings.dayDurationSec/60).toFixed(1)+' min)',bx,245,'#8a8070',9);
-  tx('La lámpara se enciende automáticamente a las 19:00',bx,260,'#8a8070',9);
-  // Sky preview strip
-  tx('Vista del cielo durante el día:',bx,280,'#c0b898',9);
-  for(let i=0;i<200;i++){
-    const h=shopTimeSettings.openHour+(i/200)*dayH;
-    const c=getSkyColors(h);
-    r(bx+50+i,280,1,20,c[1]);
+  // ── Tabs ──
+  const tabs=['🏪 Tienda','💡 Luces'];
+  const tabW=bw/tabs.length;
+  for(let i=0;i<tabs.length;i++){
+    const tx2=bx+i*tabW,ty=42;
+    const sel=i===settingsTab;
+    r(tx2,ty,tabW,22,sel?'#3a2a18':'#1a1018');rx(tx2,ty,tabW,22,sel?P.neon3:'#4a3a2a',1);
+    tx(tabs[i],tx2+tabW/2,ty+16,sel?'#ffdd66':'#8a7a60',9,'center');
+    BTNS['setTab'+i]={x:tx2,y:ty,w:tabW,h:22};
   }
-  rx(bx+50,280,200,20,'#8a7a50',1);
-  // Time labels under preview
-  tx(String(shopTimeSettings.openHour).padStart(2,'0'),bx+50,310,'#8a8070',7,'center');
-  tx('13',bx+100,310,'#8a8070',7,'center');
-  tx('17',bx+150,310,'#8a8070',7,'center');
-  tx(String(shopTimeSettings.closeHour).padStart(2,'0'),bx+250,310,'#8a8070',7,'center');
-  // ── Staff configuration ──
-  const roleNames=['CAJERO/A','REPOSITOR/A','AZAFATA','STORE MANAGER'];
-  const roleIcons2=['💰','📦','🎀','👔','🎧'];
-  const roleCols=['#44aa66','#88aa44','#aa44aa','#4466cc'];
-  tx('— PERSONAL —',bx+bw/2,330,'#c0b898',10,'center');
-  if(!shopTimeSettings.staff) shopTimeSettings.staff=JSON.parse(JSON.stringify(SHOP_TIME_DEFAULTS.staff));
-  for(let i=0;i<4;i++){
-    const st=shopTimeSettings.staff[i]||(shopTimeSettings.staff[i]={name:'STAFF'+(i+1),role:0});
-    const sy=338+i*34;
-    // Card
-    r(bx,sy,bw,30,'#1a1a18');rx(bx,sy,bw,30,roleCols[st.role],1);
-    r(bx,sy,3,30,roleCols[st.role]);
-    // Icon + Name
-    tx(roleIcons2[st.role],bx+8,sy+20,'#fff',10);
-    tx(st.name,bx+24,sy+13,'#fff',9);
-    tx(roleNames[st.role],bx+24,sy+25,roleCols[st.role],7);
-    // Name edit buttons (cycle through preset names)
-    const names=['ANA','JORGE','LUCÍA','MARCOS','PABLO','ELENA','SARA','DIEGO','MARTA','HUGO','ALBA','INÉS'];
-    r(bx+bw-90,sy+2,26,12,'#3a2a18');rx(bx+bw-90,sy+2,26,12,'#8a7a50',1);
-    tx('◀',bx+bw-77,sy+12,'#c0b898',8,'center');
-    BTNS['staffNamePrev'+i]={x:bx+bw-90,y:sy+2,w:26,h:12};
-    r(bx+bw-60,sy+2,26,12,'#3a2a18');rx(bx+bw-60,sy+2,26,12,'#8a7a50',1);
-    tx('▶',bx+bw-47,sy+12,'#c0b898',8,'center');
-    BTNS['staffNameNext'+i]={x:bx+bw-60,y:sy+2,w:26,h:12};
-    // Role cycle button
-    r(bx+bw-90,sy+16,56,12,'#2a2a3a');rx(bx+bw-90,sy+16,56,12,roleCols[st.role],1);
-    tx('Rol ▶',bx+bw-62,sy+26,roleCols[st.role],7,'center');
-    BTNS['staffRoleCycle'+i]={x:bx+bw-90,y:sy+16,w:56,h:12};
+  const topY=72; // content starts here
+
+  if(settingsTab===0){
+    // ══════ TAB 0: TIENDA ══════
+    // Open hour
+    tx('Hora de apertura:',bx,topY+14,'#c0b898',11);
+    r(bx+180,topY,40,22,'#3a2a18');rx(bx+180,topY,40,22,'#8a7a50',1);
+    tx(String(shopTimeSettings.openHour).padStart(2,'0')+':00',bx+200,topY+16,'#ffdd66',12,'center');
+    r(bx+140,topY,18,22,'#3a2020');rx(bx+140,topY,18,22,'#aa5555',1);tx('−',bx+149,topY+16,'#ee8888',12,'center');
+    BTNS['setOpenDown']={x:bx+140,y:topY,w:18,h:22};
+    r(bx+232,topY,18,22,'#203a20');rx(bx+232,topY,18,22,'#55aa55',1);tx('+',bx+241,topY+16,'#88ee88',12,'center');
+    BTNS['setOpenUp']={x:bx+232,y:topY,w:18,h:22};
+    // Close hour
+    tx('Hora de cierre:',bx,topY+50,'#c0b898',11);
+    r(bx+180,topY+36,40,22,'#3a2a18');rx(bx+180,topY+36,40,22,'#8a7a50',1);
+    tx(String(shopTimeSettings.closeHour).padStart(2,'0')+':00',bx+200,topY+52,'#ffdd66',12,'center');
+    r(bx+140,topY+36,18,22,'#3a2020');rx(bx+140,topY+36,18,22,'#aa5555',1);tx('−',bx+149,topY+52,'#ee8888',12,'center');
+    BTNS['setCloseDown']={x:bx+140,y:topY+36,w:18,h:22};
+    r(bx+232,topY+36,18,22,'#203a20');rx(bx+232,topY+36,18,22,'#55aa55',1);tx('+',bx+241,topY+52,'#88ee88',12,'center');
+    BTNS['setCloseUp']={x:bx+232,y:topY+36,w:18,h:22};
+    // Day duration
+    tx('Duración del día (seg):',bx,topY+86,'#c0b898',11);
+    r(bx+220,topY+72,50,22,'#3a2a18');rx(bx+220,topY+72,50,22,'#8a7a50',1);
+    tx(shopTimeSettings.dayDurationSec+'s',bx+245,topY+88,'#ffdd66',12,'center');
+    r(bx+180,topY+72,18,22,'#3a2020');rx(bx+180,topY+72,18,22,'#aa5555',1);tx('−',bx+189,topY+88,'#ee8888',12,'center');
+    BTNS['setDurDown']={x:bx+180,y:topY+72,w:18,h:22};
+    r(bx+282,topY+72,18,22,'#203a20');rx(bx+282,topY+72,18,22,'#55aa55',1);tx('+',bx+291,topY+88,'#88ee88',12,'center');
+    BTNS['setDurUp']={x:bx+282,y:topY+72,w:18,h:22};
+    // Now Playing (music)
+    tx('♪ Hilo musical:',bx,topY+118,'#c0b898',11);
+    r(bx+120,topY+104,180,22,'#2a1a2a');rx(bx+120,topY+104,180,22,'#8a5a8a',1);
+    tx(shopTimeSettings.nowPlaying||'Sin música',bx+130,topY+120,'#cc99dd',8);
+    const songs=SONG_LIST;
+    r(bx+100,topY+104,18,22,'#2a1a2a');rx(bx+100,topY+104,18,22,'#aa55aa',1);tx('◀',bx+109,topY+120,'#cc88cc',12,'center');
+    BTNS['songPrev']={x:bx+100,y:topY+104,w:18,h:22};
+    r(bx+302,topY+104,18,22,'#2a1a2a');rx(bx+302,topY+104,18,22,'#aa55aa',1);tx('▶',bx+311,topY+120,'#cc88cc',12,'center');
+    BTNS['songNext']={x:bx+302,y:topY+104,w:18,h:22};
+    // Info
+    const dayH=shopTimeSettings.closeHour-shopTimeSettings.openHour;
+    tx('El reloj irá de '+String(shopTimeSettings.openHour).padStart(2,'0')+':00 a '+String(shopTimeSettings.closeHour).padStart(2,'0')+':00',bx,topY+146,'#8a8070',9);
+    tx('('+dayH+'h) en '+shopTimeSettings.dayDurationSec+'s reales ('+(shopTimeSettings.dayDurationSec/60).toFixed(1)+' min)',bx,topY+159,'#8a8070',9);
+    // Sky preview strip
+    tx('Vista del cielo:',bx,topY+178,'#c0b898',9);
+    for(let i=0;i<200;i++){
+      const h=shopTimeSettings.openHour+(i/200)*dayH;
+      const c=getSkyColors(h);
+      r(bx+50+i,topY+178,1,16,c[1]);
+    }
+    rx(bx+50,topY+178,200,16,'#8a7a50',1);
+    // ── Staff configuration ──
+    const roleNames=['CAJERO/A','REPOSITOR/A','AZAFATA','STORE MANAGER'];
+    const roleIcons2=['💰','📦','🎀','👔','🎧'];
+    const roleCols=['#44aa66','#88aa44','#aa44aa','#4466cc'];
+    tx('— PERSONAL —',bx+bw/2,topY+214,'#c0b898',10,'center');
+    if(!shopTimeSettings.staff) shopTimeSettings.staff=JSON.parse(JSON.stringify(SHOP_TIME_DEFAULTS.staff));
+    for(let i=0;i<4;i++){
+      const st=shopTimeSettings.staff[i]||(shopTimeSettings.staff[i]={name:'STAFF'+(i+1),role:0});
+      const sy=topY+222+i*34;
+      r(bx,sy,bw,30,'#1a1a18');rx(bx,sy,bw,30,roleCols[st.role],1);
+      r(bx,sy,3,30,roleCols[st.role]);
+      tx(roleIcons2[st.role],bx+8,sy+20,'#fff',10);
+      tx(st.name,bx+24,sy+13,'#fff',9);
+      tx(roleNames[st.role],bx+24,sy+25,roleCols[st.role],7);
+      const names=['ANA','JORGE','LUCÍA','MARCOS','PABLO','ELENA','SARA','DIEGO','MARTA','HUGO','ALBA','INÉS'];
+      r(bx+bw-90,sy+2,26,12,'#3a2a18');rx(bx+bw-90,sy+2,26,12,'#8a7a50',1);
+      tx('◀',bx+bw-77,sy+12,'#c0b898',8,'center');
+      BTNS['staffNamePrev'+i]={x:bx+bw-90,y:sy+2,w:26,h:12};
+      r(bx+bw-60,sy+2,26,12,'#3a2a18');rx(bx+bw-60,sy+2,26,12,'#8a7a50',1);
+      tx('▶',bx+bw-47,sy+12,'#c0b898',8,'center');
+      BTNS['staffNameNext'+i]={x:bx+bw-60,y:sy+2,w:26,h:12};
+      r(bx+bw-90,sy+16,56,12,'#2a2a3a');rx(bx+bw-90,sy+16,56,12,roleCols[st.role],1);
+      tx('Rol ▶',bx+bw-62,sy+26,roleCols[st.role],7,'center');
+      BTNS['staffRoleCycle'+i]={x:bx+bw-90,y:sy+16,w:56,h:12};
+    }
+  } else if(settingsTab===1){
+    // ══════ TAB 1: LUCES (Elgato + Hue) ══════
+    // ── Elgato section ──
+    tx('— ELGATO KEY LIGHT —',bx+bw/2,topY+10,'#ffcc44',10,'center');
+    tx('IP:',bx,topY+34,'#c0b898',10);
+    r(bx+30,topY+22,160,18,'#2a2a18');rx(bx+30,topY+22,160,18,'#8a7a50',1);
+    tx(ELGATO.ip+':'+ELGATO.port,bx+38,topY+36,'#ffdd66',9);
+    tx('Estado:',bx+210,topY+34,'#c0b898',10);
+    const elgStatus=elgatoState.on?'ON':'OFF';
+    const elgCol=elgatoState.on?'#66ff66':'#cc6666';
+    tx(elgStatus,bx+260,topY+34,elgCol,10);
+    // Test button
+    r(bx+bw-60,topY+22,55,18,'#2a3a2a');rx(bx+bw-60,topY+22,55,18,'#44aa44',1);
+    tx('TEST',bx+bw-32,topY+36,'#88ee88',9,'center');
+    BTNS['hueTestElgato']={x:bx+bw-60,y:topY+22,w:55,h:18};
+
+    // ── Hue section ──
+    tx('— PHILIPS HUE —',bx+bw/2,topY+68,'#cc88ff',10,'center');
+
+    // Enable/disable toggle
+    const hueEnCol=HUE.enabled?'#44aa44':'#aa4444';
+    const hueEnTxt=HUE.enabled?'ACTIVADO':'DESACTIVADO';
+    r(bx,topY+78,bw,22,HUE.enabled?'#1a2a1a':'#2a1a1a');rx(bx,topY+78,bw,22,hueEnCol,1);
+    tx('🟣 Hue: '+hueEnTxt,bx+bw/2,topY+93,hueEnCol,10,'center');
+    BTNS['hueToggleEnabled']={x:bx,y:topY+78,w:bw,h:22};
+
+    // Bridge IP
+    tx('Bridge IP:',bx,topY+120,'#c0b898',10);
+    r(bx+80,topY+108,bw-80,18,'#2a2a18');rx(bx+80,topY+108,bw-80,18,'#8a5a8a',1);
+    tx(HUE.bridgeIP,bx+88,topY+122,'#cc99ff',9);
+    // IP octets: cycle last octet up/down
+    const ipParts=HUE.bridgeIP.split('.');
+    const lastOctet=parseInt(ipParts[3])||0;
+    r(bx+bw-44,topY+108,20,18,'#3a2020');rx(bx+bw-44,topY+108,20,18,'#aa5555',1);tx('−',bx+bw-34,topY+122,'#ee8888',10,'center');
+    BTNS['hueIpDown']={x:bx+bw-44,y:topY+108,w:20,h:18};
+    r(bx+bw-22,topY+108,20,18,'#203a20');rx(bx+bw-22,topY+108,20,18,'#55aa55',1);tx('+',bx+bw-12,topY+122,'#88ee88',10,'center');
+    BTNS['hueIpUp']={x:bx+bw-22,y:topY+108,w:20,h:18};
+
+    // API Key (masked)
+    tx('API Key:',bx,topY+148,'#c0b898',10);
+    r(bx+80,topY+136,bw-80,18,'#2a2a18');rx(bx+80,topY+136,bw-80,18,'#8a5a8a',1);
+    const keyMask=HUE.apiKey?HUE.apiKey.slice(0,8)+'...'+HUE.apiKey.slice(-4):'(no configurada)';
+    tx(keyMask,bx+88,topY+150,'#aa88cc',8);
+
+    // Lights configuration
+    tx('Luces configuradas:',bx,topY+178,'#c0b898',10);
+    const lightEntries=Object.entries(HUE.lights);
+    let ly=topY+188;
+    for(let i=0;i<lightEntries.length;i++){
+      const [name,id]=lightEntries[i];
+      r(bx+10,ly,bw-20,22,'#1a1a28');rx(bx+10,ly,bw-20,22,'#6644aa',1);
+      tx('🟣',bx+18,ly+16,'#fff',9);
+      tx(name,bx+34,ly+16,'#cc99ff',9);
+      tx('ID: '+id,bx+140,ly+16,'#aa88cc',9);
+      // Change light ID
+      r(bx+bw-64,ly+2,18,18,'#3a2020');rx(bx+bw-64,ly+2,18,18,'#aa5555',1);tx('−',bx+bw-55,ly+16,'#ee8888',10,'center');
+      BTNS['hueLightDown'+i]={x:bx+bw-64,y:ly+2,w:18,h:18};
+      r(bx+bw-42,ly+2,18,18,'#203a20');rx(bx+bw-42,ly+2,18,18,'#55aa55',1);tx('+',bx+bw-33,ly+16,'#88ee88',10,'center');
+      BTNS['hueLightUp'+i]={x:bx+bw-42,y:ly+2,w:18,h:18};
+      ly+=26;
+    }
+    // Add light button
+    r(bx+10,ly,100,20,'#1a2a1a');rx(bx+10,ly,100,20,'#44aa44',1);
+    tx('+ Añadir luz',bx+60,ly+14,'#88ee88',8,'center');
+    BTNS['hueAddLight']={x:bx+10,y:ly,w:100,h:20};
+    // Remove last light
+    if(lightEntries.length>1){
+      r(bx+120,ly,100,20,'#2a1a1a');rx(bx+120,ly,100,20,'#aa4444',1);
+      tx('− Quitar última',bx+170,ly+14,'#ee8888',8,'center');
+      BTNS['hueRemoveLight']={x:bx+120,y:ly,w:100,h:20};
+    }
+
+    // Test all Hue lights
+    ly+=30;
+    r(bx+10,ly,bw-20,24,'#2a1a3a');rx(bx+10,ly,bw-20,24,'#aa66cc',1);
+    tx('🟣 TEST — Parpadear todas las Hue',bx+bw/2,ly+17,'#cc99ff',9,'center');
+    BTNS['hueTestAll']={x:bx+10,y:ly,w:bw-20,h:24};
+
+    // Status info
+    ly+=34;
+    tx('Las luces se sincronizan con la hora del juego:',bx,ly,'#8a8070',8);
+    tx('  Mañana → luz fría (ct:250)  |  Tarde → cálida (ct:340)',bx,ly+13,'#8a8070',8);
+    tx('  Noche → cálida intensa (ct:366)  |  Tormenta → flash azul',bx,ly+26,'#8a8070',8);
+    tx('  Tecla L → enciende/apaga Elgato + Hue a la vez',bx,ly+39,'#8a8070',8);
   }
-  // Back button
+
+  // Back button (shared)
   const bbx=W/2-50,bby=480;
   r(bbx,bby,100,28,'#2a5a2a');rx(bbx,bby,100,28,'#44aa44',1);
   tx('✓ GUARDAR',W/2,bby+19,'#88ee88',10,'center');
@@ -3926,25 +4114,48 @@ function drawEvent(){
   tx('  '+G.eventMsg,ex+ew/2,ey+17,'#f0e8c8',10,'center');
 }
 
-// ── ELGATO LIGHT NOTIFICATION ─────────────────────────────────
+// ── LIGHT NOTIFICATIONS (Elgato + Hue) ────────────────────────
 function drawElgatoNotify(){
   // Shown INSIDE the top HUD bar (compact badge, no floating overlay)
-  if(elgatoState.notify<=0) return;
-  elgatoState.notify--;
-  const alpha=Math.min(1,elgatoState.notify/25);
-  cx.globalAlpha=alpha;
-  const bx=180,by=2,bw=140,bh=24;
-  if(elgatoState.error){
-    r(bx,by,bw,bh,'#4a0a0a');rx(bx,by,bw,bh,'#cc3333',1.5);
-    tx('⚠ Lámpara offline',bx+bw/2,by+16,'#ff6666',9,'center');
-  } else if(elgatoState.on){
-    r(bx,by,bw,bh,'#2a3a10');rx(bx,by,bw,bh,'#ccaa22',1.5);
-    tx('💡 Luz ON',bx+bw/2,by+16,'#ffee66',10,'center');
-  } else {
-    r(bx,by,bw,bh,'#0a0a2a');rx(bx,by,bw,bh,'#4466aa',1.5);
-    tx('🌙 Luz OFF',bx+bw/2,by+16,'#8899cc',10,'center');
+  const showElgato=elgatoState.notify>0;
+  const showHue=HUE.notify>0;
+  if(!showElgato&&!showHue) return;
+  // Elgato badge
+  if(showElgato){
+    elgatoState.notify--;
+    const alpha=Math.min(1,elgatoState.notify/25);
+    cx.globalAlpha=alpha;
+    const bx=180,by=2,bw=110,bh=24;
+    if(elgatoState.error){
+      r(bx,by,bw,bh,'#4a0a0a');rx(bx,by,bw,bh,'#cc3333',1.5);
+      tx('⚠ Elgato offline',bx+bw/2,by+16,'#ff6666',8,'center');
+    } else if(elgatoState.on){
+      r(bx,by,bw,bh,'#2a3a10');rx(bx,by,bw,bh,'#ccaa22',1.5);
+      tx('💡 Elgato ON',bx+bw/2,by+16,'#ffee66',9,'center');
+    } else {
+      r(bx,by,bw,bh,'#0a0a2a');rx(bx,by,bw,bh,'#4466aa',1.5);
+      tx('💡 Elgato OFF',bx+bw/2,by+16,'#8899cc',9,'center');
+    }
+    cx.globalAlpha=1;
   }
-  cx.globalAlpha=1;
+  // Hue badge
+  if(showHue){
+    HUE.notify--;
+    const alpha=Math.min(1,HUE.notify/25);
+    cx.globalAlpha=alpha;
+    const bx=295,by=2,bw=100,bh=24;
+    if(HUE.error){
+      r(bx,by,bw,bh,'#3a0a2a');rx(bx,by,bw,bh,'#cc33aa',1.5);
+      tx('⚠ Hue offline',bx+bw/2,by+16,'#ff66cc',8,'center');
+    } else if(HUE.on){
+      r(bx,by,bw,bh,'#2a1a3a');rx(bx,by,bw,bh,'#aa66cc',1.5);
+      tx('🟣 Hue ON',bx+bw/2,by+16,'#cc99ff',9,'center');
+    } else {
+      r(bx,by,bw,bh,'#0a0a1a');rx(bx,by,bw,bh,'#6644aa',1.5);
+      tx('🟣 Hue OFF',bx+bw/2,by+16,'#8877aa',9,'center');
+    }
+    cx.globalAlpha=1;
+  }
 }
 
 // ── DRAW BOTTOM BAR (GDS style: Yr Sales | Yr Profit | Status | Menu) ──
