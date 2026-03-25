@@ -61,7 +61,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.61 — 2026-03-25 12:00
+//  XTANCO DIGITAL TWIN — BETA v1.62 — 2026-03-25 12:30
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -701,7 +701,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.61',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.62',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -751,7 +751,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.61',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.62',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2251,7 +2251,7 @@ function drawMenu(){
   tx('? HELP',hx+30,hy+16,'#44ccaa',9,'center');
   BTNS['menuHelp']={x:hx,y:hy,w:60,h:22};
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.61 · 2026-03-25 12:00',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.62 · 2026-03-25 12:30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -4173,16 +4173,43 @@ function drawEvent(){
 
 // ── LIGHT NOTIFICATIONS (Elgato + Hue) ────────────────────────
 function drawElgatoNotify(){
-  // Shown INSIDE the top HUD bar (compact badge, no floating overlay)
   const showElgato=elgatoState.notify>0;
   const showHue=HUE.notify>0;
   if(!showElgato&&!showHue) return;
-  // Elgato badge
+  const by=2,bh=24,gap=4;
+  // Position from right edge
+  let rx2=W-4; // right margin
+  // Hue badge (rightmost)
+  if(showHue){
+    HUE.notify--;
+    const alpha=Math.min(1,HUE.notify/25);
+    cx.globalAlpha=alpha;
+    if(HUE.error){
+      const isHTTPS=location.protocol==='https:';
+      const bw=isHTTPS?160:90;
+      const bx=rx2-bw;
+      r(bx,by,bw,bh,'#3a0a2a');rx(bx,by,bw,bh,'#cc33aa',1.5);
+      tx(isHTTPS?'⚠ Hue: usar localhost:9124':'⚠ Hue offline',bx+bw/2,by+16,'#ff66cc',8,'center');
+      rx2=bx-gap;
+    } else if(HUE.on){
+      const bw=80;const bx=rx2-bw;
+      r(bx,by,bw,bh,'#2a1a3a');rx(bx,by,bw,bh,'#aa66cc',1.5);
+      tx('🟣 Hue ON',bx+bw/2,by+16,'#cc99ff',9,'center');
+      rx2=bx-gap;
+    } else {
+      const bw=80;const bx=rx2-bw;
+      r(bx,by,bw,bh,'#0a0a1a');rx(bx,by,bw,bh,'#6644aa',1.5);
+      tx('🟣 Hue OFF',bx+bw/2,by+16,'#8877aa',9,'center');
+      rx2=bx-gap;
+    }
+    cx.globalAlpha=1;
+  }
+  // Elgato badge (left of Hue)
   if(showElgato){
     elgatoState.notify--;
     const alpha=Math.min(1,elgatoState.notify/25);
     cx.globalAlpha=alpha;
-    const bx=180,by=2,bw=110,bh=24;
+    const bw=100;const bx=rx2-bw;
     if(elgatoState.error){
       r(bx,by,bw,bh,'#4a0a0a');rx(bx,by,bw,bh,'#cc3333',1.5);
       tx('⚠ Elgato offline',bx+bw/2,by+16,'#ff6666',8,'center');
@@ -4192,26 +4219,6 @@ function drawElgatoNotify(){
     } else {
       r(bx,by,bw,bh,'#0a0a2a');rx(bx,by,bw,bh,'#4466aa',1.5);
       tx('💡 Elgato OFF',bx+bw/2,by+16,'#8899cc',9,'center');
-    }
-    cx.globalAlpha=1;
-  }
-  // Hue badge
-  if(showHue){
-    HUE.notify--;
-    const alpha=Math.min(1,HUE.notify/25);
-    cx.globalAlpha=alpha;
-    const bx=295,by=2,bw=100,bh=24;
-    if(HUE.error){
-      const isHTTPS=location.protocol==='https:';
-      const errW=isHTTPS?160:100;
-      r(bx,by,errW,bh,'#3a0a2a');rx(bx,by,errW,bh,'#cc33aa',1.5);
-      tx(isHTTPS?'⚠ Hue: usar localhost:9124':'⚠ Hue offline',bx+errW/2,by+16,'#ff66cc',8,'center');
-    } else if(HUE.on){
-      r(bx,by,bw,bh,'#2a1a3a');rx(bx,by,bw,bh,'#aa66cc',1.5);
-      tx('🟣 Hue ON',bx+bw/2,by+16,'#cc99ff',9,'center');
-    } else {
-      r(bx,by,bw,bh,'#0a0a1a');rx(bx,by,bw,bh,'#6644aa',1.5);
-      tx('🟣 Hue OFF',bx+bw/2,by+16,'#8877aa',9,'center');
     }
     cx.globalAlpha=1;
   }
