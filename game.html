@@ -3509,9 +3509,8 @@ function drawGlassDoor(){
 
 // ── LED DISPLAY (on LEFT WALL, middle height) ────────────────
 // ── UNIFIED LED BANNER (back wall + left wall as one continuous strip) ──
-// Text enters from the right side of the back wall (high cols),
-// scrolls left across the back wall, wraps around the corner,
-// continues down the left wall, and exits at the bottom.
+// Text scrolls right-to-left across back wall, wraps around corner, continues down left wall.
+// Both segments share a single offset so text flows seamlessly.
 let ledUnifiedOffset=0;
 
 function _getLedParams(){
@@ -3520,38 +3519,36 @@ function _getLedParams(){
     ? `  ◈  ${T().customers}: ${G?G.customersToday:0}  ◈  ${T().satisfaction}: ${G?(G.satisfaction|0):0}%  ◈  ${T().fame}: ${G?(G.fame|0):0}%  ◈  `
     : '  ◈  ';
   const fullMsg=msgs.join('   ◆   ')+liveData;
-  // Measure text width (need a temp canvas font set)
   cx.font='bold 9px monospace';
   const msgW=cx.measureText(fullMsg).width;
   return {fullMsg, msgW};
 }
 
+// Draw one LED segment. p1→p2 must go LEFT-to-RIGHT (increasing screen X) so text reads correctly.
 function _drawLedSegment(p1x,p1y,p2x,p2y,lh,scrollStart,totalLen,fullMsg,msgW){
   cx.save();
   const angle=Math.atan2(p2y-p1y,p2x-p1x);
   const segLen=Math.sqrt((p2x-p1x)**2+(p2y-p1y)**2);
   cx.translate(p1x,p1y);
   cx.rotate(angle);
-  // LED body
-  r(0,-1,segLen,lh,'#1a1408');
-  rx(0,-1,segLen,lh,'#8a7a50',1);
+  // LED body — flush at wall top (no gap)
+  r(0,0,segLen,lh,'#1a1408');
+  rx(0,0,segLen,lh,'#8a7a50',1);
   // LED dot grid
   cx.globalAlpha=0.04;
   for(let dx=2;dx<segLen-2;dx+=4)
-    for(let dy=1;dy<lh-2;dy+=4)
+    for(let dy=2;dy<lh-2;dy+=4)
       r(dx,dy,2,2,'#ffaa00');
   cx.globalAlpha=1;
   // Clip text to segment
-  cx.beginPath();cx.rect(2,0,segLen-4,lh-1);cx.clip();
+  cx.beginPath();cx.rect(2,1,segLen-4,lh-2);cx.clip();
   const pulse=0.7+0.3*Math.sin(tt*0.04);
   cx.fillStyle=`rgba(255,${160+(80*pulse)|0},0,1)`;
   cx.font='bold 9px monospace';cx.textAlign='left';
-  // Draw text at position relative to this segment's start in the total strip
+  // Text position: scrolls right-to-left within the combined strip
   const textX=totalLen-ledUnifiedOffset-scrollStart;
-  // Draw multiple copies to ensure seamless looping
-  for(let copy=-1;copy<=2;copy++){
-    const x=textX+copy*(msgW+80);
-    cx.fillText(fullMsg,x,12);
+  for(let copy=-2;copy<=3;copy++){
+    cx.fillText(fullMsg,textX+copy*(msgW+80),12);
   }
   cx.restore();
 }
@@ -3560,30 +3557,35 @@ function drawLED(scx,scy){
   scx=scx||1;scy=scy||1;
   const lh=Math.round(16*scy);
   const {fullMsg, msgW}=_getLedParams();
-  // Back wall segment: right to left (col ISO.cols+0.5 → col -0.5)
-  const bp1=toIso(ISO.cols+0.5,0);
-  const bp2=toIso(-0.5,0);
-  const backLen=Math.sqrt((bp2.x-bp1.x)**2+(bp2.y-bp1.y)**2);
-  // Left wall segment: top to bottom (row -0.5 → row ISO.rows+1)
-  const lp1=toIso(0,-0.5);
-  const lp2=toIso(0,ISO.rows+1);
-  const leftLen=Math.sqrt((lp2.x-lp1.x)**2+(lp2.y-lp1.y)**2);
-  const totalLen=backLen+leftLen;
-  // Advance unified offset
+
+  // Back wall: LEFT to RIGHT (low cols → high cols) = increasing screen X
+  const bL=toIso(-0.5,0);   // left end of back wall
+  const bR=toIso(ISO.cols+0.5,0); // right end of back wall
+  const backLen=Math.sqrt((bR.x-bL.x)**2+(bR.y-bL.y)**2);
+
+  // Left wall: TOP to BOTTOM (low rows → high rows) = LEFT going down in iso
+  // In screen coords: toIso(0,0) is top-right, toIso(0,rows) is bottom-left
+  // So we go from bottom-left to top-right (increasing X) for readable text
+  const lB=toIso(0,ISO.rows+1); // bottom of left wall (screen-left)
+  const lT=toIso(0,-0.5);       // top of left wall (screen-right)
+  const leftLen=Math.sqrt((lT.x-lB.x)**2+(lT.y-lB.y)**2);
+
+  const totalLen=leftLen+backLen;
   ledUnifiedOffset=(ledUnifiedOffset+0.7)%(msgW+80);
-  const ledYoff=-16;
-  // Draw back wall segment (text enters here first)
+
+  // Left wall LED sits at wall top edge
+  const lwLedY=-ISO.wallH;
   _drawLedSegment(
-    bp1.x, bp1.y-ISO.wallH+ledYoff,
-    bp2.x, bp2.y-ISO.wallH+ledYoff,
+    lB.x, lB.y+lwLedY,
+    lT.x, lT.y+lwLedY,
     lh, 0, totalLen, fullMsg, msgW
   );
-  // Draw left wall segment (text continues from back wall)
-  const lwY=lp1.y-ISO.wallH+ledYoff;
+
+  // Back wall LED sits at wall top edge
   _drawLedSegment(
-    lp1.x, lp1.y-ISO.wallH+ledYoff,
-    lp2.x, lp2.y-ISO.wallH+ledYoff,
-    lh, backLen, totalLen, fullMsg, msgW
+    bL.x, bL.y-ISO.wallH,
+    bR.x, bR.y-ISO.wallH,
+    lh, leftLen, totalLen, fullMsg, msgW
   );
 }
 
