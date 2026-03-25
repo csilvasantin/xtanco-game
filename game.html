@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.90 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v1.91 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -306,8 +306,8 @@ function updateDSCanvases(){
 // Digital Signage screens on LEFT WALL, flanking Admira TFT (rows 2-4)
 // DS1: rows 0.3–1.8 (above Admira), DS2: rows 4.2–5.7 (below Admira)
 const DS_SCREENS=[
-  {rowT:0.0, rowB:2.2},  // Screen 1: above Admira (+40%)
-  {rowT:3.8, rowB:6.1},  // Screen 2: below Admira (+40%)
+  {rowT:0.0, rowB:1.6},  // Screen 1: left of Admira (shifted left)
+  {rowT:4.4, rowB:6.1},  // Screen 2: right of Admira
 ];
 
 function positionDSOnLeftWall(el,rowT,rowB){
@@ -3495,19 +3495,12 @@ function drawLED(scx,scy){
   const start=0.5+(5-span)/2;
   const lp1=toIso(0,start+span); // bottom (text starts here)
   const lp2=toIso(0,start);      // top (text ends here)
-  // Position at very top edge of wall (above clock)
-  const ledYoff=2; // flush with top of wall
+  // Position above wall top edge (banner sticks out above wall)
+  const ledYoff=-14; // negative = above wall top
   const ledY=lp1.y-ISO.wallH+ledYoff;
   const lh=Math.round(16*scy);
   cx.save();
-  // Clip to left wall
-  const wallClipPts=[];
-  for(let rr=0;rr<=ISO.rows;rr++) wallClipPts.push(toIso(0,rr));
-  cx.beginPath();
-  cx.moveTo(wallClipPts[0].x,wallClipPts[0].y-ISO.wallH);
-  for(let i=1;i<wallClipPts.length;i++) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y-ISO.wallH);
-  for(let i=wallClipPts.length-1;i>=0;i--) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y);
-  cx.closePath();cx.clip();
+  // NO wall clip — LED banner intentionally extends above the wall
   // Angle from lp1→lp2 (bottom to top = readable direction)
   const angle=Math.atan2(lp2.y-lp1.y,lp2.x-lp1.x);
   const ledLen=Math.sqrt((lp2.x-lp1.x)**2+(lp2.y-lp1.y)**2);
