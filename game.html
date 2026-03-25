@@ -61,7 +61,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.63 — 2026-03-25 12:45
+//  XTANCO DIGITAL TWIN — BETA v1.64 — 2026-03-25 12:45
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -701,7 +701,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.63',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.64',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -751,7 +751,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.63',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.64',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1153,6 +1153,9 @@ let activeTab=0;
 const keys={};
 const BTNS={};
 
+// ── AUTO-START — skip to game after 5s idle on menu ──────────
+let menuEnteredAt=Date.now();
+const AUTOSTART_MS=5000; // 5 seconds idle before auto-start
 // ── DEMO MODE — auto-play after 30s idle from menu ───────────
 let lastInput=Date.now();
 let demoMode=false;
@@ -1160,6 +1163,7 @@ let demoTimer=0;
 const DEMO_IDLE_MS=30000; // 30 seconds idle before demo starts
 function resetIdleTimer(){
   lastInput=Date.now();
+  menuEnteredAt=Date.now(); // reset auto-start countdown
   if(demoMode){
     demoMode=false;demoTimer=0;
     // Return to menu if demo was running
@@ -1471,6 +1475,7 @@ function doAction(id){
   if(id==='menuLangEn'){menuSel=1;return;}
   if(id==='menuSettings'){state=S.SETTINGS;return;}
   if(id==='menuHelp'){helpPage=0;state=S.HELP;return;}
+  // Opciones goes to settings (handled by menuSettings above)
   if(id==='helpBack'){state=S.MENU;return;}
   if(id==='helpPrev'){helpPage=Math.max(0,helpPage-1);return;}
   if(id==='helpNext'){helpPage=Math.min(HELP_PAGES.length-1,helpPage+1);return;}
@@ -2240,18 +2245,27 @@ function drawMenu(){
   BTNS['menuLangEn']={x:sx+ow+gap,y:oy,w:ow,h:oh};
   // Mini chibi preview
   for(let i=0;i<4;i++) chibi(W/2-60+i*40,oy+100,1,i,i,Math.floor(tt/12)%2,false,tt);
-  // Settings button
-  const setX=W/2-50,setY=oy+140;
-  r(setX,setY,80,22,'#0a0a18');rx(setX,setY,80,22,P.gray,1);
-  tx('⚙ SETTINGS',setX+40,setY+16,P.gray,9,'center');
-  BTNS['menuSettings']={x:setX,y:setY,w:80,h:22};
-  // Help button
-  const hx=setX+90,hy=setY;
-  r(hx,hy,60,22,'#0a0a18');rx(hx,hy,60,22,'#44ccaa',1);
-  tx('? HELP',hx+30,hy+16,'#44ccaa',9,'center');
-  BTNS['menuHelp']={x:hx,y:hy,w:60,h:22};
+  // Opciones button (opens settings)
+  const optW=120,optH=24,optX=W/2-optW/2,optY=oy+140;
+  r(optX,optY,optW,optH,'#0a0a18');rx(optX,optY,optW,optH,P.gray,1);
+  tx('⚙ OPCIONES',optX+optW/2,optY+17,P.gray,10,'center');
+  BTNS['menuSettings']={x:optX,y:optY,w:optW,h:optH};
+  // Auto-start countdown (5 seconds)
+  if(!demoMode){
+    const elapsed=Date.now()-menuEnteredAt;
+    const remaining=Math.max(0,Math.ceil((AUTOSTART_MS-elapsed)/1000));
+    if(remaining>0){
+      cx.globalAlpha=0.5+0.3*Math.abs(Math.sin(tt*0.08));
+      tx('Auto-inicio en '+remaining+'s...',W/2,optY+optH+20,'#88ccaa',9,'center');
+      cx.globalAlpha=1;
+      // Progress bar
+      const pct=Math.min(1,elapsed/AUTOSTART_MS);
+      const pbW=140,pbH=4,pbX=W/2-pbW/2,pbY=optY+optH+26;
+      r(pbX,pbY,pbW,pbH,'#1a1a2a');r(pbX,pbY,(pbW*pct)|0,pbH,P.neon1);
+    }
+  }
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.63 · 2026-03-25 12:45',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.64 · 2026-03-25 13:00',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -5037,6 +5051,11 @@ function loop(){
   try{updateHtmlBar();}catch(e){}
   try{if(videoPlaying)updateVideoPosition();}catch(e){}
 
+  // Auto-start game after 5 seconds idle on MENU (before demo kicks in)
+  if(!demoMode&&state===S.MENU&&Date.now()-menuEnteredAt>=AUTOSTART_MS){
+    lang=menuSel===0?'es':'en';modelSel=0;startTransition(S.MODEL_SEL);
+    menuEnteredAt=Date.now(); // prevent re-trigger
+  }
   // Check idle → activate demo mode after 30 seconds from MENU only
   if(!demoMode&&state===S.MENU&&Date.now()-lastInput>DEMO_IDLE_MS){
     demoMode=true;demoTimer=0;
