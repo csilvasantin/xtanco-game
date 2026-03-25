@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.87 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v1.88 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -205,8 +205,8 @@ function switchDSVideo(idx){
     dsVideoEl.volume=0.3;
     dsVideoEl.currentTime=0;
     dsVideoEl.play().catch(()=>{});
-    mgrDanceTimer=240; // Manager dances for ~4 seconds
-    mgrSongBubbleTimer=240; // Show song bubble for ~4 seconds
+    mgrDanceTimer=300; // Manager dances for ~5 seconds
+    mgrSongBubbleTimer=300; // Show song bubble for ~5 seconds
   } else {
     dsMode='slides';
     dsVideoEl.pause();
@@ -3192,7 +3192,7 @@ function drawShop(){
   for(const wc of winCols){
     const wp1=toIso(wc,0), wp2=toIso(wc+1.2,0);
     const whei=Math.floor((ISO.wallH-50)*0.55);
-    const wy=wp1.y-ISO.wallH+Math.floor((ISO.wallH-whei)/2)-Math.floor(ISO.wallH*0.1); // 10% higher
+    const wy=wp1.y-ISO.wallH+Math.floor((ISO.wallH-whei)/2)-Math.floor(ISO.wallH*0.25); // 25% higher
     const wwid=wp2.x-wp1.x;
     // Window frame outer
     r(wp1.x-3,wy-3,wwid+6,whei+6,'#e8e4dc');
@@ -4363,22 +4363,30 @@ function drawIsoStaff(s){
     const bw=msg.length*6+8,bh=14,bx2=s.x+7-bw/2,by2=s.y-24;
     r(bx2,by2,bw,bh,'#ff44ccdd');rx(bx2,by2,bw,bh,'#cc22aa',1);
     tx(msg,bx2+4,by2+10,'#ffffff',8);r(s.x+4,by2+bh,4,4,'#ff44ccdd');
+  } else if(s.role===3 && mgrSongBubbleTimer>0){
+    // Store Manager: song announcement (PRIORITY over selling bubble)
+    mgrSongBubbleTimer--;
+    const dsN=VIDEO_LIST[dsVideoIdx]||'';
+    const dashI=dsN.indexOf(' - ');
+    const songT=dashI>0?dsN.substring(dashI+3):dsN;
+    const msg1='Esta es la canción que más';
+    const msg2='me gustaba en los 80 !!';
+    const msg3='♪ '+songT+' ♪';
+    const maxLen=Math.max(msg1.length,msg2.length,msg3.length);
+    const bw=maxLen*5+14,bh=30,bx2=s.x+7-bw/2,by2=s.y-38;
+    const pulse=Math.sin(tt*0.15)*0.3+0.7;
+    r(bx2,by2,bw,bh,'#ff44aadd');rx(bx2,by2,bw,bh,'#ffcc00',1.5);
+    cx.globalAlpha=pulse;
+    tx(msg1,bx2+bw/2,by2+9,'#ffffff',6,'center');
+    tx(msg2,bx2+bw/2,by2+17,'#ffffff',6,'center');
+    cx.globalAlpha=1;
+    tx(msg3,bx2+bw/2,by2+26,'#ffee44',7,'center');
+    r(s.x+4,by2+bh,4,4,'#ff44aadd');
   } else if(s.bTimer>0){
     const msg=T().bubble[s.bIdx]||'!';
     const bw=msg.length*6+8,bh=14,bx2=s.x+7-bw/2,by2=s.y-24;
     r(bx2,by2,bw,bh,'#ffffffe8');rx(bx2,by2,bw,bh,'#8a7a60',1);
     tx(msg,bx2+4,by2+10,'#4a3a20',8);r(s.x+4,by2+bh,4,4,'#ffffffe8');
-  } else if(s.role===3 && mgrSongBubbleTimer>0){
-    // Store Manager: "La canción que me gusta !!" when video changes
-    mgrSongBubbleTimer--;
-    const msg='La canción que me gusta !!';
-    const bw=msg.length*5+10,bh=14,bx2=s.x+7-bw/2,by2=s.y-24;
-    const pulse=Math.sin(tt*0.15)*0.3+0.7;
-    r(bx2,by2,bw,bh,'#ff44aadd');rx(bx2,by2,bw,bh,'#ffcc00',1.5);
-    cx.globalAlpha=pulse;
-    tx(msg,bx2+4,by2+10,'#ffffff',7);
-    cx.globalAlpha=1;
-    r(s.x+4,by2+bh,4,4,'#ff44aadd');
   } else if(s.role===3 && videoPlaying && !videoPaused && dsMode==='video'){
     // Store Manager shows current DS video title in bubble
     const dsN=VIDEO_LIST[dsVideoIdx]||'';
