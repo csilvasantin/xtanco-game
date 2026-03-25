@@ -57,15 +57,15 @@
 <div id="eventBanner" style="display:none;position:absolute;right:6px;top:36px;min-width:200px;max-width:320px;padding:5px 14px;border-radius:4px;font-family:monospace;font-size:11px;font-weight:bold;color:#fff;text-align:center;z-index:15;pointer-events:none;transition:opacity 0.3s"></div>
 <audio id="bgMusic" loop preload="auto"><source src="music/titi.mp3" type="audio/mpeg"></audio>
 <canvas id="c" width="800" height="500"></canvas>
-<div id="videoMonitor" style="display:none;position:absolute;overflow:hidden;border:2px solid #333;border-radius:2px;background:#000;z-index:5;pointer-events:auto">
-  <iframe id="ytPlayer" width="100%" height="100%" src="" frameborder="0" allow="autoplay" style="display:block"></iframe>
+<div id="videoMonitor" style="display:none;position:absolute;overflow:hidden;border:2px solid #333;border-radius:2px;background:#000;z-index:5;pointer-events:none">
+  <canvas id="dsCanvas1" width="160" height="90" style="display:block;width:100%;height:100%"></canvas>
 </div>
-<div id="videoMonitor2" style="display:none;position:absolute;overflow:hidden;border:2px solid #333;border-radius:2px;background:#000;z-index:5;pointer-events:auto">
-  <iframe id="ytPlayer2" width="100%" height="100%" src="" frameborder="0" allow="autoplay" style="display:block"></iframe>
+<div id="videoMonitor2" style="display:none;position:absolute;overflow:hidden;border:2px solid #333;border-radius:2px;background:#000;z-index:5;pointer-events:none">
+  <canvas id="dsCanvas2" width="160" height="90" style="display:block;width:100%;height:100%"></canvas>
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.72 — 2026-03-25 12:45
+//  XTANCO DIGITAL TWIN — BETA v1.73 — 2026-03-25 12:45
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -149,22 +149,66 @@ function toggleMusic(){
   if(bgMusic.paused){bgMusic.play();} else {bgMusic.pause();}
 }
 
-// ── VIDEO MONITOR (YouTube embed on counter PC) ──────────────
-const YOUTUBE_VIDEOS={
-  'Titi Me Preguntó - Bad Bunny':'Cr8K88UcO0s',
-  'Careless Whisper - George Michael':'izGwDsrQ1eQ',
-  'La Perla - Rosalía':'GkTWxDB21cA',
-  'Despechá - Rosalía':'p_i1Ps2bVU8',
-  'La Bicicleta - Shakira':'FcdOLKx2XG8',
-  'Bailando - Enrique Iglesias':'NUsoVlDFqZg',
-  'Dákiti - Bad Bunny':'TmKh7lAwnBI',
-  'Vivir Mi Vida - Marc Anthony':'YXnjy5YlDwk',
-};
+// ── DIGITAL SIGNAGE (animated canvas screens — no YouTube, no ads) ─
 let videoPlaying=false, videoPaused=false, currentVideoId='';
 const videoEl=document.getElementById('videoMonitor');
-const ytFrame=document.getElementById('ytPlayer');
 const videoEl2=document.getElementById('videoMonitor2');
-const ytFrame2=document.getElementById('ytPlayer2');
+const dsC1=document.getElementById('dsCanvas1').getContext('2d');
+const dsC2=document.getElementById('dsCanvas2').getContext('2d');
+let dsFrame=0;
+
+// DS content messages that rotate
+const DS_MSGS=[
+  {txt:'★ XTANCO ★',sub:'Digital Twin',bg:'#0a1a2a',fg:'#ffaa33'},
+  {txt:'ADMIRA',sub:'Red de Estancos',bg:'#1a0a1a',fg:'#cc66ff'},
+  {txt:'TABACO',sub:'Marcas Premium',bg:'#1a1a0a',fg:'#ffdd44'},
+  {txt:'LOTERÍA',sub:'Tu suerte aquí',bg:'#0a1a0a',fg:'#44ff66'},
+  {txt:'VAPES',sub:'Última generación',bg:'#0a0a1a',fg:'#44aaff'},
+  {txt:'PRENSA',sub:'Diarios y Revistas',bg:'#1a0a0a',fg:'#ff6644'},
+];
+
+function renderDSCanvas(ctx,w,h,frame){
+  const msgIdx=Math.floor(frame/180)%DS_MSGS.length;
+  const m=DS_MSGS[msgIdx];
+  const t=frame*0.02;
+  // Animated gradient background
+  const grd=ctx.createLinearGradient(0,0,w,h);
+  const shift=Math.sin(t)*0.3;
+  grd.addColorStop(0,m.bg);
+  grd.addColorStop(0.5+shift,m.fg+'22');
+  grd.addColorStop(1,m.bg);
+  ctx.fillStyle=grd;ctx.fillRect(0,0,w,h);
+  // Animated scan lines
+  ctx.globalAlpha=0.06;
+  for(let y=0;y<h;y+=3){ctx.fillStyle='#fff';ctx.fillRect(0,y,w,1);}
+  ctx.globalAlpha=1;
+  // Main text
+  ctx.textAlign='center';
+  ctx.fillStyle=m.fg;
+  ctx.font='bold 18px monospace';
+  ctx.fillText(m.txt,w/2,38);
+  // Sub text with pulse
+  ctx.globalAlpha=0.6+0.4*Math.sin(t*2);
+  ctx.font='11px monospace';
+  ctx.fillText(m.sub,w/2,58);
+  ctx.globalAlpha=1;
+  // Animated bottom bar
+  const barW=(frame%120)/120*w;
+  ctx.fillStyle=m.fg+'88';
+  ctx.fillRect(0,h-4,barW,4);
+  // Now playing indicator
+  if(G&&G.nowPlaying){
+    ctx.fillStyle='#ffffff44';ctx.font='8px monospace';
+    ctx.fillText('♪ '+G.nowPlaying,w/2,h-8);
+  }
+}
+
+function updateDSCanvases(){
+  if(!videoPlaying||videoPaused) return;
+  dsFrame++;
+  renderDSCanvas(dsC1,160,90,dsFrame);
+  renderDSCanvas(dsC2,160,90,dsFrame);
+}
 
 // Digital Signage screens on LEFT WALL, flanking Admira TFT (rows 2-4)
 // DS1: rows 0.3–1.8 (above Admira), DS2: rows 4.2–5.7 (below Admira)
@@ -208,30 +252,13 @@ function updateVideoPosition(){
 }
 
 function startVideo(){
-  const song=G?G.nowPlaying:'Titi Me Preguntó - Bad Bunny';
-  const vid=YOUTUBE_VIDEOS[song]||'Cr8K88UcO0s';
-  if(vid!==currentVideoId){
-    currentVideoId=vid;
-    const src='https://www.youtube.com/embed/'+vid+'?autoplay=1&mute=0&loop=1&playlist='+vid+'&controls=0&modestbranding=1&rel=0&enablejsapi=1';
-    ytFrame.src=src;
-    // Screen 2 synced but muted (avoid double audio)
-    ytFrame2.src=src.replace('mute=0','mute=1');
-  }
   videoPlaying=true;videoPaused=false;
   updateVideoPosition();
 }
 
 function toggleVideoPause(){
   if(!videoPlaying){startVideo();return;}
-  if(videoPaused){
-    ytFrame.src=ytFrame.src.replace('autoplay=0','autoplay=1');
-    ytFrame2.src=ytFrame2.src.replace('autoplay=0','autoplay=1');
-    videoPaused=false;
-  } else {
-    ytFrame.src=ytFrame.src.replace('autoplay=1','autoplay=0');
-    ytFrame2.src=ytFrame2.src.replace('autoplay=1','autoplay=0');
-    videoPaused=true;
-  }
+  videoPaused=!videoPaused;
 }
 
 // ── HTML BOTTOM BAR — wiring ─────────────────────────────────
@@ -727,7 +754,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.72',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.73',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -777,7 +804,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.72',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.73',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2312,7 +2339,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.72 · 2026-03-25 14:15',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.73 · 2026-03-25 14:25',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -5095,7 +5122,7 @@ function loop(){
 
   // Always update HTML bar + video position first
   try{updateHtmlBar();}catch(e){}
-  try{if(videoPlaying)updateVideoPosition();}catch(e){}
+  try{if(videoPlaying){updateVideoPosition();updateDSCanvases();}}catch(e){}
 
   // Auto-start game after 5 seconds idle on MENU — skip straight to game
   if(!demoMode&&state===S.MENU&&Date.now()-menuEnteredAt>=AUTOSTART_MS){
