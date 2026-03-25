@@ -59,9 +59,12 @@
 <div id="videoMonitor" style="display:none;position:absolute;overflow:hidden;border:2px solid #333;border-radius:2px;background:#000;z-index:5;pointer-events:auto">
   <iframe id="ytPlayer" width="100%" height="100%" src="" frameborder="0" allow="autoplay" style="display:block"></iframe>
 </div>
+<div id="videoMonitor2" style="display:none;position:absolute;overflow:hidden;border:2px solid #333;border-radius:2px;background:#000;z-index:5;pointer-events:auto">
+  <iframe id="ytPlayer2" width="100%" height="100%" src="" frameborder="0" allow="autoplay" style="display:block"></iframe>
+</div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.67 — 2026-03-25 12:45
+//  XTANCO DIGITAL TWIN — BETA v1.68 — 2026-03-25 12:45
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -159,29 +162,37 @@ const YOUTUBE_VIDEOS={
 let videoPlaying=false, videoPaused=false, currentVideoId='';
 const videoEl=document.getElementById('videoMonitor');
 const ytFrame=document.getElementById('ytPlayer');
+const videoEl2=document.getElementById('videoMonitor2');
+const ytFrame2=document.getElementById('ytPlayer2');
 
-function updateVideoPosition(){
-  if(!videoPlaying||!G||state!==S.GAME){videoEl.style.display='none';return;}
-  // Position YouTube on the BACK WALL between windows (cols 4–5.5)
-  const pL=toIso(4,0), pR=toIso(5.5,0);
+// Digital Signage screen positions on back wall (between windows)
+// Windows at cols 2.5, 6, 9.5 — screens fit between them
+const DS_SCREENS=[
+  {colL:4,  colR:5.5},  // Screen 1: between window 1 (2.5) and window 2 (6)
+  {colL:7.5,colR:9.0},  // Screen 2: between window 2 (6) and window 3 (9.5)
+];
+
+function positionDSScreen(el,colL,colR){
+  const pL=toIso(colL,0), pR=toIso(colR,0);
   const canvasRect=cv.getBoundingClientRect();
   const scaleX=canvasRect.width/W, scaleY=canvasRect.height/H;
-  // Center of the wall segment, below LED, above baseboard
-  const mx=pL.x;
-  const mw=pR.x-pL.x;
+  const mx=pL.x, mw=pR.x-pL.x;
   const wallTop=pL.y-ISO.wallH;
-  const my=wallTop+ISO.wallH*0.25; // 25% from top of wall
-  const mh=ISO.wallH*0.35;         // 35% of wall height
-  // Convert to screen coords
-  const sx=canvasRect.left+mx*scaleX;
-  const sy=canvasRect.top+my*scaleY;
-  const sw=mw*scaleX;
-  const sh=mh*scaleY;
-  videoEl.style.display='block';
-  videoEl.style.left=sx+'px';
-  videoEl.style.top=sy+'px';
-  videoEl.style.width=sw+'px';
-  videoEl.style.height=sh+'px';
+  const my=wallTop+ISO.wallH*0.25;
+  const mh=ISO.wallH*0.35;
+  el.style.display='block';
+  el.style.left=(canvasRect.left+mx*scaleX)+'px';
+  el.style.top=(canvasRect.top+my*scaleY)+'px';
+  el.style.width=(mw*scaleX)+'px';
+  el.style.height=(mh*scaleY)+'px';
+}
+
+function updateVideoPosition(){
+  if(!videoPlaying||!G||state!==S.GAME){
+    videoEl.style.display='none';videoEl2.style.display='none';return;
+  }
+  positionDSScreen(videoEl, DS_SCREENS[0].colL, DS_SCREENS[0].colR);
+  positionDSScreen(videoEl2,DS_SCREENS[1].colL, DS_SCREENS[1].colR);
 }
 
 function startVideo(){
@@ -189,7 +200,10 @@ function startVideo(){
   const vid=YOUTUBE_VIDEOS[song]||'Cr8K88UcO0s';
   if(vid!==currentVideoId){
     currentVideoId=vid;
-    ytFrame.src='https://www.youtube.com/embed/'+vid+'?autoplay=1&mute=0&loop=1&playlist='+vid+'&controls=0&modestbranding=1&rel=0&enablejsapi=1';
+    const src='https://www.youtube.com/embed/'+vid+'?autoplay=1&mute=0&loop=1&playlist='+vid+'&controls=0&modestbranding=1&rel=0&enablejsapi=1';
+    ytFrame.src=src;
+    // Screen 2 synced but muted (avoid double audio)
+    ytFrame2.src=src.replace('mute=0','mute=1');
   }
   videoPlaying=true;videoPaused=false;
   updateVideoPosition();
@@ -198,12 +212,12 @@ function startVideo(){
 function toggleVideoPause(){
   if(!videoPlaying){startVideo();return;}
   if(videoPaused){
-    // Resume — reload iframe (simple approach)
     ytFrame.src=ytFrame.src.replace('autoplay=0','autoplay=1');
+    ytFrame2.src=ytFrame2.src.replace('autoplay=0','autoplay=1');
     videoPaused=false;
   } else {
-    // Pause — stop by clearing src partially
     ytFrame.src=ytFrame.src.replace('autoplay=1','autoplay=0');
+    ytFrame2.src=ytFrame2.src.replace('autoplay=1','autoplay=0');
     videoPaused=true;
   }
 }
@@ -701,7 +715,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.67',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.68',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -751,7 +765,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.67',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.68',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1615,7 +1629,7 @@ function doAction(id){
   if(id==='menu'){uiOpen=!uiOpen;return;}
   if(id==='closeUI'){uiOpen=false;return;}
   if(id==='save'){saveGame();showEv('💾 Saved!','#88aa55');SFX.cashRegister();return;}
-  if(id==='quit'){saveGame();bgMusic.pause();videoPlaying=false;videoEl.style.display='none';startTransition(S.MENU);menuSel=0;return;}
+  if(id==='quit'){saveGame();bgMusic.pause();videoPlaying=false;videoEl.style.display='none';videoEl2.style.display='none';startTransition(S.MENU);menuSel=0;return;}
   if(id==='editor'){state=S.EDITOR;edSelIdx=-1;return;}
   // Editor actions
   if(id.startsWith('edsel')){edSelIdx=parseInt(id.slice(5));return;}
@@ -2265,7 +2279,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.67 · 2026-03-25 13:30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.68 · 2026-03-25 13:40',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
