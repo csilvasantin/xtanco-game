@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.91 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v1.92 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -306,8 +306,8 @@ function updateDSCanvases(){
 // Digital Signage screens on LEFT WALL, flanking Admira TFT (rows 2-4)
 // DS1: rows 0.3–1.8 (above Admira), DS2: rows 4.2–5.7 (below Admira)
 const DS_SCREENS=[
-  {rowT:0.0, rowB:1.6},  // Screen 1: left of Admira (shifted left)
-  {rowT:4.4, rowB:6.1},  // Screen 2: right of Admira
+  {rowT:0.0, rowB:1.8},  // Screen 1: right section (no overlap with TFT)
+  {rowT:4.2, rowB:6.0},  // Screen 2: left section (no overlap with TFT)
 ];
 
 function positionDSOnLeftWall(el,rowT,rowB){
@@ -3547,10 +3547,10 @@ function drawAltadisTFT(){
   for(let i=1;i<wallClipPts.length;i++) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y-ISO.wallH);
   for(let i=wallClipPts.length-1;i>=0;i--) cx.lineTo(wallClipPts[i].x,wallClipPts[i].y);
   cx.closePath();cx.clip();
-  // Screen corners on left wall — maximized, below clock
-  const ledEndY=ISO.wallH*0.25; // aligned with DS screens
-  const pR=toIso(0,1.4); // visually RIGHT (maximized)
-  const pL=toIso(0,4.6); // visually LEFT (maximized)
+  // Screen corners on left wall — centered, no overlap with DS screens
+  const ledEndY=ISO.wallH*0.25;
+  const pR=toIso(0,2.0); // starts after DS1 ends at 1.8 (gap 0.2)
+  const pL=toIso(0,4.0); // ends before DS2 starts at 4.2 (gap 0.2)
   // Bezel corners (outer frame)
   const bzTL={x:pL.x, y:pL.y-ISO.wallH+ledEndY+14};
   const bzTR={x:pR.x, y:pR.y-ISO.wallH+ledEndY+14};
