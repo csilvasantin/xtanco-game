@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.00 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.01 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -3131,6 +3131,24 @@ function drawCityBg(){
       drawIsoTile(c,rr,gc,'#5a8a3810');
     }
   }
+  // ── XTANCO branding on grass (bottom-right corner) ──
+  const bp=toIso(ISO.cols+2,ISO.rows+3);
+  cx.save();
+  cx.translate(bp.x,bp.y);
+  // Isometric skew: rotate to follow the grass tile angle
+  const ba=Math.atan2(ISO.tileH/2,ISO.tileW/2);
+  cx.rotate(-ba);
+  cx.scale(1,0.5); // flatten for iso perspective
+  cx.globalAlpha=0.35;
+  cx.font='bold 28px monospace';
+  cx.textAlign='center';
+  cx.fillStyle='#3a6a28';
+  cx.fillText('X T A N C O',0,0);
+  cx.globalAlpha=0.2;
+  cx.font='bold 10px monospace';
+  cx.fillText('SIMULADOR DE ESTANCO DIGITAL',0,16);
+  cx.globalAlpha=1;
+  cx.restore();
 }
 
 // ── DRAW SHOP (ISOMETRIC — Kairosoft warm style) ─────────────
@@ -3192,7 +3210,7 @@ function drawShop(){
   for(const wc of winCols){
     const wp1=toIso(wc,0), wp2=toIso(wc+1.2,0);
     const whei=Math.floor((ISO.wallH-50)*0.55);
-    const wy=wp1.y-ISO.wallH+Math.floor((ISO.wallH-whei)/2)-Math.floor(ISO.wallH*0.25); // 25% higher
+    const wy=wp1.y-ISO.wallH+Math.floor((ISO.wallH-whei)/2)+Math.floor(ISO.wallH*0.05); // centered, below LED banner
     const wwid=wp2.x-wp1.x;
     // Window frame outer
     r(wp1.x-3,wy-3,wwid+6,whei+6,'#e8e4dc');
