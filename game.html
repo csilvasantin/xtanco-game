@@ -2348,7 +2348,7 @@ function drawMenu(){
     if(o.sel) nt('▶',ox-18,oy+26,P.neon1,12);
   });
   // Start button (clickable)
-  const startBtnW=260,startBtnH=30,startBtnX=W/2-startBtnW/2,startBtnY=oy+48;
+  const startBtnW=300,startBtnH=30,startBtnX=W/2-startBtnW/2,startBtnY=oy+48;
   r(startBtnX,startBtnY,startBtnW,startBtnH,'#0a1a0a');rx(startBtnX,startBtnY,startBtnW,startBtnH,P.neon3,1.5);
   cx.globalAlpha=.5+.5*Math.abs(Math.sin(tt*.04));
   tx(T().startBtn,W/2,startBtnY+20,P.neon3,12,'center');
