@@ -65,7 +65,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v1.70 — 2026-03-25 12:45
+//  XTANCO DIGITAL TWIN — BETA v1.71 — 2026-03-25 12:45
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -727,7 +727,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.70',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v1.71',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -777,7 +777,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.70',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v1.71',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1679,11 +1679,20 @@ function doAction(id){
 
 function showEv(msg,col){
   G.eventMsg=msg;G.eventTimer=160;G.eventColor=col||P.neon1;
-  // Show HTML banner below topBar EDIT/MENU/QUIT
+  // Show HTML banner below topBar, aligned from Edit left edge to Quit right edge
   const eb=document.getElementById('eventBanner');
-  if(eb){
+  const editBtn=document.getElementById('btnEdit');
+  const quitBtn=document.getElementById('btnQuit');
+  if(eb&&editBtn&&quitBtn){
+    const editRect=editBtn.getBoundingClientRect();
+    const quitRect=quitBtn.getBoundingClientRect();
     eb.textContent=msg;
     eb.style.background=col||'#3a2818';
+    eb.style.left=editRect.left+'px';
+    eb.style.width=(quitRect.right-editRect.left)+'px';
+    eb.style.right='auto';
+    eb.style.minWidth='0';
+    eb.style.maxWidth='none';
     eb.style.display='block';eb.style.opacity='1';
     clearTimeout(eb._fadeT);clearTimeout(eb._hideT);
     eb._fadeT=setTimeout(()=>{eb.style.opacity='0';},2400);
@@ -2303,7 +2312,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v1.70 · 2026-03-25 14:00',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v1.71 · 2026-03-25 14:10',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
