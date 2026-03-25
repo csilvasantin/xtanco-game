@@ -3361,7 +3361,27 @@ function drawShop(){
   for(let i=1;i<lwPts.length;i++) cx.lineTo(lwPts[i].x,lwPts[i].y-ISO.wallH);
   cx.stroke();
 
+  // ── CORNER FILL (covers sky gap where left wall meets back wall) ──
+  {
+    const cP=toIso(0,0);          // corner point
+    const bExt=toIso(-0.5,0);     // back wall extends left
+    const lExt=toIso(0,-0.5);     // left wall extends up
+    // Fill from floor to ceiling at the corner
+    cx.beginPath();
+    cx.moveTo(cP.x, cP.y);
+    cx.lineTo(bExt.x, bExt.y);
+    cx.lineTo(bExt.x, bExt.y-ISO.wallH);
+    cx.lineTo(lExt.x, lExt.y-ISO.wallH);
+    cx.lineTo(lExt.x, lExt.y);
+    cx.lineTo(cP.x, cP.y);
+    cx.closePath();
+    cx.fillStyle='#c8bca0'; cx.fill(); // slightly darker corner shade
+  }
+
   // ── RIGHT WALL door drawn AFTER furniture (see drawGlassDoor below) ──
+
+  // ── AIR CONDITIONING on left wall (centered) ──
+  drawAirConditioning();
 
   // ── CLOCK on left wall ──
   drawWallClock();
@@ -3877,6 +3897,46 @@ function drawAltadisTFT(){
 }
 
 // ── WALL CLOCK (above LED on left wall) ──────────────────────
+// ── AIR CONDITIONING UNIT on left wall ──
+function drawAirConditioning(){
+  // Position: centered on left wall at row 4 (middle), high on wall
+  const acP=toIso(0,4);
+  const acX=acP.x;
+  const acY=acP.y-ISO.wallH+30; // near top of wall, below LED
+
+  // Clip to left wall
+  cx.save();
+  const wClip=[];
+  for(let rr=0;rr<=ISO.rows;rr++) wClip.push(toIso(0,rr));
+  cx.beginPath();
+  cx.moveTo(wClip[0].x,wClip[0].y-ISO.wallH);
+  for(let i=1;i<wClip.length;i++) cx.lineTo(wClip[i].x,wClip[i].y-ISO.wallH);
+  for(let i=wClip.length-1;i>=0;i--) cx.lineTo(wClip[i].x,wClip[i].y);
+  cx.closePath();cx.clip();
+
+  const aw=50, ah=16;
+  // Shadow behind unit
+  r(acX-aw/2+2,acY+2,aw,ah,'rgba(0,0,0,0.15)');
+  // Main body (white/light gray)
+  r(acX-aw/2,acY,aw,ah,'#f0f0f0');
+  // Top edge highlight
+  r(acX-aw/2,acY,aw,2,'#ffffff');
+  // Bottom vent grille
+  for(let v=0;v<3;v++){
+    r(acX-aw/2+4,acY+ah-5+v*2,aw-8,1,'#d8d8d8');
+  }
+  // Side borders
+  rx(acX-aw/2,acY,aw,ah,'#c0c0c0',1);
+  // Small indicator light (green = running)
+  cx.fillStyle='#44dd44';
+  cx.beginPath();cx.arc(acX+aw/2-6,acY+4,1.5,0,Math.PI*2);cx.fill();
+  // Brand label
+  cx.fillStyle='#999';cx.font='4px monospace';
+  cx.fillText('DAIKIN',acX-10,acY+6);
+
+  cx.restore();
+}
+
 // Clock time derived from game time (not real time)
 let _clockH=9,_clockM=0;
 
