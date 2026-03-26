@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.39 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.40 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -874,7 +874,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.39',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.40',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -929,7 +929,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.39',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.40',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2501,7 +2501,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v2.39 · 2026-03-26 11:35',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v2.40 · 2026-03-26 11:40',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -3404,6 +3404,8 @@ function drawShop(){
   drawBackWallLED();
   // ── AIR CONDITIONING on left wall (drawn AFTER LED so it's visible) ──
   drawAirConditioning();
+  // ── AROMATIZER on back wall (right side, low) ──
+  drawAromatizer();
   // ── TFT ALTADIS (16:9 screen on back wall, above 2nd window) ──
   drawAltadisTFT();
 
@@ -3466,8 +3468,6 @@ function drawShop(){
     }
   }
 
-  // ── AROMATIZER on floor (right side of shop) ──
-  drawAromatizer();
   // ── GLASS DOOR — drawn LAST, always on top of furniture/characters ──
   drawGlassDoor();
 
@@ -3971,17 +3971,14 @@ function drawAirConditioning(){
 let aromaOn=false; // Aromatizer state: false=off, true=on (diffusing particles)
 
 function drawAromatizer(){
-  // Position on the FLOOR at col 10, row 6 (right side of shop, near back wall)
-  const ap=toIso(10.5,6.5);
-  const ax=ap.x-8, baseY=ap.y;
-  const aw=16, ah=22; // small device on the floor
-  const ay=baseY-ah-2; // sitting on the floor tile
+  // Position on back wall, right side past 2nd window (col ~12.5), low on wall
+  const ap=toIso(12.5,0);
+  const ax=ap.x, baseY=ap.y;
+  const aw=16, ah=22;
+  const ay=baseY-Math.floor(ISO.wallH*0.25); // low on wall, near baseboard
 
-  // Shadow on floor (isometric ellipse)
-  cx.globalAlpha=0.15;
-  cx.fillStyle='#000';
-  cx.beginPath();cx.ellipse(ax+aw/2,baseY-1,aw/2+2,4,0,0,Math.PI*2);cx.fill();
-  cx.globalAlpha=1;
+  // Shadow behind on wall
+  r(ax+2,ay+2,aw,ah,'rgba(0,0,0,0.15)');
 
   // Main body (black)
   r(ax,ay,aw,ah,'#1a1a1a');
