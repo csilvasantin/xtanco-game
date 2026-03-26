@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.47 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.48 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -874,7 +874,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.47',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.48',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -929,7 +929,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.47',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.48',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2501,7 +2501,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v2.47 · 2026-03-26 12:20',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v2.48 · 2026-03-26 12:30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -3012,52 +3012,86 @@ function drawIsoCityBuilding(b){
   const topCol=`hsl(${b.hue},${b.sat}%,${b.lit+10}%)`;
   const leftCol=`hsl(${b.hue},${b.sat}%,${b.lit-5}%)`;
   const rightCol=`hsl(${b.hue},${b.sat}%,${b.lit}%)`;
+
+  // Left face corners (front-facing wall)
+  const lTL={x:p.x-d, y:p.y+dh-b.h};       // top-left
+  const lTR={x:p.x+w-d, y:p.y+wh+dh-b.h};  // top-right
+  const lBL={x:p.x-d, y:p.y+dh};            // bottom-left
+  const lBR={x:p.x+w-d, y:p.y+wh+dh};       // bottom-right
+
+  // Right face corners (side wall)
+  const rTL={x:p.x+w-d, y:p.y+wh+dh-b.h};  // top-left
+  const rTR={x:p.x+w, y:p.y+wh-b.h};        // top-right
+  const rBL={x:p.x+w-d, y:p.y+wh+dh};       // bottom-left
+  const rBR={x:p.x+w, y:p.y+wh};            // bottom-right
+
   // Top face
   cx.beginPath();
   cx.moveTo(p.x,p.y-b.h);
-  cx.lineTo(p.x+w,p.y+wh-b.h);
-  cx.lineTo(p.x+w-d,p.y+wh+dh-b.h);
-  cx.lineTo(p.x-d,p.y+dh-b.h);
+  cx.lineTo(rTR.x,rTR.y);
+  cx.lineTo(rTL.x,rTL.y);
+  cx.lineTo(lTL.x,lTL.y);
   cx.closePath();
   cx.fillStyle=topCol;cx.fill();
   // Left face
   cx.beginPath();
-  cx.moveTo(p.x-d,p.y+dh-b.h);
-  cx.lineTo(p.x+w-d,p.y+wh+dh-b.h);
-  cx.lineTo(p.x+w-d,p.y+wh+dh);
-  cx.lineTo(p.x-d,p.y+dh);
+  cx.moveTo(lTL.x,lTL.y);cx.lineTo(lTR.x,lTR.y);
+  cx.lineTo(lBR.x,lBR.y);cx.lineTo(lBL.x,lBL.y);
   cx.closePath();
   cx.fillStyle=leftCol;cx.fill();
   // Right face
   cx.beginPath();
-  cx.moveTo(p.x+w-d,p.y+wh+dh-b.h);
-  cx.lineTo(p.x+w,p.y+wh-b.h);
-  cx.lineTo(p.x+w,p.y+wh);
-  cx.lineTo(p.x+w-d,p.y+wh+dh);
+  cx.moveTo(rTL.x,rTL.y);cx.lineTo(rTR.x,rTR.y);
+  cx.lineTo(rBR.x,rBR.y);cx.lineTo(rBL.x,rBL.y);
   cx.closePath();
   cx.fillStyle=rightCol;cx.fill();
-  // Windows on left face
-  const faceH=b.h;
-  const wRows=Math.min(b.winRows,Math.floor((faceH-8)/9));
-  const wCols=Math.min(b.winCols,Math.floor((b.bw*hw)/8));
+
+  // Helper: interpolate point on a parallelogram face
+  // u=0..1 horizontal, v=0..1 vertical (0=top,1=bottom)
+  function facePoint(tl,tr,bl,br,u,v){
+    const topX=tl.x+(tr.x-tl.x)*u;
+    const topY=tl.y+(tr.y-tl.y)*u;
+    const botX=bl.x+(br.x-bl.x)*u;
+    const botY=bl.y+(br.y-bl.y)*u;
+    return {x:topX+(botX-topX)*v, y:topY+(botY-topY)*v};
+  }
+
+  // Windows on left face (perspective-correct)
+  const wRows=Math.min(b.winRows,Math.floor(b.h/12));
+  const wCols=Math.min(b.winCols,Math.floor((b.bw*hw)/10));
+  const margin=0.08;
   for(let wy=0;wy<wRows;wy++){
     for(let wx=0;wx<wCols;wx++){
+      const u0=margin+wx*(1-2*margin)/wCols;
+      const u1=u0+(1-2*margin)/wCols*0.6;
+      const v0=margin+wy*(1-2*margin)/wRows;
+      const v1=v0+(1-2*margin)/wRows*0.55;
+      const a=facePoint(lTL,lTR,lBL,lBR,u0,v0);
+      const bb=facePoint(lTL,lTR,lBL,lBR,u1,v0);
+      const cc=facePoint(lTL,lTR,lBL,lBR,u1,v1);
+      const dd=facePoint(lTL,lTR,lBL,lBR,u0,v1);
       const lit=Math.sin(tt*0.004+b.col*10+wx*5+wy*8)>0.15;
-      const fy=p.y+dh-b.h+6+wy*9;
-      const fx=p.x-d+3+wx*8;
       cx.fillStyle=lit?'#eedd77':'#6a8899';
-      cx.fillRect(fx,fy,5,5);
+      cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(bb.x,bb.y);
+      cx.lineTo(cc.x,cc.y);cx.lineTo(dd.x,dd.y);cx.closePath();cx.fill();
     }
   }
-  // Windows on right face
-  const rCols=Math.min(b.winCols,Math.floor((b.bd*hw)/8));
+  // Windows on right face (perspective-correct)
+  const rCols=Math.min(b.winCols,Math.floor((b.bd*hw)/10));
   for(let wy=0;wy<wRows;wy++){
     for(let wx=0;wx<rCols;wx++){
+      const u0=margin+wx*(1-2*margin)/rCols;
+      const u1=u0+(1-2*margin)/rCols*0.6;
+      const v0=margin+wy*(1-2*margin)/wRows;
+      const v1=v0+(1-2*margin)/wRows*0.55;
+      const a=facePoint(rTL,rTR,rBL,rBR,u0,v0);
+      const bb=facePoint(rTL,rTR,rBL,rBR,u1,v0);
+      const cc=facePoint(rTL,rTR,rBL,rBR,u1,v1);
+      const dd=facePoint(rTL,rTR,rBL,rBR,u0,v1);
       const lit=Math.sin(tt*0.004+b.col*7+wx*4+wy*11)>0.2;
-      const fy=p.y+wh+dh-b.h+6+wy*9-(b.bd*hh);
-      const fx=p.x+w-d+3+wx*8;
       cx.fillStyle=lit?'#eedd77':'#7a99aa';
-      cx.fillRect(fx,fy,4,5);
+      cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(bb.x,bb.y);
+      cx.lineTo(cc.x,cc.y);cx.lineTo(dd.x,dd.y);cx.closePath();cx.fill();
     }
   }
 }
@@ -3257,58 +3291,11 @@ function drawShop(){
     cx.beginPath();cx.arc(wp1.x+cOff,wy+15,6,0,Math.PI*2);cx.fill();
     cx.beginPath();cx.arc(wp1.x+cOff+10,wy+12,5,0,Math.PI*2);cx.fill();
     cx.beginPath();cx.arc(wp1.x+cOff+18,wy+14,5,0,Math.PI*2);cx.fill();
-    // City buildings through window — realistic perspective view
-    // Each window shows a slice of the city skyline at proper scale
-    const winCenter=wc+0.6; // center of window in col space
-    // Show 4 buildings per window, varying depths for parallax
-    const depths=[
-      {scale:1.0, xOff:-0.15, alpha:1.0},   // front row
-      {scale:0.85, xOff:0.1, alpha:0.85},    // mid row
-      {scale:0.7, xOff:-0.05, alpha:0.7},    // back row
-      {scale:0.55, xOff:0.15, alpha:0.6},    // far back
-    ];
-    for(let di=0;di<depths.length;di++){
-      const d=depths[di];
-      const bIdx=(Math.floor(winCenter)+di*3)%CITY_BUILDINGS.length;
-      const b=CITY_BUILDINGS[bIdx];
-      if(!b) continue;
-      const bw2=Math.floor(wwid*0.45*d.scale);
-      const bh=Math.floor(whei*(0.5+d.scale*0.45));
-      const bd2=Math.floor(4*d.scale);
-      const bx=wp1.x+Math.floor(wwid*(0.15+di*0.2+d.xOff));
-      const bBase=wy+whei;
-      cx.globalAlpha=d.alpha;
-      // Front face
-      cx.fillStyle=`hsl(${b.hue},${b.sat}%,${b.lit}%)`;
-      cx.fillRect(bx,bBase-bh,bw2,bh);
-      // Right face
-      cx.beginPath();
-      cx.moveTo(bx+bw2,bBase-bh);
-      cx.lineTo(bx+bw2+bd2,bBase-bh-bd2*0.5);
-      cx.lineTo(bx+bw2+bd2,bBase-bd2*0.5);
-      cx.lineTo(bx+bw2,bBase);
-      cx.closePath();
-      cx.fillStyle=`hsl(${b.hue},${b.sat}%,${b.lit-12}%)`;cx.fill();
-      // Top face
-      cx.beginPath();
-      cx.moveTo(bx,bBase-bh);
-      cx.lineTo(bx+bd2,bBase-bh-bd2*0.5);
-      cx.lineTo(bx+bw2+bd2,bBase-bh-bd2*0.5);
-      cx.lineTo(bx+bw2,bBase-bh);
-      cx.closePath();
-      cx.fillStyle=`hsl(${b.hue},${b.sat}%,${b.lit+10}%)`;cx.fill();
-      // Windows on building — scale with building
-      const wRows=Math.min(6,Math.floor(bh/7));
-      const wCols=Math.min(3,Math.floor(bw2/6));
-      for(let wr=0;wr<wRows;wr++){
-        for(let wcc=0;wcc<wCols;wcc++){
-          const lit=Math.sin(tt*0.004+bIdx*7+wcc*4+wr*9)>0.15;
-          cx.fillStyle=lit?'#eecc66':'#6a8899';
-          cx.fillRect(bx+2+wcc*Math.floor(bw2/wCols),bBase-bh+3+wr*Math.floor(bh/wRows),3,4);
-        }
-      }
+    // Draw the SAME isometric city buildings clipped to window
+    // This ensures windows show exactly what's behind the wall
+    for(const b of CITY_BUILDINGS){
+      drawIsoCityBuilding(b);
     }
-    cx.globalAlpha=1;
     cx.restore();
     // Crossbars
     cx.strokeStyle='#d0ccbc';cx.lineWidth=2.5;
