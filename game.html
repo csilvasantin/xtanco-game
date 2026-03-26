@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.41 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.42 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -874,7 +874,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.41',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.42',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -929,7 +929,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.41',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.42',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2501,7 +2501,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v2.41 · 2026-03-26 11:45',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v2.42 · 2026-03-26 11:50',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -3945,33 +3945,34 @@ function drawAirConditioning(){
   // Clickable area for mouse toggle
   BTNS['acToggle']={x:acX,y:acY,w:aw,h:ah};
 
-  // ── Wind animation (when AC is ON) ──
+  // ── Wind animation (when AC is ON) — 10s on, 10s off cycle, slower ──
   if(acOn){
-    const windBase=acY+ah; // bottom of the AC unit
-    // Blue wind streaks falling down
-    for(let i=0;i<8;i++){
-      const wx=acX+8+i*9;
-      const phase=(tt*0.07+i*1.1)%1;
-      const wy=windBase+phase*35;
-      const sway=Math.sin(tt*0.05+i*2)*4;
-      const len=8+Math.sin(tt*0.1+i)*3;
-      const alpha=0.7*(1-phase);
-      cx.globalAlpha=alpha;
-      cx.strokeStyle='#44aaff';
-      cx.lineWidth=2;
-      cx.beginPath();
-      cx.moveTo(wx+sway,wy);
-      cx.lineTo(wx+sway,wy+len);
-      cx.stroke();
-      // White highlight
-      cx.strokeStyle='#88ddff';
-      cx.lineWidth=1;
-      cx.beginPath();
-      cx.moveTo(wx+sway+1,wy+1);
-      cx.lineTo(wx+sway+1,wy+len-1);
-      cx.stroke();
+    const acCycle=tt%1200; // 1200 frames = 20s total (10s on + 10s off at ~60fps)
+    if(acCycle<600){ // first 10 seconds: show wind
+      const windBase=acY+ah;
+      for(let i=0;i<8;i++){
+        const wx=acX+8+i*9;
+        const phase=(tt*0.025+i*1.1)%1; // slower speed (was 0.07)
+        const wy=windBase+phase*35;
+        const sway=Math.sin(tt*0.02+i*2)*4; // slower sway
+        const len=8+Math.sin(tt*0.04+i)*3;
+        const alpha=0.7*(1-phase);
+        cx.globalAlpha=alpha;
+        cx.strokeStyle='#44aaff';
+        cx.lineWidth=2;
+        cx.beginPath();
+        cx.moveTo(wx+sway,wy);
+        cx.lineTo(wx+sway,wy+len);
+        cx.stroke();
+        cx.strokeStyle='#88ddff';
+        cx.lineWidth=1;
+        cx.beginPath();
+        cx.moveTo(wx+sway+1,wy+1);
+        cx.lineTo(wx+sway+1,wy+len-1);
+        cx.stroke();
+      }
+      cx.globalAlpha=1;
     }
-    cx.globalAlpha=1;
   }
   cx.textAlign='left';
 }
@@ -4031,41 +4032,41 @@ function drawAromatizer(){
   // Clickable area
   BTNS['aromaToggle']={x:ax,y:ay,w:aw,h:ah};
 
-  // ── Scent waves (when ON) — bold concentric arcs rising upward ──
+  // ── Scent waves (when ON) — 10s on, 10s off cycle, slower ──
   if(aromaOn){
-    const waveX=ax+aw/2;
-    const waveBase=ay-3;
-    // Concentric arc waves — purple/magenta for contrast on beige wall
-    for(let i=0;i<5;i++){
-      const phase=(tt*0.03+i*0.7)%1;
-      const wy=waveBase-phase*40;
-      const wSize=5+phase*14;
-      const alpha=0.75*(1-phase);
-      cx.globalAlpha=alpha;
-      cx.strokeStyle='#cc66ff';
-      cx.lineWidth=2;
-      cx.beginPath();
-      cx.arc(waveX,wy,wSize,Math.PI*1.15,Math.PI*1.85);
-      cx.stroke();
-      // Inner highlight
-      cx.strokeStyle='#ee88ff';
-      cx.lineWidth=1;
-      cx.beginPath();
-      cx.arc(waveX,wy-1,wSize*0.8,Math.PI*1.2,Math.PI*1.8);
-      cx.stroke();
+    const aromaCycle=(tt+300)%1200; // offset 300 frames so AC and aroma alternate slightly
+    if(aromaCycle<600){ // first 10 seconds: show waves
+      const waveX=ax+aw/2;
+      const waveBase=ay-3;
+      for(let i=0;i<5;i++){
+        const phase=(tt*0.012+i*0.7)%1; // much slower (was 0.03)
+        const wy=waveBase-phase*40;
+        const wSize=5+phase*14;
+        const alpha=0.75*(1-phase);
+        cx.globalAlpha=alpha;
+        cx.strokeStyle='#cc66ff';
+        cx.lineWidth=2;
+        cx.beginPath();
+        cx.arc(waveX,wy,wSize,Math.PI*1.15,Math.PI*1.85);
+        cx.stroke();
+        cx.strokeStyle='#ee88ff';
+        cx.lineWidth=1;
+        cx.beginPath();
+        cx.arc(waveX,wy-1,wSize*0.8,Math.PI*1.2,Math.PI*1.8);
+        cx.stroke();
+      }
+      for(let i=0;i<8;i++){
+        const phase=(tt*0.008+i*0.9)%1; // slower (was 0.02)
+        const px=waveX+Math.sin(tt*0.015+i*2.2)*8;
+        const py=waveBase-phase*45;
+        const sz=1.2+Math.sin(tt*0.015+i)*0.5;
+        const alpha=0.6*(1-phase);
+        cx.globalAlpha=alpha;
+        cx.fillStyle=i%2===0?'#bb55ee':'#88ddaa';
+        cx.beginPath();cx.arc(px,py,sz,0,Math.PI*2);cx.fill();
+      }
+      cx.globalAlpha=1;
     }
-    // Floating scent particles — green/purple dots
-    for(let i=0;i<8;i++){
-      const phase=(tt*0.02+i*0.9)%1;
-      const px=waveX+Math.sin(tt*0.035+i*2.2)*8;
-      const py=waveBase-phase*45;
-      const sz=1.2+Math.sin(tt*0.04+i)*0.5;
-      const alpha=0.6*(1-phase);
-      cx.globalAlpha=alpha;
-      cx.fillStyle=i%2===0?'#bb55ee':'#88ddaa';
-      cx.beginPath();cx.arc(px,py,sz,0,Math.PI*2);cx.fill();
-    }
-    cx.globalAlpha=1;
   }
 }
 
