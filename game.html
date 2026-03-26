@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.33 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.34 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -874,7 +874,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.33',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.34',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -929,7 +929,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.33',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.34',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2498,7 +2498,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v2.33 · 2026-03-26 11:00',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v2.34 · 2026-03-26 11:05',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -3121,15 +3121,23 @@ function drawCityBg(){
     }
     cx.globalAlpha=1;
   }
+  // Floor-colored tiles to fill the bottom triangle (below door/right wall)
+  // These extend the store floor into the visible gap before grass covers
+  for(let c=-2;c<ISO.cols;c++){
+    for(let rr=ISO.rows;rr<ISO.rows+6;rr++){
+      const fc=((c+rr)%2===0)?'#b8b0a0':'#b4ac9c';
+      drawIsoTile(c,rr,fc,'#a8a09010');
+    }
+  }
   // Grass tiles around the shop exterior (bottom, right, and corner)
   for(let c=-5;c<ISO.cols+8;c++){
-    for(let rr=ISO.rows;rr<ISO.rows+14;rr++){
+    for(let rr=ISO.rows+6;rr<ISO.rows+16;rr++){
       const gc=((c+rr)%2===0)?'#6a9a48':'#5e8e42';
       drawIsoTile(c,rr,gc,'#5a8a3810');
     }
   }
   for(let c=ISO.cols;c<ISO.cols+8;c++){
-    for(let rr=-4;rr<ISO.rows+14;rr++){
+    for(let rr=-4;rr<ISO.rows+16;rr++){
       const gc=((c+rr)%2===0)?'#6a9a48':'#5e8e42';
       drawIsoTile(c,rr,gc,'#5a8a3810');
     }
