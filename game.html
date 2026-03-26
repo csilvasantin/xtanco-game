@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.42 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.43 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -874,7 +874,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.42',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.43',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -929,7 +929,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.42',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.43',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2501,7 +2501,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v2.42 · 2026-03-26 11:50',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v2.43 · 2026-03-26 11:55',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -3945,17 +3945,17 @@ function drawAirConditioning(){
   // Clickable area for mouse toggle
   BTNS['acToggle']={x:acX,y:acY,w:aw,h:ah};
 
-  // ── Wind animation (when AC is ON) — 10s on, 10s off cycle, slower ──
+  // ── Wind animation (when AC is ON) — 5s on, 5s off cycle, very slow ──
   if(acOn){
-    const acCycle=tt%1200; // 1200 frames = 20s total (10s on + 10s off at ~60fps)
-    if(acCycle<600){ // first 10 seconds: show wind
+    const acCycle=tt%600; // 600 frames = 10s total (5s on + 5s off at ~60fps)
+    if(acCycle<300){ // first 5 seconds: show wind
       const windBase=acY+ah;
       for(let i=0;i<8;i++){
         const wx=acX+8+i*9;
-        const phase=(tt*0.025+i*1.1)%1; // slower speed (was 0.07)
+        const phase=(tt*0.008+i*1.1)%1; // very slow
         const wy=windBase+phase*35;
-        const sway=Math.sin(tt*0.02+i*2)*4; // slower sway
-        const len=8+Math.sin(tt*0.04+i)*3;
+        const sway=Math.sin(tt*0.006+i*2)*4; // very slow sway
+        const len=8+Math.sin(tt*0.01+i)*3;
         const alpha=0.7*(1-phase);
         cx.globalAlpha=alpha;
         cx.strokeStyle='#44aaff';
@@ -4032,14 +4032,14 @@ function drawAromatizer(){
   // Clickable area
   BTNS['aromaToggle']={x:ax,y:ay,w:aw,h:ah};
 
-  // ── Scent waves (when ON) — 10s on, 10s off cycle, slower ──
+  // ── Scent waves (when ON) — 5s on, 5s off cycle, very slow ──
   if(aromaOn){
-    const aromaCycle=(tt+300)%1200; // offset 300 frames so AC and aroma alternate slightly
-    if(aromaCycle<600){ // first 10 seconds: show waves
+    const aromaCycle=(tt+150)%600; // 600 frames = 10s total (5s on + 5s off), offset 2.5s
+    if(aromaCycle<300){ // first 5 seconds: show waves
       const waveX=ax+aw/2;
       const waveBase=ay-3;
       for(let i=0;i<5;i++){
-        const phase=(tt*0.012+i*0.7)%1; // much slower (was 0.03)
+        const phase=(tt*0.004+i*0.7)%1; // very slow
         const wy=waveBase-phase*40;
         const wSize=5+phase*14;
         const alpha=0.75*(1-phase);
@@ -4056,10 +4056,10 @@ function drawAromatizer(){
         cx.stroke();
       }
       for(let i=0;i<8;i++){
-        const phase=(tt*0.008+i*0.9)%1; // slower (was 0.02)
-        const px=waveX+Math.sin(tt*0.015+i*2.2)*8;
+        const phase=(tt*0.003+i*0.9)%1; // very slow
+        const px=waveX+Math.sin(tt*0.005+i*2.2)*8;
         const py=waveBase-phase*45;
-        const sz=1.2+Math.sin(tt*0.015+i)*0.5;
+        const sz=1.2+Math.sin(tt*0.005+i)*0.5;
         const alpha=0.6*(1-phase);
         cx.globalAlpha=alpha;
         cx.fillStyle=i%2===0?'#bb55ee':'#88ddaa';
