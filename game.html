@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — BETA v2.48 — 2026-03-25
+//  XTANCO DIGITAL TWIN — BETA v2.49 — 2026-03-25
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -874,7 +874,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.48',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — BETA v2.49',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -929,7 +929,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.48',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — BETA v2.49',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2501,7 +2501,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v2.48 · 2026-03-26 12:30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v2.49 · 2026-03-26 12:35',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -2971,34 +2971,34 @@ function drawTutorial(){
 // Generate isometric city buildings using same tile system
 const CITY_BUILDINGS=[];
 // Buildings behind the back wall (row < 0, extending left/right)
-// Back row (far) — tall skyscrapers
+// Back row (far) — shorter skyscrapers, pushed further back for sky
 for(let i=0;i<8;i++){
   CITY_BUILDINGS.push({
     col:-2+i*2.2,
-    row:-6-Math.random()*2,
+    row:-8-Math.random()*2,
     bw:1.2+Math.random()*1.8,
     bd:0.8+Math.random()*0.8,
-    h:80+Math.random()*100|0,
+    h:40+Math.random()*50|0,  // shorter (was 80-180)
     hue:210+Math.random()*30|0,
     sat:12+Math.random()*15|0,
     lit:55+Math.random()*20|0,
     winCols:3+Math.random()*3|0,
-    winRows:4+Math.random()*6|0,
+    winRows:2+Math.random()*4|0,
   });
 }
-// Front row (closer) — shorter/medium buildings
+// Front row (closer) — low buildings, leave sky visible above
 for(let i=0;i<10;i++){
   CITY_BUILDINGS.push({
     col:-3+i*1.8,
-    row:-3.5-Math.random()*1.5,
+    row:-5-Math.random()*1.5,
     bw:0.8+Math.random()*1.3,
     bd:0.6+Math.random()*0.8,
-    h:30+Math.random()*70|0,
+    h:20+Math.random()*40|0,  // shorter (was 30-100)
     hue:195+Math.random()*45|0,
     sat:10+Math.random()*20|0,
     lit:45+Math.random()*30|0,
     winCols:2+Math.random()*2|0,
-    winRows:2+Math.random()*5|0,
+    winRows:1+Math.random()*3|0,
   });
 }
 // Sort by depth (furthest first)
