@@ -1,6 +1,6 @@
 // Service Worker — force fresh content, no CDN cache
 // v1.61 — 2026-03-25
-const SW_VERSION = 'v2.49';
+const SW_VERSION = 'v2.50';
 self.addEventListener('install', e => {
   console.log('[SW] Install ' + SW_VERSION);
   self.skipWaiting();
