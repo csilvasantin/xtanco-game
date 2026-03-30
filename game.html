@@ -30,6 +30,8 @@
 </head>
 <body>
 <div id="topBar">
+  <button id="btnQuit" style="background:#551111;color:#ff6666;border:1px solid #cc3333;border-radius:3px;font-family:monospace;font-size:10px;font-weight:bold;cursor:pointer;padding:3px 10px;flex-shrink:0">✕ Quit</button>
+  <div class="sep"></div>
   <span id="bbClock" style="color:#ffdd66;font-size:12px;font-weight:bold">09:00</span>
   <span id="bbDate" style="color:#b0a888;font-size:9px">22/03/2026</span>
   <div class="sep"></div>
@@ -53,7 +55,6 @@
   <button class="btn-edit" id="btnEdit">✏ Edit</button>
   <button class="btn-menu" id="btnMenu">☰ Menu</button>
 </div>
-<button id="btnQuit" style="display:none;position:fixed;bottom:10px;left:10px;z-index:20;background:#551111;color:#ff6666;border:1px solid #cc3333;border-radius:3px;font-family:monospace;font-size:10px;font-weight:bold;cursor:pointer;padding:4px 12px">✕ Quit</button>
 <div id="topBarSub" style="display:none;position:fixed;z-index:15;display:flex;flex-direction:column;align-items:flex-end;gap:2px;pointer-events:none">
   <div id="empMonthBadge" style="display:none;padding:2px 8px;border-radius:3px;background:#2a1a08;border:1px solid #cc9900;font-family:monospace;font-size:9px;font-weight:bold;color:#ffd700;text-align:center;white-space:nowrap">🏆 <span id="empMonthName"></span></div>
   <div id="eventBanner" style="display:none;padding:4px 12px;border-radius:4px;font-family:monospace;font-size:11px;font-weight:bold;color:#fff;text-align:center;white-space:nowrap;transition:opacity 0.3s"></div>
@@ -69,7 +70,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — v4.0 — 2026-03-30
+//  XTANCO DIGITAL TWIN — v4.1 — 2026-03-30
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -398,7 +399,6 @@ function repositionTopBarSub(){
 function updateHtmlBar(){
   const show=state===S.GAME||state===S.PAUSE||state===S.EDITOR;
   bbEl.classList.toggle('show',show);
-  document.getElementById('btnQuit').style.display=show?'block':'none';
   if(!show||!G||!G.staff){resizeCanvas();return;}
   const staff=G.staff||[];
   const profit=G.yearRevenue-(staff.filter(s=>s.hired).reduce((a,s)=>a+(CFG.SALARY[s.role]||0)*s.level*(G.week||0),0));
@@ -920,7 +920,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v4.0',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v4.1',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -983,7 +983,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v4.0',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v4.1',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2980,7 +2980,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v4.0 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v4.1 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
