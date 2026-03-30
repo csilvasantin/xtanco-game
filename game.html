@@ -1396,7 +1396,7 @@ document.addEventListener('keydown',e=>{
   if(state===S.MENU){
     if(e.code==='ArrowLeft'||e.code==='ArrowUp')   menuSel=0;
     if(e.code==='ArrowRight'||e.code==='ArrowDown') menuSel=1;
-    if(e.code==='Enter'||e.code==='Space'){lang=menuSel===0?'es':'en';platformSel=0;startTransition(S.PLATFORM_SEL);}
+    if(e.code==='Enter'||e.code==='Space'){lang=menuSel===0?'es':'en';renderMode='8bit';modelSel=0;startTransition(S.MODEL_SEL);}
     return;
   }
   if(state===S.PLATFORM_SEL){
@@ -1696,7 +1696,9 @@ function doAction(id){
     return;
   }
   // ── Menu touch/click actions ──
-  if(id==='menuStart'){lang=menuSel===0?'es':'en';platformSel=0;startTransition(S.PLATFORM_SEL);return;}
+  if(id==='menuStart'){lang=menuSel===0?'es':'en';renderMode='8bit';modelSel=0;startTransition(S.MODEL_SEL);return;}
+  if(id==='menuStart8'){lang=menuSel===0?'es':'en';renderMode='8bit';modelSel=0;startTransition(S.MODEL_SEL);return;}
+  if(id==='menuStart16'){lang=menuSel===0?'es':'en';renderMode='16bit';modelSel=0;startTransition(S.MODEL_SEL);return;}
   if(id==='platformSel0'){platformSel=0;return;}
   if(id==='platformSel1'){platformSel=1;return;}
   if(id==='platformConfirm'){renderMode=platformSel===0?'8bit':'16bit';modelSel=0;startTransition(S.MODEL_SEL);return;}
@@ -2646,20 +2648,78 @@ function drawMenu(){
     if(o.sel){glow(P.neon1,14);}tx(o.label,ox+ow/2,oy+26,o.sel?P.neon1:P.gray,13,'center');nog();
     if(o.sel) nt('▶',ox-18,oy+26,P.neon1,12);
   });
-  // Start button (clickable)
-  const startBtnW=300,startBtnH=30,startBtnX=W/2-startBtnW/2,startBtnY=oy+48;
-  r(startBtnX,startBtnY,startBtnW,startBtnH,'#0a1a0a');rx(startBtnX,startBtnY,startBtnW,startBtnH,P.neon3,1.5);
-  cx.globalAlpha=.5+.5*Math.abs(Math.sin(tt*.04));
-  tx(T().startBtn,W/2,startBtnY+20,P.neon3,12,'center');
-  cx.globalAlpha=1;
-  BTNS['menuStart']={x:startBtnX,y:startBtnY,w:startBtnW,h:startBtnH};
   // Language buttons (clickable)
   BTNS['menuLangEs']={x:sx,y:oy,w:ow,h:oh};
   BTNS['menuLangEn']={x:sx+ow+gap,y:oy,w:ow,h:oh};
-  // Mini chibi preview
-  for(let i=0;i<4;i++) chibi(W/2-60+i*40,oy+100,1,i,i,Math.floor(tt/12)%2,false,tt);
+
+  // ── MODE BUTTONS: 8-BIT (Spectrum) vs 16-BIT (Amiga) ────────
+  const mbW=193,mbH=74,mbGap=18,mbY=oy+50;
+  const mb8x=W/2-mbW-mbGap/2, mb16x=W/2+mbGap/2;
+
+  // ── 8-BIT BUTTON — ZX Spectrum: flat, sin gradientes, pixelado ──
+  r(mb8x,mbY,mbW,mbH,'#000');
+  // Spectrum rainbow stripe (5 colores × 4px)
+  const sc8=['#ee2222','#ee8822','#eeee22','#22ee22','#2222ee'];
+  for(let i=0;i<5;i++) r(mb8x+2,mbY+2+i*4,mbW-4,4,sc8[i]);
+  // Borde píxel art: puntos 3×3 alternados — flat, sin glow
+  const ps=3;
+  cx.fillStyle='#44ff44';
+  for(let px=mb8x;px<mb8x+mbW;px+=ps*2){cx.fillRect(px,mbY,ps,ps);cx.fillRect(px,mbY+mbH-ps,ps,ps);}
+  for(let py=mbY+ps;py<mbY+mbH-ps;py+=ps*2){cx.fillRect(mb8x,py,ps,ps);cx.fillRect(mb8x+mbW-ps,py,ps,ps);}
+  // CRT scanlines sobre el botón
+  cx.globalAlpha=0.07;
+  for(let sy=mbY;sy<mbY+mbH;sy+=2){cx.fillStyle='#000';cx.fillRect(mb8x,sy,mbW,1);}
+  cx.globalAlpha=1;
+  // Texto FLAT — nunca usar glow() en este botón
+  cx.font='bold 32px monospace';cx.textAlign='center';cx.fillStyle='#44ff44';cx.fillText('8',mb8x+mbW/2,mbY+51);
+  cx.font='bold 12px monospace';cx.fillStyle='#aaffaa';cx.fillText('BITS',mb8x+mbW/2,mbY+65);
+  cx.globalAlpha=0.5;cx.font='8px monospace';cx.fillStyle='#44ff44';cx.fillText('SPECTRUM',mb8x+mbW/2,mbY+74);cx.globalAlpha=1;
+  BTNS['menuStart8']={x:mb8x,y:mbY,w:mbW,h:mbH};
+
+  // ── 16-BIT BUTTON — Amiga: gradientes, copper bar, glow ──
+  // Fondo degradado
+  const bg16=cx.createLinearGradient(mb16x,mbY,mb16x,mbY+mbH);
+  bg16.addColorStop(0,'#1c0830');bg16.addColorStop(0.5,'#091030');bg16.addColorStop(1,'#1c0830');
+  cx.fillStyle=bg16;cx.fillRect(mb16x,mbY,mbW,mbH);
+  // Copper bar animado (5 filas × 4px)
+  const csft=(tt*0.85)%600;
+  for(let row=0;row<5;row++){
+    const cg=cx.createLinearGradient(mb16x-csft,mbY+2+row*4,mb16x-csft+mbW+400,mbY+2+row*4);
+    cg.addColorStop(0,'#cc1111');cg.addColorStop(0.17,'#cc6611');cg.addColorStop(0.33,'#bbbb11');
+    cg.addColorStop(0.5,'#11bb11');cg.addColorStop(0.67,'#1122dd');cg.addColorStop(0.83,'#7711cc');cg.addColorStop(1,'#cc1111');
+    cx.save();cx.beginPath();cx.rect(mb16x+2,mbY+2+row*4,mbW-4,4);cx.clip();
+    cx.fillStyle=cg;cx.fillRect(mb16x+2,mbY+2+row*4,mbW-4,4);cx.restore();
+  }
+  // Borde con glow suave
+  glow(P.neon2,12);rx(mb16x,mbY,mbW,mbH,P.neon2,2);nog();
+  // "16" — texto con gradiente multicolor
+  const n16g=cx.createLinearGradient(mb16x+30,mbY+51,mb16x+mbW-30,mbY+51);
+  n16g.addColorStop(0,'#ff4466');n16g.addColorStop(0.33,'#ff9944');n16g.addColorStop(0.66,'#44aaff');n16g.addColorStop(1,'#cc44ff');
+  cx.font='bold 32px monospace';cx.textAlign='center';cx.fillStyle=n16g;cx.fillText('16',mb16x+mbW/2,mbY+51);
+  // "BITS" con gradiente
+  const bG=cx.createLinearGradient(mb16x+50,mbY+65,mb16x+mbW-50,mbY+65);
+  bG.addColorStop(0,'#dd88ff');bG.addColorStop(1,'#88aaff');
+  cx.font='bold 12px monospace';cx.textAlign='center';cx.fillStyle=bG;cx.fillText('BITS',mb16x+mbW/2,mbY+65);
+  cx.globalAlpha=0.5;
+  const amgG=cx.createLinearGradient(mb16x+50,mbY+74,mb16x+mbW-50,mbY+74);
+  amgG.addColorStop(0,'#cc44ff');amgG.addColorStop(1,'#4488ff');
+  cx.font='8px monospace';cx.textAlign='center';cx.fillStyle=amgG;cx.fillText('AMIGA',mb16x+mbW/2,mbY+74);
+  cx.globalAlpha=1;
+  BTNS['menuStart16']={x:mb16x,y:mbY,w:mbW,h:mbH};
+
+  // Mini chibis (2 en 8-bit bajo el botón izquierdo, 2 en 16-bit bajo el derecho)
+  const chibY=mbY+mbH+26;
+  const _rm=renderMode;
+  renderMode='8bit';
+  chibi(mb8x+45,chibY,1,0,0,Math.floor(tt/12)%2,false,tt);
+  chibi(mb8x+100,chibY,1,1,1,Math.floor(tt/12)%2,true,tt);
+  renderMode='16bit';
+  chibi(mb16x+45,chibY,-1,2,2,Math.floor(tt/12)%2,false,tt);
+  chibi(mb16x+100,chibY,-1,3,3,Math.floor(tt/12)%2,true,tt);
+  renderMode=_rm;
+
   // Opciones button (opens settings)
-  const optW=120,optH=24,optX=W/2-optW/2,optY=oy+140;
+  const optW=120,optH=24,optX=W/2-optW/2,optY=chibY+36;
   r(optX,optY,optW,optH,'#0a0a18');rx(optX,optY,optW,optH,P.gray,1);
   tx('⚙ OPCIONES',optX+optW/2,optY+17,P.gray,10,'center');
   BTNS['menuSettings']={x:optX,y:optY,w:optW,h:optH};
