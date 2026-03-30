@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — v3.5 — 2026-03-30
+//  XTANCO DIGITAL TWIN — v3.6 — 2026-03-30
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -921,7 +921,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v3.5',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v3.6',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -984,7 +984,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v3.5',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v3.6',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1330,7 +1330,7 @@ function initGame(){
     {col:8,row:3},   // [1] Repositor → next to revistero
     {col:4,row:1},   // [2] Azafata → next to estantería
     {col:5,row:4},   // [3] Store Manager → center of shop
-    {col:11,row:4},  // [4] DJ → in front of djBooth
+    {col:12,row:2},  // [4] DJ → right behind djBooth
     {col:3,row:4},{col:6,row:3},{col:7,row:1},  // extras
   ];
   G.staff=M.staffInit.map((s,i)=>{
@@ -2978,7 +2978,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v3.5 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v3.6 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
@@ -5376,44 +5376,57 @@ function drawIsoDJBooth(col,row){
   cx.beginPath();cx.moveTo(eFront0.x,eFront0.y);cx.lineTo(eFront1.x,eFront1.y);cx.stroke();
   nog();
 
-  // ── Left turntable ──
-  const lt=toIso(col+0.45,row+0.35);
-  const lx=lt.x,ly=lt.y-boothH;
-  cx.save();cx.translate(lx,ly);cx.scale(1,0.38);
-  cx.beginPath();cx.arc(0,0,10,0,Math.PI*2);cx.fillStyle='#111';cx.fill();
-  cx.strokeStyle='#333';cx.lineWidth=1;cx.stroke();
-  // Vinyl grooves
-  [3,5,7].forEach(gr=>{cx.beginPath();cx.arc(0,0,gr,0,Math.PI*2);cx.strokeStyle='#222';cx.lineWidth=0.5;cx.stroke();});
-  // Spinning label
-  cx.save();cx.rotate(djOn?tt*0.05:0);
-  cx.beginPath();cx.arc(0,0,3,0,Math.PI*2);cx.fillStyle='#cc2233';cx.fill();
-  cx.strokeStyle='#ff4455';cx.lineWidth=0.5;cx.stroke();
-  cx.restore();
-  // Tonearm
-  cx.save();cx.rotate(djOn?Math.sin(tt*0.01)*0.15:0);
-  cx.strokeStyle='#99aabb';cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(8,-8);cx.lineTo(1,0);cx.stroke();
-  cx.fillStyle='#aabbcc';cx.beginPath();cx.arc(8,-8,1.5,0,Math.PI*2);cx.fill();
-  cx.restore();
-  cx.restore();
+  // ── Vinyl platters (draws ON the table surface) ──
+  function _vinyl(px,py,spinDir,labelCol){
+    const R=14, scaleY=0.52;
+    const spin=djOn?tt*0.055*spinDir:0;
+    cx.save();cx.translate(px,py-boothH);cx.scale(1,scaleY);
+    // Outer rim
+    cx.beginPath();cx.arc(0,0,R,0,Math.PI*2);
+    cx.fillStyle='#111418';cx.fill();
+    cx.strokeStyle='#444';cx.lineWidth=1.5;cx.stroke();
+    // Grooves — alternate dark rings
+    for(let g=3;g<=R-2;g+=2){
+      cx.beginPath();cx.arc(0,0,g,0,Math.PI*2);
+      cx.strokeStyle=g%4===1?'#1e1e24':'#252530';cx.lineWidth=0.8;cx.stroke();
+    }
+    // Spinning shine highlight (white arc that sweeps)
+    cx.save();cx.rotate(spin);
+    cx.beginPath();cx.arc(0,0,R-2,0.2,1.1);
+    cx.strokeStyle='#ffffff22';cx.lineWidth=2;cx.stroke();
+    cx.restore();
+    // Center label (spinning sticker)
+    cx.save();cx.rotate(spin);
+    cx.beginPath();cx.arc(0,0,5,0,Math.PI*2);
+    cx.fillStyle=labelCol;cx.fill();
+    cx.strokeStyle='#ffffff44';cx.lineWidth=0.5;cx.stroke();
+    // Label line detail
+    cx.strokeStyle='#ffffff55';cx.lineWidth=0.8;
+    cx.beginPath();cx.moveTo(-4,0);cx.lineTo(4,0);cx.stroke();
+    cx.restore();
+    // Center hole
+    cx.beginPath();cx.arc(0,0,1.2,0,Math.PI*2);
+    cx.fillStyle='#222';cx.fill();
+    // Tonearm (pivot at top-right, needle touching groove)
+    const armAngle=djOn?-0.55+Math.sin(tt*0.008)*0.08:-0.7;
+    cx.save();cx.rotate(armAngle);
+    // Pivot cap
+    cx.beginPath();cx.arc(R+1,-R+1,2,0,Math.PI*2);
+    cx.fillStyle='#778899';cx.fill();
+    // Arm rod
+    cx.strokeStyle='#99aabb';cx.lineWidth=1.2;
+    cx.beginPath();cx.moveTo(R+1,-R+1);cx.lineTo(0,R-3);cx.stroke();
+    // Needle head
+    cx.fillStyle='#bbccdd';
+    cx.beginPath();cx.arc(0,R-3,1.8,0,Math.PI*2);cx.fill();
+    cx.restore();
+    cx.restore();
+  }
 
-  // ── Right turntable ──
-  const rt=toIso(col+1.55,row+0.35);
-  const rx2=rt.x,ry2=rt.y-boothH;
-  cx.save();cx.translate(rx2,ry2);cx.scale(1,0.38);
-  cx.beginPath();cx.arc(0,0,10,0,Math.PI*2);cx.fillStyle='#111';cx.fill();
-  cx.strokeStyle='#333';cx.lineWidth=1;cx.stroke();
-  [3,5,7].forEach(gr=>{cx.beginPath();cx.arc(0,0,gr,0,Math.PI*2);cx.strokeStyle='#222';cx.lineWidth=0.5;cx.stroke();});
-  cx.save();cx.rotate(djOn?-tt*0.04:0);
-  cx.beginPath();cx.arc(0,0,3,0,Math.PI*2);cx.fillStyle='#2233cc';cx.fill();
-  cx.strokeStyle='#4455ff';cx.lineWidth=0.5;cx.stroke();
-  cx.restore();
-  cx.save();cx.rotate(djOn?Math.sin(tt*0.01+1)*0.15:0);
-  cx.strokeStyle='#99aabb';cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(8,-8);cx.lineTo(1,0);cx.stroke();
-  cx.fillStyle='#aabbcc';cx.beginPath();cx.arc(8,-8,1.5,0,Math.PI*2);cx.fill();
-  cx.restore();
-  cx.restore();
+  const lt=toIso(col+0.5,row+0.28);
+  _vinyl(lt.x,lt.y,1,'#cc2233');
+  const rt2=toIso(col+1.5,row+0.28);
+  _vinyl(rt2.x,rt2.y,-1,'#2244cc');
 
   // ── Central mixer ──
   const mc=toIso(col+1,row+0.52);
