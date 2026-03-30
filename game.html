@@ -70,7 +70,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — v4.1 — 2026-03-30
+//  XTANCO DIGITAL TWIN — v4.2 — 2026-03-30
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -920,7 +920,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v4.1',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v4.2',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -983,7 +983,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v4.1',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v4.2',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1349,6 +1349,7 @@ function initGame(){
       bTimer:0,bIdx:i%5,aFrame:0,aTimer:0,
       homeCol:gp.col,homeRow:gp.row,
       navTarget:null,navPath:null,navPathIdx:0,navTick:0,
+      djScratch:0,djScratchNext:Math.floor(Math.random()*120)+90,
     };
   });
   // Products from model
@@ -1618,12 +1619,18 @@ function doAction(id){
       s.hired=true;s.energy=100;s.morale=85;s.level=1;
       s.shirt=0;s.hair=3; // Altadis uniform: blue shirt, black hair
       s.fired=false;s.fireBubble=false;s.clickBubble=0;s.isWalking=false;
-      // Reset position to their assigned station
-      const origStaff=MODELS[modelSel||0].staffInit[i];
-      if(origStaff){
-        const iso=toIso(origStaff.col||Math.floor(origStaff.x/60),origStaff.row||Math.floor(origStaff.y/60));
-        s.x=iso.x-7;s.y=iso.y-20;
-        if(s.gridCol!==undefined){s.gridCol=origStaff.col||5;s.gridRow=origStaff.row||3;}
+      s.djScratch=0;s.djScratchNext=Math.floor(Math.random()*120)+90;
+      // DJ enters through door and walks to booth; others snap to their station
+      if(s.role===4){
+        const doorIso=toIso(ISO.cols-1,3);
+        s.x=doorIso.x-7;s.y=doorIso.y-20;
+        s.navTarget=null;s.navPath=null;s.navPathIdx=0; // force pathfind to homeCol/homeRow
+      } else {
+        const origStaff=MODELS[modelSel||0].staffInit[i];
+        if(origStaff){
+          const iso=toIso(origStaff.col||Math.floor(origStaff.x/60),origStaff.row||Math.floor(origStaff.y/60));
+          s.x=iso.x-7;s.y=iso.y-20;
+        }
       }
       // Door opens for arrival
       G.doorOpen=60;SFX.hireFanfare();
@@ -2374,6 +2381,18 @@ function updateGame(){
     if(!s.isWalking){s.aTimer++;if(s.aTimer>10){s.aFrame=(s.aFrame+1)%2;s.aTimer=0;}}
     if(s.busy>0) s.busy--;
     if(s.bTimer>0) s.bTimer--;
+    // DJ scratch: tick down, trigger next gesture when idle at booth
+    if(s.role===4&&!s.isWalking){
+      if(s.djScratch>0){ s.djScratch--; }
+      else{
+        s.djScratchNext=(s.djScratchNext||90)-1;
+        if(s.djScratchNext<=0){
+          s.djScratch=Math.floor(Math.random()*20)+20; // 20-40 frames ≈ 0.3-0.7s
+          s.djScratchNext=Math.floor(Math.random()*180)+90; // next in 1.5-4.5s
+          addFloat(s.x+5,s.y-30,['🎵','🎶','🎧'][Math.floor(Math.random()*3)],'#cc44ff');
+        }
+      }
+    }
     s.energy=Math.max(15,s.energy-(s.busy>0?0.04:0.01));
     if(s.energy<25) s.energy=Math.min(100,s.energy+0.08);
     const moraleFactor=0.7+(s.morale/100)*0.3;
@@ -2980,7 +2999,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v4.1 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v4.2 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
@@ -5602,6 +5621,22 @@ function drawIsoStaff(s){
     tx('▼',s.x+7,s.y-18+bob,'#ee6622',10,'center');
     cx.globalAlpha=1;
   }
+  // DJ scratch gesture: lean toward booth while scratching
+  if(!isPlayer&&s.role===4&&s.djScratch>0){
+    const phase=s.djScratch/30; // 1→0 as gesture completes
+    const lean=Math.sin(phase*Math.PI)*8; // arc: lean out and back
+    // booth is at col-1,row+1 from DJ → iso direction is (-40+(-40), 14+14) = left+down
+    chibi(s.x-lean*0.7,s.y+lean*0.35,-1,s.shirt,s.hair,Math.floor(tt/3)%2,true,tt);
+    // arm-reach arc drawn toward the booth surface
+    cx.save();
+    cx.globalAlpha=0.7*Math.sin(phase*Math.PI);
+    cx.strokeStyle='#aabbdd';cx.lineWidth=1.2;
+    cx.beginPath();
+    cx.moveTo(s.x+7,s.y+10);
+    cx.quadraticCurveTo(s.x-lean*0.5,s.y+lean*0.3+18,s.x-lean-8,s.y+lean*0.3+22);
+    cx.stroke();
+    cx.restore();
+  } else {
   // Idle dance: employees dance to the music when not walking or busy
   const djHired=G&&G.staff&&G.staff.some(st=>st.hired&&st.role===4);
   const isIdle=!s.isWalking&&s.busy<=0;
@@ -5628,6 +5663,7 @@ function drawIsoStaff(s){
   } else {
     chibi(s.x,s.y,dir,s.shirt,s.hair,s.aFrame,s.busy>0||s.isWalking,tt);
   }
+  } // end scratch else
   // Name tag
   const nameCol=isPlayer?'#cc4400':'#4a3a20';
   tx(s.name,s.x+7,s.y-5,nameCol,7,'center');
