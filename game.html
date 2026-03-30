@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — v3.8 — 2026-03-30
+//  XTANCO DIGITAL TWIN — v3.9 — 2026-03-30
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -921,7 +921,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v3.8',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v3.9',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -984,7 +984,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v3.8',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v3.9',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1173,8 +1173,10 @@ function saveLayout(){
   }catch(e){console.log('[Layout] Save error:',e);}
 }
 function resetLayout(){
-  saveLayout(); // Reset = save current as permanent
-  console.log('[Layout] Reset = saved current as default');
+  // Reset to DEFAULT_LAYOUT and save it as the base for new games
+  shopLayout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
+  saveLayout();
+  console.log('[Layout] Reset to DEFAULT and saved as base');
 }
 function resetToFactory(){
   localStorage.removeItem('xtanco_layout_user');
@@ -1276,6 +1278,7 @@ function astarPath(sc,sr,ec,er){
 // ── GAME STATE ────────────────────────────────────────────────
 let G={};
 function initGame(){
+  loadLayout(); // Always start from the saved base layout
   activeModel=modelSel;
   const M=MODELS[activeModel];
   // Apply model config to CFG
@@ -2978,7 +2981,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v3.8 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v3.9 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
@@ -6512,26 +6515,26 @@ function drawEditor(){
   // Buttons
   const btnY=H-panH+46;
   // Save button
-  r(8,btnY,60,26,'#2a5a2a');rx(8,btnY,60,26,'#44aa44',1);
-  tx('💾 Guardar',38,btnY+18,'#88ee88',8,'center');
-  BTNS['edSave']={x:8,y:btnY,w:60,h:26};
+  r(8,btnY,72,26,'#2a5a2a');rx(8,btnY,72,26,'#44aa44',1);
+  tx('💾 Guardar Base',44,btnY+18,'#88ee88',8,'center');
+  BTNS['edSave']={x:8,y:btnY,w:72,h:26};
   // Reset button
-  r(76,btnY,60,26,'#5a2a2a');rx(76,btnY,60,26,'#aa4444',1);
-  tx('↺ Reset',106,btnY+18,'#ee8888',8,'center');
-  BTNS['edReset']={x:76,y:btnY,w:60,h:26};
+  r(88,btnY,72,26,'#5a2a2a');rx(88,btnY,72,26,'#aa4444',1);
+  tx('↺ Por defecto',124,btnY+18,'#ee8888',8,'center');
+  BTNS['edReset']={x:88,y:btnY,w:72,h:26};
   // Exit button
-  r(144,btnY,60,26,'#3a3a18');rx(144,btnY,60,26,'#aaaa44',1);
-  tx('✕ Salir',174,btnY+18,'#dddd88',8,'center');
-  BTNS['edExit']={x:144,y:btnY,w:60,h:26};
+  r(168,btnY,60,26,'#3a3a18');rx(168,btnY,60,26,'#aaaa44',1);
+  tx('✕ Salir',198,btnY+18,'#dddd88',8,'center');
+  BTNS['edExit']={x:168,y:btnY,w:60,h:26};
   // Delete selected item button
   if(edSelIdx>=0){
-    r(212,btnY,66,26,'#5a1a1a');rx(212,btnY,66,26,'#ee3333',1);
-    tx('🗑 Eliminar',245,btnY+18,'#ff6666',8,'center');
-    BTNS['edDelete']={x:212,y:btnY,w:66,h:26};
+    r(236,btnY,66,26,'#5a1a1a');rx(236,btnY,66,26,'#ee3333',1);
+    tx('🗑 Eliminar',269,btnY+18,'#ff6666',8,'center');
+    BTNS['edDelete']={x:236,y:btnY,w:66,h:26};
   }
   // Add item back button (if items have been deleted)
   if(shopLayout.length<DEFAULT_LAYOUT.length){
-    const addX=edSelIdx>=0?286:212;
+    const addX=edSelIdx>=0?310:236;
     r(addX,btnY,60,26,'#1a3a1a');rx(addX,btnY,60,26,'#44cc44',1);
     tx('+ Añadir',addX+30,btnY+18,'#66ee66',8,'center');
     BTNS['edAdd']={x:addX,y:btnY,w:60,h:26};
@@ -6588,8 +6591,8 @@ function drawEditor(){
     const nw=220,nh=40,nx=W/2-nw/2,ny=H/2-nh/2-40;
     r(nx,ny,nw,nh,'#1a4a1aee');
     rx(nx,ny,nw,nh,'#44ee44',2);
-    tx('✅  LAYOUT GUARDADO',W/2,ny+16,'#88ff88',12,'center');
-    tx('Se cargará automáticamente',W/2,ny+30,'#aaddaa',8,'center');
+    tx('✅  BASE GUARDADA',W/2,ny+16,'#88ff88',12,'center');
+    tx('Se cargará al iniciar cada nueva partida',W/2,ny+30,'#aaddaa',8,'center');
     cx.globalAlpha=1;
   }
 }
