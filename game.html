@@ -69,7 +69,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — v3.6 — 2026-03-30
+//  XTANCO DIGITAL TWIN — v3.7 — 2026-03-30
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -921,7 +921,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v3.6',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v3.7',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -984,7 +984,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v3.6',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v3.7',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -2978,7 +2978,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v3.6 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v3.7 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
@@ -5599,12 +5599,17 @@ function drawIsoStaff(s){
     tx('▼',s.x+7,s.y-18+bob,'#ee6622',10,'center');
     cx.globalAlpha=1;
   }
-  // DJ effect: staff dance too (bob + fast walk animation)
+  // Idle dance: employees dance to the music when not walking or busy
   const djHired=G&&G.staff&&G.staff.some(st=>st.hired&&st.role===4);
-  if(djHired&&!isPlayer){
-    const bob=Math.sin(tt*0.25+s.x*0.15)*4;
-    const jump=Math.abs(Math.sin(tt*0.18+s.x*0.1))*3;
-    chibi(s.x,s.y+bob-jump,dir,s.shirt,s.hair,Math.floor(tt/5)%2,true,tt);
+  const isIdle=!s.isWalking&&s.busy<=0;
+  if(!isPlayer&&isIdle){
+    // Faster + bigger bounce when DJ is active, subtle sway otherwise
+    const spd=djHired?0.25:0.12;
+    const amp=djHired?4:2;
+    const bob=Math.sin(tt*spd+s.x*0.15)*amp;
+    const jump=djHired?Math.abs(Math.sin(tt*0.18+s.x*0.1))*3:0;
+    const fr=Math.floor(tt/(djHired?5:14))%2;
+    chibi(s.x,s.y+bob-jump,dir,s.shirt,s.hair,fr,true,tt);
   } else if(isPlayer&&mgrDanceTimer>0){
     // Store Manager dances at start of new DS video
     mgrDanceTimer--;
