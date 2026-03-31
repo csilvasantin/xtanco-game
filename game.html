@@ -70,7 +70,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — v4.6 — 2026-03-31
+//  XTANCO DIGITAL TWIN — v4.7 — 2026-03-31
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -920,7 +920,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v4.6',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v4.7',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -983,7 +983,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v4.6',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v4.7',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1137,6 +1137,8 @@ let edHoverTile=null; // {col,row} under mouse
 // The "Reset" button saves current positions as the new default
 // (stored separately so code updates don't overwrite user layout).
 function loadLayout(){
+  // NOTE: ISO is not yet defined when this runs at page-start (line 1203).
+  // Do NOT reference ISO here — use raw numbers or simple checks only.
   try{
     // Try primary key, then backup key
     let d=localStorage.getItem('xtanco_layout_user');
@@ -1144,36 +1146,42 @@ function loadLayout(){
     if(d){
       const saved=JSON.parse(d);
       if(Array.isArray(saved)&&saved.length>0){
-        // Validate every item has a numeric col/row — fix any corrupted values
+        // Basic sanity: ensure col/row/sx/sy are valid numbers
+        // (14 cols × 8 rows grid — hardcoded to avoid ISO reference)
+        const MAX_COL=13, MAX_ROW=7;
         const clean=saved.map(it=>({
           ...it,
-          col: (typeof it.col==='number'&&isFinite(it.col)) ? Math.max(0,Math.min(ISO.cols-1,Math.round(it.col))) : 0,
-          row: (typeof it.row==='number'&&isFinite(it.row)) ? Math.max(0,Math.min(ISO.rows-1,Math.round(it.row))) : 0,
-          sx: (typeof it.sx==='number'&&it.sx>0) ? it.sx : 1,
-          sy: (typeof it.sy==='number'&&it.sy>0) ? it.sy : 1,
+          col: (typeof it.col==='number'&&isFinite(it.col)) ? Math.max(0,Math.min(MAX_COL,Math.round(it.col))) : 0,
+          row: (typeof it.row==='number'&&isFinite(it.row)) ? Math.max(0,Math.min(MAX_ROW,Math.round(it.row))) : 0,
+          sx:  (typeof it.sx==='number'&&it.sx>0) ? it.sx : 1,
+          sy:  (typeof it.sy==='number'&&it.sy>0) ? it.sy : 1,
         }));
         shopLayout=clean;
-        // Add any NEW items from DEFAULT that user's saved layout doesn't have yet
+        // Merge: add any NEW items from DEFAULT that saved layout doesn't have
         for(const def of DEFAULT_LAYOUT){
           if(!shopLayout.find(i=>i.id===def.id)){
             shopLayout.push(JSON.parse(JSON.stringify(def)));
           }
         }
-        console.log('[Layout] Loaded user layout ('+shopLayout.length+' items) — first item: '+shopLayout[0].id+' col:'+shopLayout[0].col+' row:'+shopLayout[0].row);
+        console.log('[Layout] ✓ Loaded saved layout ('+shopLayout.length+' items)');
         return;
       }
     }
-  }catch(e){console.warn('[Layout] Load error — falling back to DEFAULT_LAYOUT:',e);}
+  }catch(e){console.warn('[Layout] Load failed, using DEFAULT_LAYOUT:',e);}
   shopLayout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
-  console.log('[Layout] Using DEFAULT_LAYOUT (no saved data found)');
+  console.log('[Layout] Using DEFAULT_LAYOUT (no saved data)');
 }
 function saveLayout(){
   const data=JSON.stringify(shopLayout);
   try{
     localStorage.setItem('xtanco_layout_user',data);
-    localStorage.setItem('xtanco_layout_backup',data); // backup key
-    console.log('[Layout] Saved ('+shopLayout.length+' items)');
-  }catch(e){console.log('[Layout] Save error:',e);}
+    localStorage.setItem('xtanco_layout_backup',data);
+    // Also mirror into DEFAULT_LAYOUT so that if localStorage ever fails,
+    // the in-session fallback already has the user's layout (not factory positions).
+    DEFAULT_LAYOUT.length=0;
+    for(const it of shopLayout) DEFAULT_LAYOUT.push(JSON.parse(JSON.stringify(it)));
+    console.log('[Layout] ✓ Saved ('+shopLayout.length+' items) → localStorage + DEFAULT_LAYOUT updated');
+  }catch(e){console.warn('[Layout] Save error:',e);}
 }
 function resetLayout(){
   // Reset to DEFAULT_LAYOUT and save it as the base for new games
@@ -3048,7 +3056,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v4.6 · 2026-03-31',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v4.7 · 2026-03-31',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
