@@ -70,7 +70,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — v4.5 — 2026-03-31
+//  XTANCO DIGITAL TWIN — v4.6 — 2026-03-31
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -920,7 +920,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v4.5',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v4.6',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -983,7 +983,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v4.5',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v4.6',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -1138,30 +1138,34 @@ let edHoverTile=null; // {col,row} under mouse
 // (stored separately so code updates don't overwrite user layout).
 function loadLayout(){
   try{
-    // Try localStorage
+    // Try primary key, then backup key
     let d=localStorage.getItem('xtanco_layout_user');
-    // Fallback: try IndexedDB-style backup in localStorage with alt key
     if(!d) d=localStorage.getItem('xtanco_layout_backup');
     if(d){
       const saved=JSON.parse(d);
       if(Array.isArray(saved)&&saved.length>0){
-        shopLayout=saved;
-        // Add any NEW items from DEFAULT that user doesn't have
+        // Validate every item has a numeric col/row — fix any corrupted values
+        const clean=saved.map(it=>({
+          ...it,
+          col: (typeof it.col==='number'&&isFinite(it.col)) ? Math.max(0,Math.min(ISO.cols-1,Math.round(it.col))) : 0,
+          row: (typeof it.row==='number'&&isFinite(it.row)) ? Math.max(0,Math.min(ISO.rows-1,Math.round(it.row))) : 0,
+          sx: (typeof it.sx==='number'&&it.sx>0) ? it.sx : 1,
+          sy: (typeof it.sy==='number'&&it.sy>0) ? it.sy : 1,
+        }));
+        shopLayout=clean;
+        // Add any NEW items from DEFAULT that user's saved layout doesn't have yet
         for(const def of DEFAULT_LAYOUT){
           if(!shopLayout.find(i=>i.id===def.id)){
             shopLayout.push(JSON.parse(JSON.stringify(def)));
           }
         }
-        for(const it of shopLayout){
-          if(!it.sx) it.sx=1; if(!it.sy) it.sy=1;
-        }
-        console.log('[Layout] Loaded user layout ('+shopLayout.length+' items)');
+        console.log('[Layout] Loaded user layout ('+shopLayout.length+' items) — first item: '+shopLayout[0].id+' col:'+shopLayout[0].col+' row:'+shopLayout[0].row);
         return;
       }
     }
-  }catch(e){console.log('[Layout] Load error:',e);}
+  }catch(e){console.warn('[Layout] Load error — falling back to DEFAULT_LAYOUT:',e);}
   shopLayout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
-  console.log('[Layout] Using DEFAULT_LAYOUT');
+  console.log('[Layout] Using DEFAULT_LAYOUT (no saved data found)');
 }
 function saveLayout(){
   const data=JSON.stringify(shopLayout);
@@ -1277,7 +1281,10 @@ function astarPath(sc,sr,ec,er){
 // ── GAME STATE ────────────────────────────────────────────────
 let G={};
 function initGame(){
-  loadLayout(); // Always start from the saved base layout
+  // shopLayout is already authoritative in memory (loaded at page start
+  // via loadLayout() at line 1203, or updated live by the editor).
+  // Do NOT call loadLayout() here — it would overwrite the in-memory
+  // layout with localStorage, which may be stale or fail silently.
   activeModel=modelSel;
   const M=MODELS[activeModel];
   // Apply model config to CFG
@@ -1508,27 +1515,31 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(state===S.EDITOR){
-    if(e.code==='Escape'){if(edSelIdx>=0)edSelIdx=-1;else state=S.GAME;}
+    if(e.code==='Escape'){
+      if(edSelIdx>=0){edSelIdx=-1;}
+      else{saveLayout();state=S.GAME;} // save on exit via Escape
+    }
     if(edSelIdx>=0&&edSelIdx<shopLayout.length){
       const it=shopLayout[edSelIdx];
-      if(e.code==='ArrowUp'&&it.row>0) it.row--;
-      if(e.code==='ArrowDown'&&it.row<ISO.rows-1) it.row++;
-      if(e.code==='ArrowLeft'&&it.col>0) it.col--;
-      if(e.code==='ArrowRight'&&it.col<ISO.cols-1) it.col++;
+      // Arrow moves — save immediately so position is always persisted
+      if(e.code==='ArrowUp'&&it.row>0){it.row--;saveLayout();}
+      if(e.code==='ArrowDown'&&it.row<ISO.rows-1){it.row++;saveLayout();}
+      if(e.code==='ArrowLeft'&&it.col>0){it.col--;saveLayout();}
+      if(e.code==='ArrowRight'&&it.col<ISO.cols-1){it.col++;saveLayout();}
     }
     if(e.code==='KeyS'){saveLayout();edSaveNotify=90;playSaveBeep();}
     if(e.code==='KeyR'){resetLayout();edSelIdx=-1;}
     if((e.code==='Delete'||e.code==='Backspace')&&edSelIdx>=0){
-      shopLayout.splice(edSelIdx,1);edSelIdx=-1;
+      shopLayout.splice(edSelIdx,1);saveLayout();edSelIdx=-1;
     }
     if(edSelIdx>=0){
       const it=shopLayout[edSelIdx];
       // Shift+arrows = resize, plain arrows = move
       if(e.shiftKey){
-        if(e.code==='ArrowRight'){it.sx=Math.min(3,(it.sx||1)+0.1);e.preventDefault();}
-        if(e.code==='ArrowLeft'){it.sx=Math.max(0.2,(it.sx||1)-0.1);e.preventDefault();}
-        if(e.code==='ArrowUp'){it.sy=Math.min(3,(it.sy||1)+0.1);e.preventDefault();}
-        if(e.code==='ArrowDown'){it.sy=Math.max(0.2,(it.sy||1)-0.1);e.preventDefault();}
+        if(e.code==='ArrowRight'){it.sx=Math.min(3,(it.sx||1)+0.1);saveLayout();e.preventDefault();}
+        if(e.code==='ArrowLeft'){it.sx=Math.max(0.2,(it.sx||1)-0.1);saveLayout();e.preventDefault();}
+        if(e.code==='ArrowUp'){it.sy=Math.min(3,(it.sy||1)+0.1);saveLayout();e.preventDefault();}
+        if(e.code==='ArrowDown'){it.sy=Math.max(0.2,(it.sy||1)-0.1);saveLayout();e.preventDefault();}
       }
     }
     return;
@@ -1586,6 +1597,7 @@ cv.addEventListener('click',e=>{
       if(edSelIdx>=0&&edSelIdx<shopLayout.length){
         shopLayout[edSelIdx].col=tile.col;
         shopLayout[edSelIdx].row=tile.row;
+        saveLayout(); // auto-save every tile move
       } else {
         // Try to select item at this tile
         for(let i=0;i<shopLayout.length;i++){
@@ -1937,7 +1949,7 @@ function doAction(id){
   if(id.startsWith('edsel')){edSelIdx=parseInt(id.slice(5));return;}
   if(id==='edSave'){saveLayout();edSaveNotify=90;playSaveBeep();return;}
   if(id==='edReset'){resetLayout();edSelIdx=-1;return;}
-  if(id==='edExit'){state=S.GAME;return;}
+  if(id==='edExit'){saveLayout();state=S.GAME;return;} // auto-save on exit
   if(id==='edDelete'&&edSelIdx>=0&&edSelIdx<shopLayout.length){
     shopLayout.splice(edSelIdx,1);
     edSelIdx=-1;
@@ -1956,14 +1968,14 @@ function doAction(id){
   }
   if(edSelIdx>=0&&edSelIdx<shopLayout.length){
     const it=shopLayout[edSelIdx];
-    if(id==='edUp'&&it.row>0){it.row--;return;}
-    if(id==='edDown'&&it.row<ISO.rows-1){it.row++;return;}
-    if(id==='edLeft'&&it.col>0){it.col--;return;}
-    if(id==='edRight'&&it.col<ISO.cols-1){it.col++;return;}
-    if(id==='edSxUp'){it.sx=Math.min(3,(it.sx||1)+0.1);return;}
-    if(id==='edSxDown'){it.sx=Math.max(0.2,(it.sx||1)-0.1);return;}
-    if(id==='edSyUp'){it.sy=Math.min(3,(it.sy||1)+0.1);return;}
-    if(id==='edSyDown'){it.sy=Math.max(0.2,(it.sy||1)-0.1);return;}
+    if(id==='edUp'&&it.row>0){it.row--;saveLayout();return;}
+    if(id==='edDown'&&it.row<ISO.rows-1){it.row++;saveLayout();return;}
+    if(id==='edLeft'&&it.col>0){it.col--;saveLayout();return;}
+    if(id==='edRight'&&it.col<ISO.cols-1){it.col++;saveLayout();return;}
+    if(id==='edSxUp'){it.sx=Math.min(3,(it.sx||1)+0.1);saveLayout();return;}
+    if(id==='edSxDown'){it.sx=Math.max(0.2,(it.sx||1)-0.1);saveLayout();return;}
+    if(id==='edSyUp'){it.sy=Math.min(3,(it.sy||1)+0.1);saveLayout();return;}
+    if(id==='edSyDown'){it.sy=Math.max(0.2,(it.sy||1)-0.1);saveLayout();return;}
   }
 }
 
@@ -3036,7 +3048,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v4.5 · 2026-03-31',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v4.6 · 2026-03-31',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
