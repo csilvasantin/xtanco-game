@@ -70,7 +70,7 @@
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  XTANCO DIGITAL TWIN — v4.4 — 2026-03-30
+//  XTANCO DIGITAL TWIN — v4.5 — 2026-03-31
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -920,7 +920,7 @@ let activeModel=0;
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v4.4',
+    menuTitle:'XTANCO',menuSub:'SIMULADOR DE ESTANCO DIGITAL — v4.5',
     langPick:'SELECCIONA IDIOMA',startBtn:'PULSA ENTER PARA EMPEZAR',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -983,7 +983,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v4.4',
+    menuTitle:'XTANCO',menuSub:'DIGITAL TOBACCO SHOP SIMULATOR — v4.5',
     langPick:'SELECT LANGUAGE',startBtn:'PRESS ENTER TO START',
     langEs:'🇪🇸  CASTELLANO',langEn:'🇬🇧  ENGLISH',
     tut:[
@@ -3036,7 +3036,7 @@ function drawMenu(){
     }
   }
   // Version tag
-  cx.globalAlpha=0.3;tx('v4.4 · 2026-03-30',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('v4.5 · 2026-03-31',W-80,H-8,P.gray,7,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
@@ -4460,6 +4460,44 @@ function drawShop(){
   // ── GLASS DOOR — drawn LAST, always on top of furniture/characters ──
   drawGlassDoor();
 
+  // ── DAY / NIGHT AMBIENT OVERLAY ──
+  if(G&&G.gameTime){
+    const nh=G.gameTime;
+    let nightA=0;
+    if(nh>=21)      nightA=0.42;
+    else if(nh>=20) nightA=0.30;
+    else if(nh>=19) nightA=0.18;
+    else if(nh>=18) nightA=0.08;
+    else if(nh>=17) nightA=0.03;
+    if(nightA>0){
+      // Dark blue tint over the whole shop
+      cx.globalAlpha=nightA;
+      cx.fillStyle='#080818';
+      cx.fillRect(0,28,W,H-28);
+      cx.globalAlpha=1;
+      // Warm glow from floor lamp
+      const lampItem=shopLayout.find(i=>i.type==='floorLamp');
+      if(lampItem){
+        const lp=toIso(lampItem.col,lampItem.row);
+        const lampRad=cx.createRadialGradient(lp.x,lp.y-20,4,lp.x,lp.y-20,90);
+        lampRad.addColorStop(0,`rgba(255,200,80,${Math.min(0.22,nightA*0.7)})`);
+        lampRad.addColorStop(1,'rgba(255,170,40,0)');
+        cx.fillStyle=lampRad;cx.fillRect(lp.x-90,lp.y-110,180,130);
+      }
+      // Warm glow from DJ booth LEDs at night
+      const djItem=shopLayout.find(i=>i.type==='djBooth');
+      const djHiredNight=G.staff&&G.staff.some(s=>s.hired&&s.role===4);
+      if(djItem&&djHiredNight){
+        const dp=toIso(djItem.col+0.5,djItem.row);
+        const djRad=cx.createRadialGradient(dp.x,dp.y,3,dp.x,dp.y,70);
+        const djPulse=0.10+Math.abs(Math.sin(tt*0.06))*0.08;
+        djRad.addColorStop(0,`rgba(60,80,220,${Math.min(djPulse,nightA*0.6)})`);
+        djRad.addColorStop(1,'rgba(40,60,200,0)');
+        cx.fillStyle=djRad;cx.fillRect(dp.x-70,dp.y-50,140,100);
+      }
+    }
+  }
+
   cx.restore(); // end clip
 }
 
@@ -4813,6 +4851,57 @@ function drawAltadisTFT(){
     cx.textAlign='center';
     cx.fillStyle='#fff';cx.font='bold '+Math.max(5,Math.round(sH*0.1))+'px monospace';
     cx.fillText('DELEGACIÓN',cX,cY+sH*0.42);
+    cx.textAlign='left';
+  } else if(G&&(!bgMusic.paused||(G.staff&&G.staff.some(s=>s.hired&&s.role===4)))){
+    // ── MUSIC / DJ EQ VISUALIZER ──
+    const djOnViz=G.staff&&G.staff.some(s=>s.hired&&s.role===4);
+    cx.fillStyle='#000a18';cx.fillRect(0,0,vW,vH);
+    // Scanline texture
+    cx.globalAlpha=0.04;
+    for(let sl=0;sl<vH;sl+=2){cx.fillStyle='#000';cx.fillRect(0,sl,vW,1);}
+    cx.globalAlpha=1;
+    // Header
+    cx.textAlign='center';
+    const hdrCol=djOnViz?'#cc44ff':'#4488cc';
+    glow(hdrCol,6);
+    cx.fillStyle=hdrCol;cx.font='bold 7px monospace';
+    cx.fillText(djOnViz?'♪ DJ NOVAH ♪':'♪ NOW PLAYING ♪',cX,11);
+    nog();
+    // Song name footer
+    if(G.nowPlaying){
+      const sn=G.nowPlaying.length>24?G.nowPlaying.substring(0,22)+'…':G.nowPlaying;
+      cx.fillStyle='#556677';cx.font='6px monospace';
+      cx.fillText(sn,cX,vH-3);
+    }
+    // EQ bars
+    const eqBars=22;
+    const eqAreaW=vW-16;
+    const eqBarW=Math.floor(eqAreaW/eqBars)-1;
+    const eqGap=1;
+    const eqStartX=8;
+    const eqMaxH=vH-22;
+    for(let bi=0;bi<eqBars;bi++){
+      const f1=0.035+bi*0.013;
+      const f2=0.021+bi*0.009;
+      const ph=bi*0.55+1.3;
+      const raw=Math.abs(Math.sin(tt*f1+ph))*0.65+Math.abs(Math.sin(tt*f2+ph+0.8))*0.35;
+      const barH=Math.max(2,raw*eqMaxH*0.85);
+      const bx3=eqStartX+bi*(eqBarW+eqGap);
+      const by3=16+eqMaxH-barH;
+      // Color: bass=purple/magenta, treble=cyan (DJ) or blue (music)
+      const hue3=djOnViz?(260+bi/eqBars*100):(200+bi/eqBars*60);
+      const lit3=50+Math.round(raw*25);
+      cx.fillStyle=`hsl(${hue3},100%,${lit3}%)`;
+      cx.fillRect(bx3,by3,eqBarW,barH);
+      // Peak flash on tall bars
+      if(raw>0.82){cx.fillStyle='#ffffffcc';cx.fillRect(bx3,by3-1,eqBarW,1);}
+    }
+    // Center glow reflection
+    cx.globalAlpha=0.12;
+    const reflG=cx.createRadialGradient(cX,vH/2,5,cX,vH/2,40);
+    reflG.addColorStop(0,hdrCol);reflG.addColorStop(1,'transparent');
+    cx.fillStyle=reflG;cx.fillRect(0,0,vW,vH);
+    cx.globalAlpha=1;
     cx.textAlign='left';
   } else {
     // ── WEATHER-CONDITIONED ADMIRA ADS ──
@@ -5791,6 +5880,24 @@ function drawIsoCust(c){
     }
   } else {
     chibi(c.x,c.y,c.dir||1,shirtIdx,c.hair%P.hair.length,c.fr,false,tt);
+  }
+  // ── Mood icon (satisfaction) ──
+  const djHiredMood=G&&G.staff&&G.staff.some(s=>s.hired&&s.role===4);
+  let moodIcon=null;
+  if(c.bought){
+    moodIcon='😊';
+  } else if(c.st==='leave'&&!c.bought){
+    moodIcon='😤';
+  } else if(c.st==='browse'){
+    moodIcon=djHiredMood?'😊':'😐';
+  }
+  if(moodIcon){
+    // Don't overlap speech bubble
+    const moodAlpha=c.bTimer>0?0.35:0.82;
+    cx.globalAlpha=moodAlpha;
+    cx.font='10px serif';cx.textAlign='center';
+    cx.fillText(moodIcon,c.x+7,c.y-32);
+    cx.globalAlpha=1;cx.textAlign='left';
   }
   // Customer dialogue bubble
   if(c.bTimer>0&&c.bMsg){
