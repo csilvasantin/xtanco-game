@@ -5,24 +5,32 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <meta http-equiv="Pragma" content="no-cache"/>
   <meta http-equiv="Expires" content="0"/>
-  <title>XTANCO — Loading...</title>
+  <title>Admira XP // The Xpace OS — Loading...</title>
+  <script src="xtanco-version.js"></script>
 </head>
 <body style="background:#1a1420;color:#cc99dd;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
 <div style="text-align:center">
-  <p>♪ Cargando XTANCO...</p>
+  <p>♪ Cargando Admira XP // The Xpace OS...</p>
+  <p id="bootBuild" style="font-size:12px;opacity:0.75"></p>
 </div>
 <script>
-// Register Service Worker to bust CDN cache
+const APP=window.XTANCO_APP||{version:'dev',build:String(Date.now())};
+const bootBuild=document.getElementById('bootBuild');
+if(bootBuild) bootBuild.textContent=APP.version+' - build '+APP.build;
+
+const params=new URLSearchParams(window.location.search);
+params.set('v',APP.build);
+const target='game.html?'+params.toString()+(window.location.hash||'');
+
+function boot(){window.location.replace(target);}
+
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
-}
-// Clear all caches then redirect
-if(window.caches){
-  caches.keys().then(k=>k.forEach(n=>caches.delete(n))).finally(()=>{
-    location.replace('game.html?v=' + Date.now());
-  });
+  navigator.serviceWorker.register('sw.js?v='+encodeURIComponent(APP.build),{updateViaCache:'none'})
+    .then(reg=>reg.update().catch(()=>{}))
+    .then(boot)
+    .catch(boot);
 } else {
-  location.replace('game.html?v=' + Date.now());
+  boot();
 }
 </script>
 </body>

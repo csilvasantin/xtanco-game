@@ -1,0 +1,16 @@
+{
+  "port": 9124,
+  "elgato": {
+    "ip": "192.168.1.50",
+    "port": 9123
+  },
+  "hue": {
+    "bridgeIP": "192.168.1.60",
+    "apiKey": "replace-with-local-api-key",
+    "lights": {
+      "despacho": 9,
+      "comedor": 8
+    },
+    "enabled": true
+  }
+}

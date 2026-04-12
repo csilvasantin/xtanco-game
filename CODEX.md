@@ -1,7 +1,9 @@
-# Proyecto 11 — xtanco-game
+# 01.- XtancoGame
 
 > Machine-readable project reference for AI agents (Codex, GPT, Claude, etc.).
 > Single-file HTML5 Canvas game. No build step, no dependencies.
+
+Nombre local del repo en este workspace: **01.- XtancoGame**.
 
 ## 1. 2. 3. Basic Priority
 
