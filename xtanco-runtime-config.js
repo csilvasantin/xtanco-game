@@ -24,7 +24,8 @@
     },
     grok: {
       proxyPort: 9124,
-      enabled: false,
+      enabled: true,
+      proxyUrl: 'https://admira-grok-proxy.csilvasantin.workers.dev',
       model: 'grok-4-latest',
     },
   };

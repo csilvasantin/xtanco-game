@@ -23,6 +23,7 @@
     "apiKey": "replace-with-xai-api-key",
     "baseUrl": "https://api.x.ai/v1",
     "model": "grok-4-latest",
+    "proxyUrl": "https://admira-grok-proxy.csilvasantin.workers.dev",
     "systemPrompt": "Eres AdmiraXPBot dentro del juego Admira XP. Responde en español, de forma útil y breve. Si recibes estado del juego, úsalo como contexto."
   }
 }

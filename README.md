@@ -68,14 +68,15 @@ Archivos de apoyo:
 
 ## Telegram
 
-Admira XP v9.12 incluye puente bidireccional con Telegram desde el proxy local y una consola inferior 50/50:
+Admira XP v9.13 incluye puente bidireccional con Telegram desde el proxy local, Grok publico via Cloudflare Worker y una consola inferior 50/50:
 
 - el juego envia mensajes a Telegram via `POST /telegram/send`;
 - el bot lee mensajes con polling de la Bot API;
 - el juego consume instrucciones via `GET /telegram/commands` y responde con `/telegram/reply`.
 - la mitad izquierda de la franja inferior envia texto al bot;
 - la mitad derecha muestra enviados, recibidos y respuestas de AdmiraXPBot.
-- `/grok` y `/ask` conectan AdmiraXPBot con Grok via el proxy local, sin exponer la API key al navegador.
+- `/grok` y `/ask` conectan AdmiraXPBot con Grok via el proxy local o via Cloudflare Worker, sin exponer la API key al navegador.
+- En GitHub Pages, Grok usa `https://admira-grok-proxy.csilvasantin.workers.dev`.
 - En GitHub Pages la consola aparece en modo publico/local: ejecuta comandos dentro del juego sin enviar mensajes reales a Telegram, porque los tokens no se publican.
 
 Configuracion local:
@@ -110,7 +111,8 @@ Para activar Grok añade tambien:
 "grok": {
   "apiKey": "XAI_API_KEY",
   "baseUrl": "https://api.x.ai/v1",
-  "model": "grok-4-latest"
+  "model": "grok-4-latest",
+  "proxyUrl": "https://admira-grok-proxy.csilvasantin.workers.dev"
 }
 ```
 
@@ -119,6 +121,14 @@ O usa variable de entorno:
 ```bash
 export XAI_API_KEY="tu-api-key-de-xai"
 ```
+
+Grok en la version publica:
+
+- El navegador llama a `https://admira-grok-proxy.csilvasantin.workers.dev/grok/ask`.
+- La API key de xAI vive como secret `XAI_API_KEY` en Cloudflare Workers.
+- El worker se define en `workers/admira-grok-proxy` y expone `GET /health` para verificar configuracion.
+- Para actualizar el secret: `wrangler secret put XAI_API_KEY --config workers/admira-grok-proxy/wrangler.toml`.
+- Para publicar el worker: `wrangler deploy --config workers/admira-grok-proxy/wrangler.toml`.
 
 Comandos soportados desde Telegram:
 
@@ -154,7 +164,7 @@ Comandos soportados desde Telegram:
 
 ## Personajes y escenas en vivo
 
-La v9.12 convierte Telegram en una consola de dirección de escena. Los personajes entran y salen por la puerta del local, respetan el canvas isométrico y actualizan los paneles del juego.
+La v9.13 convierte Telegram y la consola local/publica en una consola de dirección de escena. Los personajes entran y salen por la puerta del local, respetan el canvas isométrico y actualizan los paneles del juego.
 
 | Comando | Personaje / escena | Efecto |
 |---------|--------------------|--------|

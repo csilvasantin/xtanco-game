@@ -1,0 +1,8 @@
+name = "admira-grok-proxy"
+main = "src/index.js"
+compatibility_date = "2025-12-01"
+
+[vars]
+XAI_BASE_URL = "https://api.x.ai/v1"
+XAI_MODEL = "grok-4-latest"
+ALLOWED_ORIGINS = "https://csilvasantin.github.io,http://localhost:9124,http://127.0.0.1:9124"
