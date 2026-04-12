@@ -112,7 +112,7 @@
 <script src="xtanco-runtime-config.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  ADMIRA XP // THE XPACE OS — XTANCO — v9.11 — 2026-04-12
+//  ADMIRA XP // THE XPACE OS — XTANCO — v9.12 — 2026-04-12
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -176,9 +176,8 @@ function resizeCanvas(){
   const vw=window.innerWidth, vh=window.innerHeight;
   const barH=document.getElementById('topBar').classList.contains('show')?34:0;
   const dock=document.getElementById('telegramDock');
-  const telegramEnabled=!!(window.XTANCO_RUNTIME_CONFIG&&window.XTANCO_RUNTIME_CONFIG.telegram&&window.XTANCO_RUNTIME_CONFIG.telegram.enabled);
   let telegramInGame=false;
-  try{telegramInGame=telegramEnabled&&state==='game';}catch(e){telegramInGame=false;}
+  try{telegramInGame=state==='game';}catch(e){telegramInGame=false;}
   if(dock) dock.classList.toggle('show',telegramInGame);
   const dockH=(telegramInGame&&dock)?dock.offsetHeight:0;
   const availH=vh-barH-dockH;
@@ -1200,7 +1199,7 @@ function getClientLaunchLabel(client,index){
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'PLATAFORMA OPERATIVA MULTICLIENTE — v9.11',
+    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'PLATAFORMA OPERATIVA MULTICLIENTE — v9.12',
     menuDeck:'Catalogo vivo de experiencias por cliente',
     langPick:'SELECCIONA IDIOMA',menuStartBtn:'ABRIR CATALOGO XP',menuHint:'Xtanco ya esta en vivo. Loterias y Retail avanzan en la hoja de lanzamiento.',
     menuGuideBtn:'▶ MANUAL XP',menuSettingsBtn:'⚙ XPACE CONFIG',
@@ -1281,7 +1280,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'MULTI-CLIENT OPERATIONS PLATFORM — v9.11',
+    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'MULTI-CLIENT OPERATIONS PLATFORM — v9.12',
     menuDeck:'Living catalog of client-based experiences',
     langPick:'SELECT LANGUAGE',menuStartBtn:'OPEN XP CATALOG',menuHint:'Xtanco is live. Lottery and Retail are moving through the launch pipeline.',
     menuGuideBtn:'▶ XP MANUAL',menuSettingsBtn:'⚙ XPACE CONFIG',
@@ -4935,7 +4934,7 @@ function drawMenu(){
       r(pbX,pbY,pbW,pbH,'#1a1a2a');r(pbX,pbY,(pbW*pct)|0,pbH,P.neon1);
     }
   }
-  cx.globalAlpha=0.3;tx('Admira XP // The Xpace OS · v9.11 · 2026-04-12',W/2,H-8,P.gray,6,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('Admira XP // The Xpace OS · v9.12 · 2026-04-12',W/2,H-8,P.gray,6,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
@@ -10376,13 +10375,13 @@ window.xtAPI = (function(){
   }
 
   if(!TELEGRAM.enabled){
-    setTelegramUiStatus('sin configurar',true);
-    appendTelegramLog('err','Sistema','Telegram no esta configurado en xtanco.config.local.json');
-    console.log('%cTelegram bridge disabled — configure XTANCO_TELEGRAM_BOT_TOKEN','color:#8899aa');
-    return;
+    setTelegramUiStatus('modo local',false);
+    appendTelegramLog('bot','AdmiraXPBot','Modo publico/local: los comandos funcionan dentro del juego. Para enviar/recibir Telegram real, abre con node elgato-proxy.js y xtanco.config.local.json.');
+    console.log('%cTelegram console local mode — configure XTANCO_TELEGRAM_BOT_TOKEN for real bot bridge','color:#55ccff');
+  } else {
+    setTelegramUiStatus('conectado',false);
+    appendTelegramLog('bot','AdmiraXPBot','Puente local conectado. Escribe /help o /status.');
   }
-  setTelegramUiStatus('conectado',false);
-  appendTelegramLog('bot','AdmiraXPBot','Puente local conectado. Escribe /help o /status.');
 
   function telegramUrl(path){
     return `http://localhost:${TELEGRAM.proxyPort}${path}`;
@@ -10397,6 +10396,10 @@ window.xtAPI = (function(){
 
   async function telegramSend(text){
     if(!text) return {ok:false,message:'Mensaje vacio'};
+    if(!TELEGRAM.enabled){
+      setTelegramUiStatus('modo local',false);
+      return {ok:true,message:'Modo local: no enviado a Telegram'};
+    }
     try{
       const out=await telegramFetch('/telegram/send',{
         method:'POST',
@@ -10415,6 +10418,7 @@ window.xtAPI = (function(){
   }
 
   async function telegramReply(cmd,text){
+    if(!TELEGRAM.enabled) return;
     try{
       await telegramFetch('/telegram/reply',{
         method:'POST',
@@ -10958,6 +10962,7 @@ window.xtAPI = (function(){
   }
 
   async function pollTelegramCommands(){
+    if(!TELEGRAM.enabled) return;
     if(!TELEGRAM.polling) return;
     try{
       const data=await telegramFetch('/telegram/commands?since='+TELEGRAM.lastCommandId+'&limit=10');
@@ -10979,6 +10984,7 @@ window.xtAPI = (function(){
   }
 
   function monitorGameForTelegram(){
+    if(!TELEGRAM.enabled) return;
     const current=state;
     const prev=TELEGRAM.lastState;
     if(current!==TELEGRAM.lastState){
@@ -11026,9 +11032,11 @@ window.xtAPI = (function(){
 
   setInterval(pollTelegramCommands,2500);
   setInterval(monitorGameForTelegram,3000);
-  telegramSend('Admira XP v9.11 online. Usa /help para ver comandos.').then(res=>{
-    appendTelegramLog(res.ok?'bot':'err','AdmiraXPBot',res.ok?'Online enviado a Telegram':res.message);
-  });
+  if(TELEGRAM.enabled){
+    telegramSend('Admira XP v9.12 online. Usa /help para ver comandos.').then(res=>{
+      appendTelegramLog(res.ok?'bot':'err','AdmiraXPBot',res.ok?'Online enviado a Telegram':res.message);
+    });
+  }
   console.log('%cTelegram bridge ready — game <-> bot','color:#55ccff;font-size:14px;font-weight:bold');
 })();
 </script>

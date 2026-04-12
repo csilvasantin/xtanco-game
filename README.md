@@ -68,7 +68,7 @@ Archivos de apoyo:
 
 ## Telegram
 
-Admira XP v9.11 incluye puente bidireccional con Telegram desde el proxy local y una consola inferior 50/50:
+Admira XP v9.12 incluye puente bidireccional con Telegram desde el proxy local y una consola inferior 50/50:
 
 - el juego envia mensajes a Telegram via `POST /telegram/send`;
 - el bot lee mensajes con polling de la Bot API;
@@ -76,6 +76,7 @@ Admira XP v9.11 incluye puente bidireccional con Telegram desde el proxy local y
 - la mitad izquierda de la franja inferior envia texto al bot;
 - la mitad derecha muestra enviados, recibidos y respuestas de AdmiraXPBot.
 - `/grok` y `/ask` conectan AdmiraXPBot con Grok via el proxy local, sin exponer la API key al navegador.
+- En GitHub Pages la consola aparece en modo publico/local: ejecuta comandos dentro del juego sin enviar mensajes reales a Telegram, porque los tokens no se publican.
 
 Configuracion local:
 
@@ -153,7 +154,7 @@ Comandos soportados desde Telegram:
 
 ## Personajes y escenas en vivo
 
-La v9.11 convierte Telegram en una consola de dirección de escena. Los personajes entran y salen por la puerta del local, respetan el canvas isométrico y actualizan los paneles del juego.
+La v9.12 convierte Telegram en una consola de dirección de escena. Los personajes entran y salen por la puerta del local, respetan el canvas isométrico y actualizan los paneles del juego.
 
 | Comando | Personaje / escena | Efecto |
 |---------|--------------------|--------|
@@ -184,7 +185,7 @@ La v9.11 convierte Telegram en una consola de dirección de escena. Los personaj
 ## Prueba rápida local
 
 1. Arranca `node elgato-proxy.js`.
-2. Abre `http://localhost:9124/?v=20260412-v911-opinador`.
+2. Abre `http://localhost:9124/?v=20260412-v912-public-console`.
 3. Entra en partida.
 4. Envía desde Telegram o desde la consola inferior:
    - `/dj on`
