@@ -112,7 +112,7 @@
 <script src="xtanco-runtime-config.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  ADMIRA XP // THE XPACE OS — XTANCO — v9.3 — 2026-04-12
+//  ADMIRA XP // THE XPACE OS — XTANCO — v9.11 — 2026-04-12
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -177,8 +177,10 @@ function resizeCanvas(){
   const barH=document.getElementById('topBar').classList.contains('show')?34:0;
   const dock=document.getElementById('telegramDock');
   const telegramEnabled=!!(window.XTANCO_RUNTIME_CONFIG&&window.XTANCO_RUNTIME_CONFIG.telegram&&window.XTANCO_RUNTIME_CONFIG.telegram.enabled);
-  if(dock) dock.classList.toggle('show',telegramEnabled);
-  const dockH=(telegramEnabled&&dock)?dock.offsetHeight:0;
+  let telegramInGame=false;
+  try{telegramInGame=telegramEnabled&&state==='game';}catch(e){telegramInGame=false;}
+  if(dock) dock.classList.toggle('show',telegramInGame);
+  const dockH=(telegramInGame&&dock)?dock.offsetHeight:0;
   const availH=vh-barH-dockH;
   const ratio=W/H;
   let cw,ch;
@@ -352,10 +354,10 @@ function extractYouTubeId(input){
   return m?m[1]:'';
 }
 
-function admiraTubeEmbedUrl(videoId){
+function admiraTubeEmbedUrl(videoId,audioOn){
   const params=new URLSearchParams({
     autoplay:'1',
-    mute:'1',
+    mute:audioOn?'0':'1',
     loop:'1',
     playlist:videoId,
     playsinline:'1',
@@ -366,12 +368,50 @@ function admiraTubeEmbedUrl(videoId){
   return 'https://www.youtube.com/embed/'+videoId+'?'+params.toString();
 }
 
+function parseAdmiraTubeArg(arg){
+  let clean=String(arg||'').replace(/\s+/g,' ').trim();
+  let screens=2;
+  let audio=true;
+  const audioRe=/\s+(?:audio|sound|sonido|unmute|con-audio|consonido|mute|muted|silencio)\s*$/i;
+  let audioMatch=clean.match(audioRe);
+  if(audioMatch){
+    audio=!/mute|muted|silencio/i.test(audioMatch[0]);
+    clean=clean.replace(audioRe,'').trim();
+  }
+  const screenPatterns=[
+    /\s+(?:screens?|pantallas?)=(1|2)\s*$/i,
+    /\s+--(?:screens?|pantallas?)\s+(1|2)\s*$/i,
+    /\s+(?:one|una|single|solo|pantalla1|screen1|1p|1)\s*$/i,
+    /\s+(?:two|dos|doble|ambas|both|2p|2)\s*$/i,
+  ];
+  for(const re of screenPatterns){
+    const m=clean.match(re);
+    if(m){
+      screens=(m[1]&&m[1]==='1')||/one|una|single|solo|pantalla1|screen1|1p|(?:^|\s)1\s*$/i.test(m[0])?1:2;
+      clean=clean.replace(re,'').trim();
+      break;
+    }
+  }
+  const first=clean.match(/^(1|2|una|dos|one|two|single|both|ambas)\s+(.+)$/i);
+  if(first){
+    screens=/^(1|una|one|single)$/i.test(first[1])?1:2;
+    clean=first[2].trim();
+  }
+  audioMatch=clean.match(audioRe);
+  if(audioMatch){
+    audio=!/mute|muted|silencio/i.test(audioMatch[0]);
+    clean=clean.replace(audioRe,'').trim();
+  }
+  return {url:clean,screens,audio};
+}
+
 function syncAdmiraTubeFrames(){
   const active=G&&G.admiraTube&&G.admiraTube.active&&G.admiraTube.videoId;
-  const src=active?admiraTubeEmbedUrl(G.admiraTube.videoId):'';
-  [admiraTube1,admiraTube2].forEach(frame=>{
+  const src=active?admiraTubeEmbedUrl(G.admiraTube.videoId,G.admiraTube.audio!==false):'';
+  const screens=active?Math.max(1,Math.min(2,Number(G.admiraTube.screens)||2)):0;
+  [admiraTube1,admiraTube2].forEach((frame,idx)=>{
     if(!frame) return;
-    if(active){
+    if(active&&idx<screens){
       if(frame.src!==src) frame.src=src;
       frame.style.display='block';
     } else {
@@ -379,8 +419,8 @@ function syncAdmiraTubeFrames(){
       if(frame.src) frame.src='';
     }
   });
-  [dsCanvasEl1,dsCanvasEl2].forEach(canvas=>{
-    if(canvas) canvas.style.display=active?'none':'block';
+  [dsCanvasEl1,dsCanvasEl2].forEach((canvas,idx)=>{
+    if(canvas) canvas.style.display=(active&&idx<screens)?'none':'block';
   });
 }
 
@@ -1160,7 +1200,7 @@ function getClientLaunchLabel(client,index){
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'PLATAFORMA OPERATIVA MULTICLIENTE — v9.2',
+    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'PLATAFORMA OPERATIVA MULTICLIENTE — v9.11',
     menuDeck:'Catalogo vivo de experiencias por cliente',
     langPick:'SELECCIONA IDIOMA',menuStartBtn:'ABRIR CATALOGO XP',menuHint:'Xtanco ya esta en vivo. Loterias y Retail avanzan en la hoja de lanzamiento.',
     menuGuideBtn:'▶ MANUAL XP',menuSettingsBtn:'⚙ XPACE CONFIG',
@@ -1241,7 +1281,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'MULTI-CLIENT OPERATIONS PLATFORM — v9.2',
+    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'MULTI-CLIENT OPERATIONS PLATFORM — v9.11',
     menuDeck:'Living catalog of client-based experiences',
     langPick:'SELECT LANGUAGE',menuStartBtn:'OPEN XP CATALOG',menuHint:'Xtanco is live. Lottery and Retail are moving through the launch pipeline.',
     menuGuideBtn:'▶ XP MANUAL',menuSettingsBtn:'⚙ XPACE CONFIG',
@@ -1792,6 +1832,9 @@ function initGame(){
     tftGrokArt:null,  // Grok-generated pixel art for the main wall screen
     admiraLiveMsg:'',
     admiraTube:null,
+    securityCam:{active:true},
+    guardiaCivil:{phase:'idle',x:820,y:0,dir:-1,aFrame:0,aTimer:0,patrolTimer:0,targetCol:9,targetRow:3},
+    opinador:{phase:'idle',x:820,y:0,dir:-1,aFrame:0,aTimer:0,voteTimer:0,voteFace:0,look:null,opinion:''},
     sfxVolume:0,
     weekHistory:[],
     holiday:{active:false,timer:0,name:''},
@@ -3408,6 +3451,116 @@ function updateGame(){
     }
   }
 
+  // ── GUARDIA CIVIL — personaje de seguridad por comando ───────
+  if(G.guardiaCivil){
+    const gc=G.guardiaCivil;
+    const doorIso3=toIso(ISO.cols,3);
+    const startX3=820,startY3=doorIso3.y-20;
+    if(gc.y===0) gc.y=startY3;
+    const patrolIso=toIso(gc.targetCol||9,gc.targetRow||3);
+    const patrolX=patrolIso.x-7, patrolY=patrolIso.y-20;
+
+    if(gc.phase==='entering'){
+      const dx=patrolX-gc.x,dy=patrolY-gc.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      G.doorOpen=60;
+      if(dist<3){
+        gc.x=patrolX;gc.y=patrolY;gc.baseX=patrolX;gc.baseY=patrolY;gc.phase='patrolling';gc.patrolTimer=1800;
+        showEv('👮 Guardia Civil vigilando la tienda','#55aa55');
+      } else {
+        const spd=1.35;
+        gc.x+=dx/dist*spd;gc.y+=dy/dist*spd;gc.dir=dx<0?-1:1;
+      }
+      gc.aTimer++;if(gc.aTimer>=8){gc.aTimer=0;gc.aFrame=(gc.aFrame+1)%2;}
+    } else if(gc.phase==='patrolling'){
+      if(gc.patrolTimer>0) gc.patrolTimer--;
+      gc.x=(gc.baseX||gc.x)+Math.sin(tt*0.025)*1.2;
+      gc.y=(gc.baseY||gc.y)+Math.cos(tt*0.02)*0.5;
+      if(G.thief&&G.thief.phase!=='idle'){
+        const dx=G.thief.x-gc.x,dy=G.thief.y-gc.y;
+        if(Math.sqrt(dx*dx+dy*dy)<155){
+          G.thief.caught=true;
+          G.thief.phase='fleeing';
+          G.thief.cooldown=9999;
+          G.doorOpen=80;
+          showEv('🛡 Guardia Civil intercepta al ladrón','#55cc77');
+          addFloat(G.thief.x,G.thief.y-34,'PILLADO','#55cc77');
+          setManagerSayBubble('¡Guardia Civil en acción!');
+        }
+      }
+      if(gc.patrolTimer<=0&&gc.autoLeave) gc.phase='leaving';
+    } else if(gc.phase==='leaving'){
+      const dx=startX3-gc.x,dy=startY3-gc.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      G.doorOpen=60;
+      if(dist<3||gc.x>810){
+        gc.phase='idle';gc.x=startX3;gc.y=startY3;gc.autoLeave=false;
+      } else {
+        const spd=1.5;
+        gc.x+=dx/dist*spd;gc.y+=dy/dist*spd;gc.dir=dx<0?-1:1;
+      }
+      gc.aTimer++;if(gc.aTimer>=8){gc.aTimer=0;gc.aFrame=(gc.aFrame+1)%2;}
+    }
+  }
+
+  // ── OPINADOR — entra, vota en el tótem y se va ────────────────
+  if(G.opinador){
+    const op=G.opinador;
+    const doorIso4=toIso(ISO.cols,3);
+    const startX4=820,startY4=doorIso4.y-20;
+    if(op.y===0) op.y=startY4;
+    const kp=getTabletPos();
+    const targetX=kp.x-10,targetY=kp.y-16;
+    if(op.phase==='entering'){
+      const dx=targetX-op.x,dy=targetY-op.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      G.doorOpen=60;
+      if(dist<3){
+        op.x=targetX;op.y=targetY;op.phase='voting';op.voteTimer=70;
+        op.bTimer=90;op.bMsg=op.opinion||'Voy a opinar';
+      } else {
+        const spd=1.45;
+        op.x+=dx/dist*spd;op.y+=dy/dist*spd;op.dir=dx<0?-1:1;
+      }
+      op.aTimer++;if(op.aTimer>=8){op.aTimer=0;op.aFrame=(op.aFrame+1)%2;}
+    } else if(op.phase==='voting'){
+      op.voteTimer--;
+      if(op.voteTimer===38){
+        const face=op.voteFace||0;
+        tabletVote={face,timer:100};
+        if(G.reviews){
+          if(face===0){G.reviews.positive++;G.fame=Math.min(100,(G.fame||0)+0.7);G.satisfaction=Math.min(100,G.satisfaction+2.5);}
+          else if(face===1){G.satisfaction=Math.min(100,G.satisfaction+0.5);}
+          else{G.reviews.negative++;G.fame=Math.max(0,(G.fame||0)-0.5);G.satisfaction=Math.max(0,G.satisfaction-3);}
+        }
+        const vEmoji=['😊','😐','😡'][face];
+        const vCol=['#44aa44','#ccaa00','#cc3333'][face];
+        addFloat(kp.x,kp.y-40,vEmoji,vCol);
+        showEv('💬 Opinador deja su opinión: '+vEmoji,vCol);
+        if(face===0) SFX.voteHappy();
+        else if(face===1) SFX.voteNeutral();
+        else SFX.voteSad();
+      }
+      if(op.voteTimer<=0){
+        op.phase='leaving';
+        op.bTimer=75;
+        op.bMsg=['¡Gracias!','Apuntado','Hasta luego'][op.voteFace||0];
+      }
+    } else if(op.phase==='leaving'){
+      const dx=startX4-op.x,dy=startY4-op.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      G.doorOpen=60;
+      if(dist<3||op.x>810){
+        op.phase='idle';op.x=startX4;op.y=startY4;op.bTimer=0;op.bMsg='';
+      } else {
+        const spd=1.55;
+        op.x+=dx/dist*spd;op.y+=dy/dist*spd;op.dir=dx<0?-1:1;
+      }
+      op.aTimer++;if(op.aTimer>=8){op.aTimer=0;op.aFrame=(op.aFrame+1)%2;}
+    }
+    if(op.bTimer>0) op.bTimer--;
+  }
+
   // Floats
   for(let i=G.floats.length-1;i>=0;i--){
     G.floats[i].y+=G.floats[i].vy;G.floats[i].life--;
@@ -3992,6 +4145,42 @@ function drawThief(x,y,dir,frame,tick,scale=1){
   // Sneaky grin
   r(x+4,y+8,6,1,'#cc4444');
   r(x+5,y+9,4,1,'#ffcc99');
+  cx.restore();
+}
+
+// ── DRAW GUARDIA CIVIL ─────────────────────────────────────────
+function drawGuardiaCivil(x,y,dir,frame,tick,scale=1){
+  cx.save();
+  if(scale!==1){cx.translate(x,y);cx.scale(scale,scale);cx.translate(-x,-y);}
+  const flip=dir===-1;
+  if(flip){cx.translate(x+12,0);cx.scale(-1,1);cx.translate(-x,0);}
+  drawIsoShadow(x+7,y+28,9,3);
+  const lk=frame===0?0:2;
+  // Legs and boots
+  r(x+3,y+18,3,7+lk,'#213820');r(x+8,y+18,3,7-lk,'#213820');
+  r(x+2,y+24+lk,4,3,'#111');r(x+8,y+24-lk,4,3,'#111');
+  // Uniform
+  r(x+1,y+8,12,11,'#315f33');
+  r(x+1,y+8,12,3,'#244a27');
+  r(x+6,y+8,2,11,'#1b331d');
+  r(x+3,y+11,3,2,'#d8c06a');
+  r(x+8,y+11,3,2,'#d8c06a');
+  // Arms
+  const ak=frame===0?-1:1;
+  r(x-1,y+9+ak,3,8,'#315f33');r(x+12,y+9-ak,3,8,'#315f33');
+  r(x+13,y+15-ak,5,2,'#1a1a1a');
+  // Head
+  r(x+1,y-1,12,12,P.skin);
+  // Tricornio / cap silhouette
+  r(x-2,y-6,18,4,'#182414');
+  r(x+1,y-8,12,3,'#22321d');
+  r(x+5,y-10,4,3,'#182414');
+  r(x+2,y-5,10,2,'#d0b84f');
+  const blink=Math.floor(tick/75)%8===0;
+  r(x+3,y+3,3,blink?1:3,'#1a1a2e');r(x+9,y+3,3,blink?1:3,'#1a1a2e');
+  if(!blink){r(x+4,y+4,1,1,P.white);r(x+10,y+4,1,1,P.white);}
+  r(x+6,y+7,2,1,'#d6a27e');
+  r(x+4,y+9,6,1,'#5d2a20');
   cx.restore();
 }
 
@@ -4746,7 +4935,7 @@ function drawMenu(){
       r(pbX,pbY,pbW,pbH,'#1a1a2a');r(pbX,pbY,(pbW*pct)|0,pbH,P.neon1);
     }
   }
-  cx.globalAlpha=0.3;tx('Admira XP // The Xpace OS · v9.2 · 2026-04-12',W/2,H-8,P.gray,6,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('Admira XP // The Xpace OS · v9.11 · 2026-04-12',W/2,H-8,P.gray,6,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
@@ -6165,6 +6354,8 @@ function drawShop(){
   drawAirConditioning();
   // ── AROMATIZER on back wall (right side, low) ──
   drawAromatizer();
+  // ── SECURITY CAMERA in the corner, aimed at the entrance ──
+  drawCornerSecurityCamera();
   // ── TFT ALTADIS (16:9 screen on back wall, above 2nd window) ──
   drawAltadisTFT();
 
@@ -6200,6 +6391,14 @@ function drawShop(){
     // Thief (active phases only)
     if(G.thief&&G.thief.phase!=='idle'){
       entities.push({type:'thief',data:G.thief,col:0,row:0,depth:G.thief.y+27});
+    }
+    // Guardia Civil (active phases only)
+    if(G.guardiaCivil&&G.guardiaCivil.phase!=='idle'){
+      entities.push({type:'guardiaCivil',data:G.guardiaCivil,col:0,row:0,depth:G.guardiaCivil.y+27});
+    }
+    // Opinador (active phases only)
+    if(G.opinador&&G.opinador.phase!=='idle'){
+      entities.push({type:'opinador',data:G.opinador,col:0,row:0,depth:G.opinador.y+27});
     }
   }
 
@@ -6248,6 +6447,8 @@ function drawShop(){
       case 'cust': drawIsoCust(e.data); break;
       case 'saca': drawIsoSaca(e.data); break;
       case 'thief': drawIsoThief(e.data); break;
+      case 'guardiaCivil': drawIsoGuardiaCivil(e.data); break;
+      case 'opinador': drawIsoOpinador(e.data); break;
     }
     if(isSelectedEditorFurniture){
       cx.globalAlpha=1;
@@ -6869,6 +7070,27 @@ function drawBackWallLED(){
   // Now handled inside drawLED() as unified banner — this is a no-op
 }
 
+function drawCornerSecurityCamera(){
+  if(!G) return;
+  const cp=toIso(0,0);
+  const x=cp.x+8,y=cp.y-ISO.wallH+34;
+  cx.save();
+  cx.strokeStyle='#3a3028';cx.lineWidth=2;
+  cx.beginPath();cx.moveTo(x-12,y-8);cx.lineTo(x,y);cx.stroke();
+  r(x-10,y-10,12,6,'#2c3138');rx(x-10,y-10,12,6,'#77808a',1);
+  r(x-1,y-8,13,8,'#d9dee3');rx(x-1,y-8,13,8,'#58616b',1);
+  r(x+9,y-6,5,4,'#121820');
+  const alert=G.thief&&G.thief.phase!=='idle';
+  cx.fillStyle=alert?'#ff2233':'#33dd77';
+  cx.globalAlpha=alert?(0.55+0.45*Math.sin(tt*0.18)):0.85;
+  cx.beginPath();cx.arc(x-6,y-7,2,0,Math.PI*2);cx.fill();
+  cx.globalAlpha=0.12;
+  cx.fillStyle=alert?'#ff3333':'#55ccff';
+  cx.beginPath();cx.moveTo(x+12,y-4);cx.lineTo(x+95,y+36);cx.lineTo(x+70,y+58);cx.closePath();cx.fill();
+  cx.restore();
+  cx.globalAlpha=1;
+}
+
 function setTftGrokArt(art){
   if(!G) return 'No hay partida en curso. Entra en una partida y vuelve a mandar el comando.';
   if(!art||!Array.isArray(art.palette)||!Array.isArray(art.pixels)) return 'Grok no devolvió un dibujo válido.';
@@ -6954,6 +7176,40 @@ function drawTftGrokArt(art,vW,vH){
   cx.textAlign='left';
 }
 
+function drawSecurityCCTV(vW,vH){
+  cx.fillStyle='#07100d';cx.fillRect(0,0,vW,vH);
+  const pulse=0.55+0.45*Math.sin(tt*0.2);
+  cx.fillStyle='rgba(20,255,120,0.08)';cx.fillRect(0,0,vW,vH);
+  for(let y=0;y<vH;y+=3){cx.fillStyle='rgba(0,0,0,0.22)';cx.fillRect(0,y,vW,1);}
+  cx.strokeStyle='#2cff77';cx.lineWidth=1;cx.strokeRect(3,3,vW-6,vH-6);
+  cx.fillStyle='#2cff77';cx.font='bold 7px monospace';cx.textAlign='left';
+  cx.fillText('CAM 01  PUERTA',7,11);
+  cx.fillStyle=`rgba(255,40,40,${pulse})`;cx.font='bold 10px monospace';cx.textAlign='center';
+  const th=G&&G.thief?G.thief:null;
+  const label=th&&th.phase==='looting'?'ROBO EN CURSO':th&&th.phase==='fleeing'?(th.caught?'LADRON PILLADO':'LADRON HUYENDO'):'LADRON ENTRANDO';
+  cx.fillText('ALERTA '+label,vW/2,24);
+  // Simplified CCTV view: door on right, floor grid and thief marker.
+  cx.strokeStyle='rgba(70,255,130,0.25)';cx.lineWidth=0.6;
+  for(let x=12;x<vW;x+=18){cx.beginPath();cx.moveTo(x,34);cx.lineTo(x-20,vH-8);cx.stroke();}
+  for(let y=36;y<vH;y+=10){cx.beginPath();cx.moveTo(7,y);cx.lineTo(vW-8,y+Math.sin(y)*3);cx.stroke();}
+  cx.fillStyle='#1b2b25';cx.fillRect(vW-34,34,26,42);
+  cx.strokeStyle='#2cff77';cx.strokeRect(vW-34,34,26,42);
+  cx.fillStyle='#2cff77';cx.font='6px monospace';cx.fillText('DOOR',vW-21,83);
+  if(th&&th.phase!=='idle'){
+    const doorX=820;
+    const norm=Math.max(0,Math.min(1,(doorX-th.x)/520));
+    const tx2=vW-24-norm*(vW-62);
+    const ty2=56+Math.sin(tt*0.08)*3;
+    cx.fillStyle='#ff3030';cx.beginPath();cx.arc(tx2,ty2,7,0,Math.PI*2);cx.fill();
+    cx.fillStyle='#111';cx.fillRect(tx2-4,ty2-5,8,3);
+    cx.fillStyle='#fff';cx.font='10px serif';cx.textAlign='center';cx.fillText('🕶',tx2,ty2+4);
+    cx.strokeStyle='#ff3030';cx.lineWidth=1;cx.beginPath();cx.arc(tx2,ty2,13+Math.sin(tt*0.25)*3,0,Math.PI*2);cx.stroke();
+  }
+  cx.fillStyle='#ffffffaa';cx.font='6px monospace';cx.textAlign='right';
+  cx.fillText(new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),vW-7,vH-6);
+  cx.textAlign='left';
+}
+
 // ── ALTADIS TFT (big screen below LED, centered on left wall) ─
 function drawAltadisTFT(){
   // Draw as a flat parallelogram on the BACK WALL (row=0), above 2nd window (col~6), 16:9
@@ -7024,7 +7280,9 @@ function drawAltadisTFT(){
   const cX=vW/2, cY=vH/2;
   const sH=vH;
 
-  if(G&&G.tftGrokArt){
+  if(G&&G.thief&&G.thief.phase!=='idle'){
+    drawSecurityCCTV(vW,vH);
+  } else if(G&&G.tftGrokArt){
     drawTftGrokArt(G.tftGrokArt,vW,vH);
   } else if(G&&G.tftParty>0){
     // ── PARTY!! on Admira screen — show DS artist ──
@@ -8379,6 +8637,65 @@ function drawIsoThief(th){
       tx('😈',x+7,y-35,'#fff',12,'center');
       cx.globalAlpha=1;
     }
+  }
+}
+
+// ── GUARDIA CIVIL — personaje de seguridad ─────────────────────
+function drawIsoGuardiaCivil(gc){
+  if(!gc||gc.phase==='idle') return;
+  const x=gc.x,y=gc.y;
+  drawGuardiaCivil(x,y,gc.dir||1,gc.aFrame||0,tt);
+  if(gc.phase==='entering'){
+    const fadeA=Math.min(1,(820-gc.x)/150);
+    if(fadeA>0.05){
+      cx.globalAlpha=fadeA;
+      r(x-18,y-48,66,15,'#102010dd');
+      rx(x-18,y-48,66,15,'#55aa55',1.5);
+      tx('GUARDIA CIVIL',x+15,y-37,'#77dd77',7,'center');
+      cx.globalAlpha=1;
+    }
+  } else if(gc.phase==='patrolling'){
+    cx.globalAlpha=0.55+0.25*Math.sin(tt*0.12);
+    tx('VIGILANCIA',x+7,y-36,'#77dd77',7,'center');
+    cx.globalAlpha=1;
+  } else if(gc.phase==='leaving'){
+    cx.globalAlpha=0.75;
+    tx('OK',x+7,y-36,'#77dd77',8,'center');
+    cx.globalAlpha=1;
+  }
+}
+
+// ── OPINADOR — visita rápida al tótem de opinión ───────────────
+function drawIsoOpinador(op){
+  if(!op||op.phase==='idle') return;
+  const x=op.x,y=op.y;
+  const look=op.look||{shirt:4,hair:2,skin:1,pants:1,shoes:0,accessory:1};
+  chibi(x,y,op.dir||1,look.shirt||4,look.hair||2,op.aFrame||0,op.phase==='voting',tt,1,false,look);
+  if(op.phase==='entering'){
+    const fadeA=Math.min(1,(820-op.x)/150);
+    if(fadeA>0.05){
+      cx.globalAlpha=fadeA;
+      r(x-18,y-48,62,15,'#202838dd');
+      rx(x-18,y-48,62,15,'#55ccff',1.4);
+      tx('OPINADOR',x+13,y-37,'#9fe7ff',7,'center');
+      cx.globalAlpha=1;
+    }
+  } else if(op.phase==='voting'){
+    const face=['😊','😐','😡'][op.voteFace||0];
+    cx.globalAlpha=0.65+0.25*Math.sin(tt*0.2);
+    tx(face,x+7,y-36,'#ffffff',12,'center');
+    cx.globalAlpha=1;
+  }
+  if(op.bTimer>0&&op.bMsg){
+    const msg=op.bMsg;
+    const bw=Math.min(110,msg.length*5.5+12),bh=14;
+    const bx=x+7-bw/2,by=y-28;
+    cx.globalAlpha=Math.min(1,op.bTimer/12);
+    r(bx,by,bw,bh,'#eef8ffee');
+    rx(bx,by,bw,bh,'#55ccff',1);
+    tx(msg.slice(0,22),bx+6,by+10,'#1a3344',7);
+    r(x+4,by+bh,4,4,'#eef8ffee');
+    cx.globalAlpha=1;
   }
 }
 
@@ -10207,7 +10524,12 @@ window.xtAPI = (function(){
       'Hora tienda: '+hour,
       'Clima: '+weather,
       'Puerta: '+(G&&G.doorMode?G.doorMode:'auto'),
+      'Ladrón: '+(G&&G.thief?G.thief.phase:'n/a'),
+      'Guardia Civil: '+(G&&G.guardiaCivil?G.guardiaCivil.phase:'n/a'),
+      'DJ: '+(G&&G.staff&&G.staff.some(s=>s.hired&&s.role===4&&!s.fired)?'on':'off'),
+      'Opinador: '+(G&&G.opinador?G.opinador.phase:'n/a'),
       'AdmiraLive: '+(G&&G.admiraLiveMsg?G.admiraLiveMsg:'off'),
+      'AdmiraTube: '+(G&&G.admiraTube&&G.admiraTube.active?(G.admiraTube.videoId+' ('+(G.admiraTube.screens||2)+' pantallas, audio '+(G.admiraTube.audio!==false?'on':'off')+')'):'off'),
       'Lámpara: '+(elgatoState.on?'ON':'OFF'),
       'AC: '+(acOn?'ON':'OFF'),
       'Aroma: '+(aromaOn?'ON':'OFF'),
@@ -10259,6 +10581,188 @@ window.xtAPI = (function(){
     showEv('AdmiraLive en LED','#55ccff');
     setManagerSayBubble('AdmiraLive: '+G.admiraLiveMsg);
     return 'AdmiraLive en pantalla LED: '+G.admiraLiveMsg;
+  }
+
+  function setAdmiraTube(arg){
+    const err=needsGame();if(err)return err;
+    const clean=String(arg||'').trim();
+    if(!clean) return 'Uso: /AdmiraTube URL [1|2] [audio|mute] o /AdmiraTube off';
+    if(['off','stop','clear','limpiar','borrar'].includes(clean.toLowerCase())){
+      G.admiraTube=null;
+      syncAdmiraTubeFrames();
+      updateVideoPosition();
+      showEv('AdmiraTube desactivado','#55ccff');
+      return 'AdmiraTube desactivado';
+    }
+    const parsed=parseAdmiraTubeArg(clean);
+    const videoId=extractYouTubeId(parsed.url);
+    if(!videoId) return 'No reconozco ese vídeo de YouTube. Usa una URL de YouTube o un ID de 11 caracteres.';
+    G.admiraTube={active:true,videoId,url:parsed.url,screens:parsed.screens,audio:parsed.audio};
+    videoPlaying=true;
+    videoPaused=false;
+    dsVideoEl.pause();
+    syncAdmiraTubeFrames();
+    updateVideoPosition();
+    showEv('AdmiraTube en pantallas','#55ccff');
+    setManagerSayBubble('AdmiraTube listo');
+    return 'AdmiraTube mostrando YouTube en '+parsed.screens+' pantalla'+(parsed.screens===1?'':'s')+' con audio '+(parsed.audio?'activado':'silenciado')+': '+videoId;
+  }
+
+  function setClockTime(arg){
+    const err=needsGame();if(err)return err;
+    const raw=String(arg||'').trim().toLowerCase().replace(',', '.');
+    if(!raw) return 'Uso: /reloj HH:MM o /reloj 14.5';
+    let h,m;
+    const colon=raw.match(/^(\d{1,2})[:h](\d{1,2})$/);
+    if(colon){
+      h=Number(colon[1]);m=Number(colon[2]);
+    } else {
+      const n=Number(raw);
+      if(!Number.isFinite(n)) return 'Hora no válida. Usa /reloj 14:30 o /reloj 14.5';
+      h=Math.floor(n);m=Math.round((n-h)*60);
+    }
+    if(!Number.isFinite(h)||!Number.isFinite(m)||h<0||h>23||m<0||m>59) return 'Hora fuera de rango. Usa 00:00 a 23:59';
+    G.gameTime=clampNumber(h+m/60,0,23.99);
+    G.weekTimer=Math.floor(((G.gameTime-shopTimeSettings.openHour)/(shopTimeSettings.closeHour-shopTimeSettings.openHour))*CFG.WEEK_TICKS);
+    _clockH=Math.floor(G.gameTime)%12;
+    _clockM=Math.floor((G.gameTime%1)*60);
+    showEv('Reloj: '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'),'#55ccff');
+    return 'Reloj actualizado a '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+  }
+
+  function ensureThief(){
+    if(!G.thief) G.thief={phase:'idle',cooldown:3600,x:820,y:0,dir:-1,aFrame:0,aTimer:0,targetCol:5,targetRow:3,path:null,pathIdx:0,lootTimer:0,caught:false};
+    return G.thief;
+  }
+
+  function setThiefCommand(arg){
+    const err=needsGame();if(err)return err;
+    const clean=String(arg||'').trim().toLowerCase();
+    const th=ensureThief();
+    const doorIso=toIso(ISO.cols,3);
+    const startX=820,startY=doorIso.y-20;
+    if(['on','entrar','entra','start','robar','ladron','ladrón'].includes(clean)){
+      th.targetCol=3+Math.floor(Math.random()*6);
+      th.targetRow=1+Math.floor(Math.random()*4);
+      th.phase='sneaking';
+      th.x=startX;th.y=startY;th.dir=-1;th.aFrame=0;th.aTimer=0;th.caught=false;th.lootTimer=0;th.cooldown=9999;
+      G.doorOpen=80;
+      showEv('🚨 ¡Ladrón entrando! CCTV en pantalla principal',P.red);
+      SFX.inspectionAlarm();
+      setManagerSayBubble('¡Ladrón en puerta!');
+      return 'Ladrón activado: entrando por la puerta';
+    }
+    if(['off','salir','sale','stop','fuera','idle'].includes(clean)){
+      if(th.phase==='idle') return 'No hay ladrón activo';
+      th.phase='fleeing';
+      th.caught=true;
+      th.cooldown=9999;
+      G.doorOpen=80;
+      showEv('🛡 Ladrón expulsado','#55ccff');
+      return 'Ladrón saliendo de la tienda';
+    }
+    return 'Uso: /ladron on | /ladron off';
+  }
+
+  function ensureGuardiaCivil(){
+    if(!G.guardiaCivil) G.guardiaCivil={phase:'idle',x:820,y:0,dir:-1,aFrame:0,aTimer:0,patrolTimer:0,targetCol:9,targetRow:3};
+    return G.guardiaCivil;
+  }
+
+  function setGuardiaCivilCommand(arg){
+    const err=needsGame();if(err)return err;
+    const clean=String(arg||'').trim().toLowerCase();
+    const gc=ensureGuardiaCivil();
+    const doorIso=toIso(ISO.cols,3);
+    const startX=820,startY=doorIso.y-20;
+    if(['on','entrar','entra','start','vigilar','guardia','gc'].includes(clean)){
+      gc.targetCol=9;gc.targetRow=3;
+      gc.phase='entering';
+      gc.x=startX;gc.y=startY;gc.dir=-1;gc.aFrame=0;gc.aTimer=0;gc.patrolTimer=2400;gc.autoLeave=false;
+      gc.baseX=0;gc.baseY=0;
+      G.doorOpen=80;
+      monitorAlert={active:true,timer:240,msg:'GUARDIA CIVIL',color:'#1d4d28'};
+      showEv('👮 Guardia Civil entrando en tienda','#55aa55');
+      setManagerSayBubble('Guardia Civil en tienda');
+      return 'Guardia Civil activado: entrando por la puerta';
+    }
+    if(['off','salir','sale','stop','fuera','idle'].includes(clean)){
+      if(gc.phase==='idle') return 'No hay Guardia Civil activo';
+      gc.phase='leaving';
+      gc.autoLeave=false;
+      G.doorOpen=80;
+      showEv('👮 Guardia Civil saliendo','#55ccff');
+      return 'Guardia Civil saliendo de la tienda';
+    }
+    return 'Uso: /guardiacivil on | /guardiacivil off';
+  }
+
+  function setDJCommand(arg){
+    const err=needsGame();if(err)return err;
+    const clean=String(arg||'').trim().toLowerCase();
+    const slot=G.staff?G.staff.findIndex(s=>s.role===4):-1;
+    if(slot<0) return 'No hay slot DJ en este modelo de tienda';
+    const dj=G.staff[slot];
+    if(['on','start','contratar','entra','entrar','dj','novah'].includes(clean||'on')){
+      if(dj.hired&&!dj.fired) return 'DJ ya está activo';
+      if(dj.hired&&dj.fired){
+        dj.fired=false;dj.fireBubble=false;dj.clickBubble=0;
+        dj.navTarget=null;dj.navPath=null;dj.navPathIdx=0;
+        showEv('🎧 DJ vuelve a cabina','#cc44aa');
+        return 'DJ reactivado';
+      }
+      const beforeMoney=G.money;
+      const res=window.xtAPI.hire(slot);
+      if(res&&res.ok) return 'DJ activado: '+dj.name+' entra como al contratarlo en el menú';
+      if(G.money===beforeMoney) return res&&res.message?res.message:'No se pudo activar el DJ';
+      return 'DJ activado';
+    }
+    if(['off','stop','salir','sale','fuera','despedir'].includes(clean)){
+      if(!dj.hired||dj.fired) return 'DJ ya está apagado';
+      doAction('fire'+slot);
+      return 'DJ saliendo de la tienda';
+    }
+    return 'Uso: /dj on | /dj off';
+  }
+
+  function ensureOpinador(){
+    if(!G.opinador) G.opinador={phase:'idle',x:820,y:0,dir:-1,aFrame:0,aTimer:0,voteTimer:0,voteFace:0,look:null,opinion:''};
+    return G.opinador;
+  }
+
+  function setOpinadorCommand(arg){
+    const err=needsGame();if(err)return err;
+    const clean=String(arg||'').trim();
+    const low=clean.toLowerCase();
+    const op=ensureOpinador();
+    const doorIso=toIso(ISO.cols,3);
+    const startX=820,startY=doorIso.y-20;
+    if(['off','stop','salir','sale','fuera','idle'].includes(low)){
+      if(op.phase==='idle') return 'No hay opinador activo';
+      op.phase='leaving';op.bTimer=60;op.bMsg='Me voy';G.doorOpen=80;
+      return 'Opinador saliendo de la tienda';
+    }
+    if(!low||low==='on'||low.startsWith('on ')||['happy','feliz','positivo','neutral','sad','triste','negativo','malo','bueno'].some(w=>low.includes(w))){
+      let face=0;
+      if(/sad|triste|negativo|malo|enfadado|mal/i.test(low)) face=2;
+      else if(/neutral|regular|medio|ok/i.test(low)) face=1;
+      else if(/happy|feliz|positivo|bueno|genial|bien/i.test(low)) face=0;
+      else face=Math.random()<0.68?0:Math.random()<0.78?1:2;
+      const opinions=[
+        ['Muy buena experiencia','Me encanta la tienda','Volveré pronto'],
+        ['Está correcto','Todo en orden','Puede mejorar'],
+        ['Falta producto','No me convence','Hay que mejorar']
+      ];
+      op.phase='entering';
+      op.x=startX;op.y=startY;op.dir=-1;op.aFrame=0;op.aTimer=0;op.voteTimer=0;op.voteFace=face;
+      op.look={shirt:2+Math.floor(Math.random()*5),hair:Math.floor(Math.random()*6),skin:Math.floor(Math.random()*6),pants:Math.floor(Math.random()*3),shoes:0,accessory:Math.random()<0.45?1:0};
+      op.opinion=clean.replace(/^on\s*/i,'').trim()||opinions[face][Math.floor(Math.random()*opinions[face].length)];
+      op.bTimer=80;op.bMsg='Voy al tótem';
+      G.doorOpen=80;SFX.doorBell();
+      showEv('💬 Opinador entrando hacia el tótem','#55ccff');
+      return 'Opinador activado: entra, opina en el tótem y se marcha';
+    }
+    return 'Uso: /opinador on | /opinador off | /opinador happy|neutral|sad';
   }
 
   function setGameField(field,value){
@@ -10329,6 +10833,7 @@ window.xtAPI = (function(){
       '/visit com|tec|del|gc',
       '/weather normal|rain|sun',
       '/time am|pm|night',
+      '/reloj 14:30',
       '/set money 12000 | /money 12000',
       '/set sat 90 | /sat 90',
       '/set fame 80 | /fame 80',
@@ -10338,6 +10843,10 @@ window.xtAPI = (function(){
       '/set customers 30',
       '/song 1 | /song bad bunny',
       '/pause | /resume | /menu',
+      '/dj on | /dj off',
+      '/opinador on | /opinador off',
+      '/ladron on | /ladron off',
+      '/guardiacivil on | /guardiacivil off',
       '/door open | /door close | /door auto',
       '/lamp',
       '/music | /next | /prev',
@@ -10345,7 +10854,8 @@ window.xtAPI = (function(){
       '/say texto',
       '/grok pregunta | /ask pregunta',
       '/draw dibujo | /dibuja dibujo',
-      '/AdmiraLive texto | /AdmiraLive off'
+      '/AdmiraLive texto | /AdmiraLive off',
+      '/AdmiraTube URL 1|2 audio|mute | /AdmiraTube off'
     ].join('\n');
   }
 
@@ -10371,17 +10881,24 @@ window.xtAPI = (function(){
         return setGameField(cmd,arg);
       }
       if(cmd==='song'||cmd==='track') return setSong(arg);
+      if(cmd==='dj'||cmd==='djnovah'||cmd==='novah') return setDJCommand(arg);
+      if(cmd==='opinador'||cmd==='opinion'||cmd==='opinión') return setOpinadorCommand(arg);
+      if(cmd==='reloj'||cmd==='clock') return setClockTime(arg);
+      if(cmd==='ladron'||cmd==='ladrón'||cmd==='thief') return setThiefCommand(arg);
+      if(cmd==='guardiacivil'||cmd==='guardia-civil'||cmd==='gc') return setGuardiaCivilCommand(arg);
+      if(cmd==='guardia') return setGuardiaCivilCommand(arg.replace(/^civil\s+/i,''));
       if(cmd==='admiralive'||cmd==='live'||cmd==='led') return setAdmiraLive(arg);
+      if(cmd==='admiratube'||cmd==='tube'||cmd==='youtube') return setAdmiraTube(arg);
       if(cmd==='pause'){
         const err=needsGame();if(err)return err;
-        state=S.PAUSE;return 'Juego pausado';
+        state=S.PAUSE;resizeCanvas();return 'Juego pausado';
       }
       if(cmd==='resume'||cmd==='game'){
         const err=needsGame();if(err)return err;
-        state=S.GAME;return 'Juego reanudado';
+        state=S.GAME;resizeCanvas();return 'Juego reanudado';
       }
       if(cmd==='menu'){
-        startTransition(S.MENU);return 'Volviendo al menú';
+        startTransition(S.MENU);setTimeout(resizeCanvas,80);return 'Volviendo al menú';
       }
       if(cmd==='hire'){
         if(arg==='all') return api.hireAll().message;
@@ -10509,7 +11026,7 @@ window.xtAPI = (function(){
 
   setInterval(pollTelegramCommands,2500);
   setInterval(monitorGameForTelegram,3000);
-  telegramSend('Admira XP v9.2 online. Usa /help para ver comandos.').then(res=>{
+  telegramSend('Admira XP v9.11 online. Usa /help para ver comandos.').then(res=>{
     appendTelegramLog(res.ok?'bot':'err','AdmiraXPBot',res.ok?'Online enviado a Telegram':res.message);
   });
   console.log('%cTelegram bridge ready — game <-> bot','color:#55ccff;font-size:14px;font-weight:bold');

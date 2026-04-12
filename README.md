@@ -68,7 +68,7 @@ Archivos de apoyo:
 
 ## Telegram
 
-Admira XP v9.2 incluye puente bidireccional con Telegram desde el proxy local y una consola inferior 50/50:
+Admira XP v9.11 incluye puente bidireccional con Telegram desde el proxy local y una consola inferior 50/50:
 
 - el juego envia mensajes a Telegram via `POST /telegram/send`;
 - el bot lee mensajes con polling de la Bot API;
@@ -129,6 +129,7 @@ Comandos soportados desde Telegram:
 - `/visit com`, `/visit tec`, `/visit del`, `/visit gc`
 - `/weather normal`, `/weather rain`, `/weather sun`
 - `/time am`, `/time pm`, `/time night`
+- `/reloj 14:30`, `/reloj 9.5`
 - `/set money 12000`, `/money 12000`
 - `/set sat 90`, `/sat 90`
 - `/set fame 80`, `/fame 80`
@@ -138,12 +139,60 @@ Comandos soportados desde Telegram:
 - `/set customers 30`
 - `/song 1`, `/song bad bunny`
 - `/pause`, `/resume`, `/menu`
+- `/dj on`, `/dj off` activa o desactiva la figura del DJ como cuando se contrata desde el menu.
+- `/opinador on`, `/opinador off` hace entrar un personaje que deja su opinion en el totem y se marcha; tambien acepta `happy`, `neutral` o `sad`.
+- `/ladron on`, `/ladron off` fuerza la entrada y salida del ladron; al activarse, la camara CCTV muestra la puerta en la pantalla principal.
+- `/guardiacivil on`, `/guardiacivil off` fuerza la entrada y salida del Guardia Civil; si hay ladron activo, lo intercepta.
 - `/door open`, `/door close`, `/door auto`
 - `/lamp`, `/music`, `/next`, `/prev`, `/save`
 - `/say texto` muestra el texto como bocadillo del Store Manager en la tienda.
 - `/grok pregunta`, `/ask pregunta` consulta a Grok y muestra la respuesta en el panel del juego.
 - `/draw dibujo`, `/dibuja dibujo` pide a Grok un pixel art y lo pinta en la pantalla principal de la pared larga.
 - `/AdmiraLive texto` publica un mensaje en tiempo real en la pantalla LED de la pared larga; `/AdmiraLive off` lo limpia.
+- `/AdmiraTube URL 1|2 audio|mute` muestra un vídeo de YouTube en una o dos pantallas de signage; por defecto intenta sonar con audio y `/AdmiraTube off` vuelve al vídeo normal.
+
+## Personajes y escenas en vivo
+
+La v9.11 convierte Telegram en una consola de dirección de escena. Los personajes entran y salen por la puerta del local, respetan el canvas isométrico y actualizan los paneles del juego.
+
+| Comando | Personaje / escena | Efecto |
+|---------|--------------------|--------|
+| `/ladron on` | Ladrón | Entra por la puerta, activa alerta y la pantalla principal cambia a CCTV. |
+| `/ladron off` | Ladrón | El ladrón sale o huye de la tienda. |
+| `/guardiacivil on` | Guardia Civil | Entra, patrulla la tienda y si hay ladrón activo lo intercepta. |
+| `/guardiacivil off` | Guardia Civil | Sale por la puerta. |
+| `/dj on` | DJ Novah | Activa el DJ real del staff, música, luces, vídeo DJ y cabina. |
+| `/dj off` | DJ Novah | Desactiva el DJ y restaura la reproducción normal. |
+| `/opinador on` | Opinador | Entra, va al tótem de satisfacción, deja opinión y se marcha. |
+| `/opinador happy` | Opinador | Fuerza opinión positiva. |
+| `/opinador neutral` | Opinador | Fuerza opinión neutra. |
+| `/opinador sad` | Opinador | Fuerza opinión negativa. |
+| `/door open` / `/door close` | Puerta | Abre o cierra manualmente la puerta. |
+
+## Pantallas conectadas
+
+| Comando | Pantalla | Efecto |
+|---------|----------|--------|
+| `/say texto` | Store Manager | Muestra un bocadillo sobre el Store Manager. |
+| `/AdmiraLive texto` | LED pared larga | Publica texto en tiempo real en el LED. |
+| `/draw dibujo` | Pantalla principal | Pide a Grok un pixel art y lo pinta en la pantalla grande. |
+| `/grok pregunta` | Panel del juego | Consulta Grok y devuelve respuesta dentro del juego y Telegram. |
+| `/AdmiraTube URL 1 audio` | Signage | Muestra YouTube en una pantalla con audio. |
+| `/AdmiraTube URL 2 mute` | Signage | Muestra YouTube en dos pantallas sin audio. |
+| `/AdmiraTube off` | Signage | Vuelve a la reproducción normal del juego. |
+
+## Prueba rápida local
+
+1. Arranca `node elgato-proxy.js`.
+2. Abre `http://localhost:9124/?v=20260412-v911-opinador`.
+3. Entra en partida.
+4. Envía desde Telegram o desde la consola inferior:
+   - `/dj on`
+   - `/ladron on`
+   - `/guardiacivil on`
+   - `/opinador happy`
+   - `/status`
+5. Comprueba que `/status` refleja `DJ`, `Ladrón`, `Guardia Civil`, `Opinador`, `Puerta`, `AdmiraLive` y `AdmiraTube`.
 
 ## Roadmap
 
