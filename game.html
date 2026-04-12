@@ -112,7 +112,7 @@
 <script src="xtanco-runtime-config.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  ADMIRA XP // THE XPACE OS — XTANCO — v9.13 — 2026-04-12
+//  ADMIRA XP // THE XPACE OS — XTANCO — v9.14 — 2026-04-12
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -766,7 +766,8 @@ const ELGATO={
   proxyPort:Number(ELGATO_CONFIG.proxyPort)||9124,
 };
 const TELEGRAM={
-  enabled:!!TELEGRAM_CONFIG.enabled,
+  proxyUrl:typeof TELEGRAM_CONFIG.proxyUrl==='string'?TELEGRAM_CONFIG.proxyUrl.replace(/\/+$/,''):'',
+  enabled:!!TELEGRAM_CONFIG.enabled||!!TELEGRAM_CONFIG.proxyUrl,
   proxyPort:Number(TELEGRAM_CONFIG.proxyPort)||9124,
   polling:TELEGRAM_CONFIG.polling!==false,
   lastCommandId:0,
@@ -1200,7 +1201,7 @@ function getClientLaunchLabel(client,index){
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'PLATAFORMA OPERATIVA MULTICLIENTE — v9.13',
+    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'PLATAFORMA OPERATIVA MULTICLIENTE — v9.14',
     menuDeck:'Catalogo vivo de experiencias por cliente',
     langPick:'SELECCIONA IDIOMA',menuStartBtn:'ABRIR CATALOGO XP',menuHint:'Xtanco ya esta en vivo. Loterias y Retail avanzan en la hoja de lanzamiento.',
     menuGuideBtn:'▶ MANUAL XP',menuSettingsBtn:'⚙ XPACE CONFIG',
@@ -1281,7 +1282,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'MULTI-CLIENT OPERATIONS PLATFORM — v9.13',
+    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'MULTI-CLIENT OPERATIONS PLATFORM — v9.14',
     menuDeck:'Living catalog of client-based experiences',
     langPick:'SELECT LANGUAGE',menuStartBtn:'OPEN XP CATALOG',menuHint:'Xtanco is live. Lottery and Retail are moving through the launch pipeline.',
     menuGuideBtn:'▶ XP MANUAL',menuSettingsBtn:'⚙ XPACE CONFIG',
@@ -4935,7 +4936,7 @@ function drawMenu(){
       r(pbX,pbY,pbW,pbH,'#1a1a2a');r(pbX,pbY,(pbW*pct)|0,pbH,P.neon1);
     }
   }
-  cx.globalAlpha=0.3;tx('Admira XP // The Xpace OS · v9.13 · 2026-04-12',W/2,H-8,P.gray,6,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('Admira XP // The Xpace OS · v9.14 · 2026-04-12',W/2,H-8,P.gray,6,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
@@ -10377,7 +10378,7 @@ window.xtAPI = (function(){
 
   if(!TELEGRAM.enabled){
     setTelegramUiStatus('modo local',false);
-    appendTelegramLog('bot','AdmiraXPBot','Modo publico/local: los comandos funcionan dentro del juego. Para enviar/recibir Telegram real, abre con node elgato-proxy.js y xtanco.config.local.json.');
+    appendTelegramLog('bot','AdmiraXPBot','Modo local: los comandos funcionan dentro del juego. Para enviar/recibir Telegram real, configura telegram.proxyUrl o abre con node elgato-proxy.js.');
     console.log('%cTelegram console local mode — configure XTANCO_TELEGRAM_BOT_TOKEN for real bot bridge','color:#55ccff');
   } else {
     setTelegramUiStatus('conectado',false);
@@ -10385,6 +10386,7 @@ window.xtAPI = (function(){
   }
 
   function telegramUrl(path){
+    if(TELEGRAM.proxyUrl) return TELEGRAM.proxyUrl+path;
     return `http://localhost:${TELEGRAM.proxyPort}${path}`;
   }
 
@@ -11045,7 +11047,7 @@ window.xtAPI = (function(){
   setInterval(pollTelegramCommands,2500);
   setInterval(monitorGameForTelegram,3000);
   if(TELEGRAM.enabled){
-    telegramSend('Admira XP v9.13 online. Usa /help para ver comandos.').then(res=>{
+    telegramSend('Admira XP v9.14 online. Usa /help para ver comandos.').then(res=>{
       appendTelegramLog(res.ok?'bot':'err','AdmiraXPBot',res.ok?'Online enviado a Telegram':res.message);
     });
   }

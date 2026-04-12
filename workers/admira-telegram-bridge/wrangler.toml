@@ -1,0 +1,14 @@
+name = "admira-telegram-bridge"
+main = "src/index.js"
+compatibility_date = "2025-12-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://csilvasantin.github.io,http://localhost:9124,http://127.0.0.1:9124"
+
+[[durable_objects.bindings]]
+name = "COMMAND_STORE"
+class_name = "TelegramCommandStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TelegramCommandStore"]

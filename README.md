@@ -68,7 +68,7 @@ Archivos de apoyo:
 
 ## Telegram
 
-Admira XP v9.13 incluye puente bidireccional con Telegram desde el proxy local, Grok publico via Cloudflare Worker y una consola inferior 50/50:
+Admira XP v9.14 incluye puente bidireccional con Telegram via Cloudflare Worker o proxy local, Grok publico via Cloudflare Worker y una consola inferior 50/50:
 
 - el juego envia mensajes a Telegram via `POST /telegram/send`;
 - el bot lee mensajes con polling de la Bot API;
@@ -77,7 +77,7 @@ Admira XP v9.13 incluye puente bidireccional con Telegram desde el proxy local, 
 - la mitad derecha muestra enviados, recibidos y respuestas de AdmiraXPBot.
 - `/grok` y `/ask` conectan AdmiraXPBot con Grok via el proxy local o via Cloudflare Worker, sin exponer la API key al navegador.
 - En GitHub Pages, Grok usa `https://admira-grok-proxy.csilvasantin.workers.dev`.
-- En GitHub Pages la consola aparece en modo publico/local: ejecuta comandos dentro del juego sin enviar mensajes reales a Telegram, porque los tokens no se publican.
+- En GitHub Pages, Telegram usa `https://admira-telegram-bridge.csilvasantin.workers.dev`; el token del bot vive como secret de Cloudflare.
 
 Configuracion local:
 
@@ -92,7 +92,8 @@ Configuracion local:
   "botToken": "TOKEN_DE_BOTFATHER",
   "chatId": "CHAT_ID_O_GRUPO",
   "allowedChatIds": ["CHAT_ID_O_GRUPO"],
-  "polling": true
+  "polling": true,
+  "proxyUrl": "https://admira-telegram-bridge.csilvasantin.workers.dev"
 }
 ```
 
@@ -130,6 +131,13 @@ Grok en la version publica:
 - Para actualizar el secret: `wrangler secret put XAI_API_KEY --config workers/admira-grok-proxy/wrangler.toml`.
 - Para publicar el worker: `wrangler deploy --config workers/admira-grok-proxy/wrangler.toml`.
 
+Telegram en la version publica:
+
+- El navegador llama a `https://admira-telegram-bridge.csilvasantin.workers.dev/telegram/send`, `/telegram/reply` y `/telegram/commands`.
+- Telegram entrega mensajes al webhook seguro del Worker y el Worker los guarda en una cola Durable Object.
+- Los secrets de Cloudflare son `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_ALLOWED_CHAT_IDS` y `TELEGRAM_WEBHOOK_SECRET`.
+- Para publicar el worker: `wrangler deploy --config workers/admira-telegram-bridge/wrangler.toml`.
+
 Comandos soportados desde Telegram:
 
 - `/status`, `/staff`, `/stock`
@@ -164,7 +172,7 @@ Comandos soportados desde Telegram:
 
 ## Personajes y escenas en vivo
 
-La v9.13 convierte Telegram y la consola local/publica en una consola de dirección de escena. Los personajes entran y salen por la puerta del local, respetan el canvas isométrico y actualizan los paneles del juego.
+La v9.14 convierte Telegram y la consola local/publica en una consola de dirección de escena. Los personajes entran y salen por la puerta del local, respetan el canvas isométrico y actualizan los paneles del juego.
 
 | Comando | Personaje / escena | Efecto |
 |---------|--------------------|--------|

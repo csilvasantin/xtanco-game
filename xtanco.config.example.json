@@ -17,7 +17,8 @@
     "botToken": "replace-with-botfather-token",
     "chatId": "replace-with-chat-id",
     "allowedChatIds": ["replace-with-chat-id"],
-    "polling": true
+    "polling": true,
+    "proxyUrl": "https://admira-telegram-bridge.csilvasantin.workers.dev"
   },
   "grok": {
     "apiKey": "replace-with-xai-api-key",

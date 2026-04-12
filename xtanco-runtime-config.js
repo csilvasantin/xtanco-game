@@ -18,7 +18,8 @@
     },
     telegram: {
       proxyPort: 9124,
-      enabled: false,
+      enabled: true,
+      proxyUrl: 'https://admira-telegram-bridge.csilvasantin.workers.dev',
       polling: true,
       defaultChatId: '',
     },
