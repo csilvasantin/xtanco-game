@@ -26,7 +26,7 @@
     .btn-save{background:#225522;color:#66ff66;border:1px solid #44cc44 !important}
     .btn-edit{background:#332255;color:#bb88ff;border:1px solid #8866cc !important}
     .btn-menu{background:#553311;color:#ffcc66;border:1px solid #cc9933 !important}
-    #telegramDock{display:none;position:fixed;left:0;bottom:0;height:116px;background:#030b12;border:2px solid #163c4a;border-bottom:none;color:#d9f7ff;font-family:monospace;z-index:30;gap:8px;padding:8px}
+    #telegramDock{display:none;position:fixed;left:0;bottom:0;height:164px;background:#030b12;border:2px solid #163c4a;border-bottom:none;color:#d9f7ff;font-family:monospace;z-index:30;gap:8px;padding:8px}
     #telegramDock.show{display:flex}
     .tg-pane{min-width:0;flex:1;display:flex;flex-direction:column;border:1px solid #1d5260;border-radius:6px;background:#06131d;overflow:hidden}
     .tg-head{height:20px;flex:0 0 20px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;background:#0b2230;color:#8defff;font-size:9px;font-weight:bold;text-transform:uppercase}
@@ -36,8 +36,12 @@
     .tg-actions{height:28px;display:flex;gap:6px;padding:5px 6px;background:#071720;border-top:1px solid #14323c}
     .tg-actions button{border:1px solid #2a7585;border-radius:6px;background:#0c2a35;color:#bff7ff;font-family:monospace;font-size:10px;font-weight:bold;padding:2px 8px;cursor:pointer}
     .tg-actions button.primary{background:#14525f;color:#ffffff;border-color:#4ac6d8}
-    .tg-diagnostics{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;border-bottom:1px solid #14323c;background:#04111a;font-size:9px;line-height:1.3;color:#9ec7d0}
-    .tg-diagnostics span{display:inline-flex;max-width:100%;padding:1px 5px;border:1px solid #1d5260;border-radius:4px;background:#071720;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .tg-diagnostics{display:flex;flex-direction:column;gap:6px;padding:6px 8px;border-bottom:1px solid #14323c;background:#04111a;font-size:9px;line-height:1.3;color:#9ec7d0}
+    .tg-card{display:flex;flex-direction:column;gap:4px;padding:5px 6px;border:1px solid #1d5260;border-radius:6px;background:#071720}
+    .tg-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#bff7ff;font-size:9px;font-weight:bold;text-transform:uppercase}
+    .tg-card-status{color:#9ec7d0;font-size:8px;font-weight:normal;text-transform:none}
+    .tg-card-badges{display:flex;flex-wrap:wrap;gap:4px}
+    .tg-card-badges span{display:inline-flex;max-width:100%;padding:1px 5px;border:1px solid #1d5260;border-radius:4px;background:#04111a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     #telegramLog{flex:1;overflow:auto;padding:7px 8px;background:#02080d;font-size:10px;line-height:1.35;color:#cceef5;white-space:pre-wrap}
     .tg-line{margin:0 0 5px 0;border-left:2px solid #25515b;padding-left:6px}
     .tg-line.in{border-left-color:#52d37c;color:#dcffe6}
@@ -47,7 +51,7 @@
     #mobileSkipBtn{display:none;position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:40;border:2px solid #55ffcc;border-radius:6px;background:#06110f;color:#d9fff5;font-family:monospace;font-size:13px;font-weight:bold;letter-spacing:0;padding:10px 18px;box-shadow:0 0 14px rgba(85,255,204,.45);cursor:pointer;touch-action:manipulation}
     #mobileSkipBtn.show{display:block}
     @media (max-width:700px){
-      #telegramDock{height:142px;gap:5px;padding:5px}
+      #telegramDock{height:192px;gap:5px;padding:5px}
       #telegramComposer{font-size:11px}
       .tg-head{font-size:8px}
       #telegramLog{font-size:9px}
@@ -96,19 +100,32 @@
     <div class="tg-head"><span>Enviar a Telegram</span><span class="tg-status" id="telegramSendStatus">AdmiraXPBot</span></div>
     <textarea id="telegramComposer" placeholder="Escribe para @AdmiraXPBot... Enter envia, Shift+Enter salto"></textarea>
     <div class="tg-actions">
-      <button class="primary" id="telegramSendBtn">Enviar</button>
-      <button id="telegramHelpBtn">/help</button>
-      <button id="telegramStatusBtn">/status</button>
+      <button type="button" class="primary" id="telegramSendBtn">Enviar</button>
+      <button type="button" id="telegramHelpBtn">/help</button>
+      <button type="button" id="telegramStatusBtn">/status</button>
     </div>
   </div>
   <div class="tg-pane">
     <div class="tg-head"><span>Conversacion</span><span class="tg-status" id="telegramConnStatus">conectando</span></div>
     <div class="tg-diagnostics" id="telegramDiagnostics">
-      <span id="telegramOrigin">Telegram: detectando</span>
-      <span id="grokOrigin">Grok: detectando</span>
-      <span id="telegramLastCommand">Ultimo: -</span>
-      <span id="telegramLatency">Latencia: -</span>
-      <span id="telegramMessageMeta">Msg: -</span>
+      <div class="tg-card">
+        <div class="tg-card-head"><span>Telegram</span><span class="tg-card-status" id="telegramCardStatus">detectando</span></div>
+        <div class="tg-card-badges">
+          <span id="telegramOrigin">Origen: detectando</span>
+          <span id="telegramLastCommand">Ultimo: -</span>
+          <span id="telegramLatency">Latencia: -</span>
+          <span id="telegramMessageMeta">Msg: -</span>
+        </div>
+      </div>
+      <div class="tg-card">
+        <div class="tg-card-head"><span>Grok</span><span class="tg-card-status" id="grokCardStatus">detectando</span></div>
+        <div class="tg-card-badges">
+          <span id="grokOrigin">Origen: detectando</span>
+          <span id="grokPrompt">Prompt: -</span>
+          <span id="grokLatency">Latencia: -</span>
+          <span id="grokMeta">Modelo: -</span>
+        </div>
+      </div>
     </div>
     <div id="telegramLog"></div>
   </div>
@@ -940,6 +957,11 @@ const GROK={
   enabled:!!GROK_CONFIG.enabled||!!GROK_CONFIG.proxyUrl,
   proxyPort:Number(GROK_CONFIG.proxyPort)||9124,
   model:typeof GROK_CONFIG.model==='string'?GROK_CONFIG.model:'grok-4-latest',
+  lastPrompt:'',
+  lastAnswer:'',
+  lastLatencyMs:0,
+  lastModel:'',
+  lastError:'',
 };
 let elgatoState={on:false,busy:false,notify:0,error:false,skyRed:false,manualOff:false}; // lamp starts OFF (auto-on at dusk)
 let monitorAlert={active:false,timer:0,msg:'',color:''};
@@ -1852,12 +1874,12 @@ function restoreSavedFurnitureLayout(){
   shopFurnitureVisible=true;
   edSelIdx=-1;
   try{buildWalkGrid();}catch(e){}
+  return 'Mobiliario en inicio: restaurado en la última posición guardada.';
 }
 function setFurnitureVisibility(value){
   const visible=value!==false;
   if(visible){
-    restoreSavedFurnitureLayout();
-    return 'Mobiliario ON: restaurado en la última posición guardada.';
+    return restoreSavedFurnitureLayout();
   }
   shopFurnitureVisible=false;
   edSelIdx=-1;
@@ -10558,13 +10580,19 @@ window.xtAPI = (function(){
   const logEl=document.getElementById('telegramLog');
   const sendStatus=document.getElementById('telegramSendStatus');
   const connStatus=document.getElementById('telegramConnStatus');
+  const telegramCardStatus=document.getElementById('telegramCardStatus');
   const telegramOriginEl=document.getElementById('telegramOrigin');
-  const grokOriginEl=document.getElementById('grokOrigin');
   const lastCommandEl=document.getElementById('telegramLastCommand');
   const latencyEl=document.getElementById('telegramLatency');
   const messageMetaEl=document.getElementById('telegramMessageMeta');
+  const grokCardStatus=document.getElementById('grokCardStatus');
+  const grokOriginEl=document.getElementById('grokOrigin');
+  const grokPromptEl=document.getElementById('grokPrompt');
+  const grokLatencyEl=document.getElementById('grokLatency');
+  const grokMetaEl=document.getElementById('grokMeta');
   const BRIDGE_MODE=TELEGRAM.proxyUrl?'public-worker':(TELEGRAM.enabled?'local-proxy':'offline');
   const GROK_MODE=GROK.proxyUrl?'public-worker':(GROK.enabled?'local-proxy':'offline');
+  const GROK_MEMORY={events:[],dialog:[]};
 
   function modeLabel(mode){
     if(mode==='public-worker') return 'Worker publico';
@@ -10578,6 +10606,21 @@ window.xtAPI = (function(){
     return clean.length>max?clean.slice(0,max-1)+'...':clean;
   }
 
+  function rememberMemory(bucket,text){
+    const clean=String(text||'').replace(/\s+/g,' ').trim();
+    if(!clean||!GROK_MEMORY[bucket]) return;
+    GROK_MEMORY[bucket].push(clean);
+    while(GROK_MEMORY[bucket].length>10) GROK_MEMORY[bucket].shift();
+  }
+
+  function buildGrokContext(extra){
+    const sections=[formatStatus()];
+    if(GROK_MEMORY.events.length) sections.push('Eventos recientes:\n- '+GROK_MEMORY.events.join('\n- '));
+    if(GROK_MEMORY.dialog.length) sections.push('Interacciones recientes:\n- '+GROK_MEMORY.dialog.join('\n- '));
+    if(extra) sections.push(String(extra).trim());
+    return sections.join('\n\n').slice(0,5000);
+  }
+
   function refreshTelegramDiagnostics(){
     const bridge=TELEGRAM.bridgeStatus||{};
     const telegramSource=bridge.webhook&&bridge.webhook.url?trimLabel(String(bridge.webhook.url).replace(/^https?:\/\//,''),38):trimLabel(TELEGRAM.proxyUrl.replace(/^https?:\/\//,''),38);
@@ -10587,8 +10630,8 @@ window.xtAPI = (function(){
       || (bridge.lastReplyMessageId?'Reply #'+bridge.lastReplyMessageId:'')
       || (bridge.lastSentMessageId?'Send #'+bridge.lastSentMessageId:'')
       || 'Msg: -';
-    if(telegramOriginEl) telegramOriginEl.textContent='Telegram: '+modeLabel(BRIDGE_MODE)+(TELEGRAM.proxyUrl?' '+trimLabel(TELEGRAM.proxyUrl.replace(/^https?:\/\//,''),38):'');
-    if(grokOriginEl) grokOriginEl.textContent='Grok: '+modeLabel(GROK_MODE)+(GROK.proxyUrl?' '+trimLabel(GROK.proxyUrl.replace(/^https?:\/\//,''),38):'');
+    if(telegramCardStatus) telegramCardStatus.textContent=TELEGRAM.lastError?'error':(BRIDGE_MODE==='public-worker'?'worker publico':modeLabel(BRIDGE_MODE));
+    if(telegramOriginEl) telegramOriginEl.textContent='Origen: '+modeLabel(BRIDGE_MODE)+(TELEGRAM.proxyUrl?' '+trimLabel(TELEGRAM.proxyUrl.replace(/^https?:\/\//,''),38):'');
     if(lastCommandEl){
       const last=TELEGRAM.lastError
         ? 'Error: '+trimLabel(TELEGRAM.lastError,42)
@@ -10598,7 +10641,15 @@ window.xtAPI = (function(){
     if(latencyEl) latencyEl.textContent=latencyLabel;
     if(messageMetaEl) messageMetaEl.textContent=trimLabel(messageMeta.startsWith('Msg:')||messageMeta.startsWith('Send')||messageMeta.startsWith('Reply')?messageMeta:'Msg: '+messageMeta,42);
     if(bridge.webhook&&bridge.webhook.url&&telegramSource&&telegramOriginEl){
-      telegramOriginEl.textContent='Telegram: Worker publico '+telegramSource;
+      telegramOriginEl.textContent='Origen: Worker publico '+telegramSource;
+    }
+    if(grokCardStatus) grokCardStatus.textContent=GROK.lastError?'error':(GROK.lastModel||modeLabel(GROK_MODE));
+    if(grokOriginEl) grokOriginEl.textContent='Origen: '+modeLabel(GROK_MODE)+(GROK.proxyUrl?' '+trimLabel(GROK.proxyUrl.replace(/^https?:\/\//,''),38):'');
+    if(grokPromptEl) grokPromptEl.textContent='Prompt: '+trimLabel(GROK.lastPrompt||'-',42);
+    if(grokLatencyEl) grokLatencyEl.textContent=GROK.lastLatencyMs>0?'Latencia: '+Math.round(GROK.lastLatencyMs)+' ms':'Latencia: -';
+    if(grokMetaEl){
+      const meta=GROK.lastError?'Error: '+trimLabel(GROK.lastError,28):(GROK.lastModel?'Modelo: '+trimLabel(GROK.lastModel,28):(GROK.lastAnswer?'Resp: '+trimLabel(GROK.lastAnswer,28):'Modelo: -'));
+      grokMetaEl.textContent=meta;
     }
   }
 
@@ -10637,6 +10688,18 @@ window.xtAPI = (function(){
     while(logEl.children.length>80) logEl.removeChild(logEl.firstChild);
     logEl.scrollTop=logEl.scrollHeight;
   }
+
+  const originalShowEv=showEv;
+  showEv=function(msg,col){
+    rememberMemory('events',msg);
+    return originalShowEv(msg,col);
+  };
+
+  const originalSetManagerSayBubble=setManagerSayBubble;
+  setManagerSayBubble=function(text){
+    rememberMemory('dialog','Manager: '+text);
+    return originalSetManagerSayBubble(text);
+  };
 
   if(dock){
     ['keydown','keyup','keypress','mousedown','mouseup','click','touchstart','touchend','wheel'].forEach(ev=>{
@@ -10696,6 +10759,7 @@ window.xtAPI = (function(){
       TELEGRAM.lastCommandLabel='Salida manual';
       TELEGRAM.lastLatencyMs=performance.now()-startedAt;
       TELEGRAM.lastMessageMeta='Send #'+(out.data&&out.data.messageId?out.data.messageId:out.messageId||'-');
+      rememberMemory('dialog','Telegram enviado: '+text);
       setTelegramUiStatus('enviado #'+(out.data&&out.data.messageId?out.data.messageId:out.messageId||''),false);
       refreshBridgeStatus();
       return {ok:true,message:'Enviado a Telegram',data:out};
@@ -10724,6 +10788,7 @@ window.xtAPI = (function(){
       TELEGRAM.lastCommandLabel='Respuesta a Telegram';
       TELEGRAM.lastLatencyMs=performance.now()-startedAt;
       TELEGRAM.lastMessageMeta='Reply a #'+cmd.telegramMessageId;
+      rememberMemory('dialog','Telegram reply: '+text);
       setTelegramUiStatus('respondido',false);
       refreshBridgeStatus();
     }catch(e){
@@ -10738,18 +10803,29 @@ window.xtAPI = (function(){
     if(!clean) return 'Uso: /grok pregunta';
     if(!GROK.enabled) return 'Grok no está configurado. Añade XAI_API_KEY o grok.apiKey en xtanco.config.local.json y reinicia el proxy, o configura grok.proxyUrl.';
     try{
+      const startedAt=performance.now();
+      GROK.lastPrompt=clean;
+      GROK.lastError='';
       const out=await grokFetch('/grok/ask',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
           prompt:clean,
-          context:formatStatus()
+          context:buildGrokContext()
         })
       });
       const answer=String(out.text||'').trim();
+      GROK.lastLatencyMs=performance.now()-startedAt;
+      GROK.lastModel=out.model||GROK.model;
+      GROK.lastAnswer=answer;
+      rememberMemory('dialog','Grok prompt: '+clean);
+      rememberMemory('dialog','Grok respuesta: '+answer);
       if(answer) setManagerSayBubble(answer);
+      refreshTelegramDiagnostics();
       return 'Grok ('+(out.model||GROK.model)+'):\n'+(answer||'Sin respuesta');
     }catch(e){
+      GROK.lastError=e.message;
+      refreshTelegramDiagnostics();
       return 'Error Grok: '+e.message;
     }
   }
@@ -10781,23 +10857,33 @@ window.xtAPI = (function(){
       'Dibujo pedido: '+clean
     ].join('\n');
     try{
+      const startedAt=performance.now();
+      GROK.lastPrompt='draw: '+clean;
+      GROK.lastError='';
       const out=await grokFetch('/grok/ask',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
           prompt:artPrompt,
-          context:'Genera solamente JSON para renderizar pixel art en un canvas 32x18.'
+          context:buildGrokContext('Genera solamente JSON para renderizar pixel art en un canvas 32x18.')
         })
       });
       const art=parseGrokArtJson(out.text);
+      GROK.lastLatencyMs=performance.now()-startedAt;
+      GROK.lastModel=out.model||GROK.model;
+      GROK.lastAnswer='Pixel art listo';
+      rememberMemory('dialog','Grok draw: '+clean);
       let result=setTftGrokArt(art);
       if(result.includes('demasiado vacío')){
         result=setTftGrokArt(makeFallbackGrokArt(clean,art.title||clean));
         result+=' (Grok envió poco pixel; he usado interpretación visible.)';
       }
       setManagerSayBubble('He pintado: '+((G&&G.tftGrokArt&&G.tftGrokArt.title)||clean));
+      refreshTelegramDiagnostics();
       return result;
     }catch(e){
+      GROK.lastError=e.message;
+      refreshTelegramDiagnostics();
       return 'Error dibujando con Grok: '+e.message;
     }
   }
@@ -11148,7 +11234,7 @@ window.xtAPI = (function(){
       '/pause | /resume | /menu',
       '/dj on | /dj off',
       '/opinador on | /opinador off',
-      '/mobiliario on | /mobiliario off',
+      '/mobiliario inicio | /mobiliario on | /mobiliario off',
       '/ladron on | /ladron off',
       '/guardiacivil on | /guardiacivil off',
       '/door open | /door close | /door auto',
@@ -11189,9 +11275,10 @@ window.xtAPI = (function(){
       if(cmd==='opinador'||cmd==='opinion'||cmd==='opinión') return setOpinadorCommand(arg);
       if(cmd==='mobiliario'||cmd==='furniture'||cmd==='muebles'){
         const clean=arg.toLowerCase().trim();
+        if(['inicio','start','home','base','reset','origen'].includes(clean)) return restoreSavedFurnitureLayout();
         if(['on','show','mostrar','visible','restore','restaurar'].includes(clean)) return setFurnitureVisibility(true);
         if(['off','hide','ocultar','invisible','none','desaparecer'].includes(clean)) return setFurnitureVisibility(false);
-        return 'Uso: /mobiliario on | /mobiliario off';
+        return 'Uso: /mobiliario inicio | /mobiliario on | /mobiliario off';
       }
       if(cmd==='reloj'||cmd==='clock') return setClockTime(arg);
       if(cmd==='ladron'||cmd==='ladrón'||cmd==='thief') return setThiefCommand(arg);
@@ -11278,6 +11365,7 @@ window.xtAPI = (function(){
           TELEGRAM.lastCommandId=Math.max(TELEGRAM.lastCommandId,cmd.id);
           TELEGRAM.lastCommandLabel=(cmd.from||'Telegram')+': '+String(cmd.text||'');
           TELEGRAM.lastMessageMeta='Inbound #'+(cmd.telegramMessageId||'-');
+          rememberMemory('dialog','Telegram inbound: '+cmd.text);
           appendTelegramLog('in',(cmd.from||'Telegram'),cmd.text);
           const answer=await executeTelegramText(cmd.text);
           appendTelegramLog('bot','AdmiraXPBot',answer);
@@ -11328,6 +11416,7 @@ window.xtAPI = (function(){
   async function sendComposerText(text){
     const clean=String(text||'').trim();
     if(!clean) return;
+    rememberMemory('dialog','Consola local: '+clean);
     appendTelegramLog('out','Juego',clean);
     if(clean.startsWith('/')){
       const answer=await executeTelegramText(clean);
