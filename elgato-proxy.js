@@ -248,6 +248,11 @@ const TELEGRAM = {
   pollingBlocked: false,
   bot: null,
   webhookInfo: null,
+  lastQueuedCommand: null,
+  lastSentMessageId: 0,
+  lastReplyMessageId: 0,
+  lastOutboundChatId: '',
+  lastActivityAt: '',
   lastError: '',
 };
 
@@ -348,6 +353,8 @@ function queueTelegramCommand(message) {
   };
   TELEGRAM.commands.push(command);
   TELEGRAM.commands = TELEGRAM.commands.slice(-100);
+  TELEGRAM.lastQueuedCommand = command;
+  TELEGRAM.lastActivityAt = command.receivedAt;
   console.log(`[Telegram] queued #${command.id} from ${command.chatId}: ${command.text}`);
 }
 
@@ -590,6 +597,11 @@ const server = http.createServer((req, res) => {
         allowedChatIds: CONFIG.telegramAllowedChatIds,
         queued: TELEGRAM.commands.length,
         lastCommandId: TELEGRAM.nextCommandId - 1,
+        lastQueuedCommand: TELEGRAM.lastQueuedCommand,
+        lastSentMessageId: TELEGRAM.lastSentMessageId,
+        lastReplyMessageId: TELEGRAM.lastReplyMessageId,
+        lastOutboundChatId: TELEGRAM.lastOutboundChatId,
+        lastActivityAt: TELEGRAM.lastActivityAt,
         lastError: TELEGRAM.lastError,
         webhook: TELEGRAM.webhookInfo,
       });
@@ -631,6 +643,9 @@ const server = http.createServer((req, res) => {
             parse_mode: body.parseMode || undefined,
             disable_web_page_preview: true,
           });
+          TELEGRAM.lastSentMessageId = Number(result.message_id || 0);
+          TELEGRAM.lastOutboundChatId = String(result.chat.id);
+          TELEGRAM.lastActivityAt = new Date().toISOString();
           sendJson(res, 200, { ok: true, messageId: result.message_id, chatId: String(result.chat.id) });
         } catch (sendError) {
           TELEGRAM.lastError = sendError.message;
@@ -675,6 +690,9 @@ const server = http.createServer((req, res) => {
             reply_to_message_id: body.replyToMessageId || undefined,
             disable_web_page_preview: true,
           });
+          TELEGRAM.lastReplyMessageId = Number(result.message_id || 0);
+          TELEGRAM.lastOutboundChatId = String(result.chat.id);
+          TELEGRAM.lastActivityAt = new Date().toISOString();
           sendJson(res, 200, { ok: true, messageId: result.message_id, chatId: String(result.chat.id) });
         } catch (sendError) {
           TELEGRAM.lastError = sendError.message;
