@@ -26,11 +26,13 @@ const DEFAULT_CONFIG = {
     chatId: '',
     allowedChatIds: [],
     polling: true,
+    proxyUrl: 'https://admira-telegram-bridge.csilvasantin.workers.dev',
   },
   grok: {
     apiKey: '',
     baseUrl: 'https://api.x.ai/v1',
     model: 'grok-4-latest',
+    proxyUrl: 'https://admira-grok-proxy.csilvasantin.workers.dev',
     systemPrompt: 'Eres AdmiraXPBot dentro del juego Admira XP. Responde en español, de forma útil y breve. Si recibes estado del juego, úsalo como contexto.',
   },
 };
@@ -105,9 +107,11 @@ const CONFIG = {
       : FILE_CONFIG.telegram && FILE_CONFIG.telegram.allowedChatIds
   ),
   telegramPolling: resolveBoolean('XTANCO_TELEGRAM_POLLING', FILE_CONFIG.telegram && FILE_CONFIG.telegram.polling, DEFAULT_CONFIG.telegram.polling),
+  telegramProxyUrl: resolveString('XTANCO_TELEGRAM_PROXY_URL', FILE_CONFIG.telegram && FILE_CONFIG.telegram.proxyUrl, DEFAULT_CONFIG.telegram.proxyUrl).replace(/\/+$/, ''),
   grokApiKey: resolveString('XAI_API_KEY', FILE_CONFIG.grok && FILE_CONFIG.grok.apiKey, DEFAULT_CONFIG.grok.apiKey),
   grokBaseUrl: resolveString('XTANCO_GROK_BASE_URL', FILE_CONFIG.grok && FILE_CONFIG.grok.baseUrl, DEFAULT_CONFIG.grok.baseUrl).replace(/\/+$/, ''),
   grokModel: resolveString('XTANCO_GROK_MODEL', FILE_CONFIG.grok && FILE_CONFIG.grok.model, DEFAULT_CONFIG.grok.model),
+  grokProxyUrl: resolveString('XTANCO_GROK_PROXY_URL', FILE_CONFIG.grok && FILE_CONFIG.grok.proxyUrl, DEFAULT_CONFIG.grok.proxyUrl).replace(/\/+$/, ''),
   grokSystemPrompt: resolveString('XTANCO_GROK_SYSTEM_PROMPT', FILE_CONFIG.grok && FILE_CONFIG.grok.systemPrompt, DEFAULT_CONFIG.grok.systemPrompt),
   gameDir: GAME_DIR,
 };
@@ -171,12 +175,14 @@ function runtimeConfigScript() {
     telegram: {
       proxyPort: CONFIG.port,
       enabled: Boolean(CONFIG.telegramBotToken),
+      proxyUrl: CONFIG.telegramProxyUrl,
       polling: CONFIG.telegramPolling,
       defaultChatId: CONFIG.telegramChatId,
     },
     grok: {
       proxyPort: CONFIG.port,
       enabled: Boolean(CONFIG.grokApiKey),
+      proxyUrl: CONFIG.grokProxyUrl,
       model: CONFIG.grokModel,
     },
   })};
@@ -239,7 +245,9 @@ const TELEGRAM = {
   commands: [],
   nextCommandId: 1,
   pollingActive: false,
+  pollingBlocked: false,
   bot: null,
+  webhookInfo: null,
   lastError: '',
 };
 
@@ -251,6 +259,29 @@ function isAllowedTelegramChat(chatId) {
   if (!chatId) return false;
   if (!CONFIG.telegramAllowedChatIds.length) return true;
   return CONFIG.telegramAllowedChatIds.includes(String(chatId));
+}
+
+async function refreshTelegramWebhookInfo() {
+  if (!isTelegramConfigured()) {
+    TELEGRAM.webhookInfo = null;
+    return null;
+  }
+  try {
+    const info = await telegramApi('getWebhookInfo');
+    TELEGRAM.webhookInfo = {
+      url: info.url || '',
+      hasCustomCertificate: Boolean(info.has_custom_certificate),
+      pendingUpdateCount: Number(info.pending_update_count || 0),
+      lastErrorDate: Number(info.last_error_date || 0),
+      lastErrorMessage: info.last_error_message || '',
+      maxConnections: Number(info.max_connections || 0),
+      ipAddress: info.ip_address || '',
+    };
+    return TELEGRAM.webhookInfo;
+  } catch (error) {
+    TELEGRAM.webhookInfo = null;
+    return null;
+  }
 }
 
 function telegramApi(method, payload = {}) {
@@ -321,7 +352,7 @@ function queueTelegramCommand(message) {
 }
 
 async function pollTelegramOnce() {
-  if (!isTelegramConfigured() || TELEGRAM.pollingActive) return;
+  if (!isTelegramConfigured() || TELEGRAM.pollingActive || TELEGRAM.pollingBlocked) return;
   TELEGRAM.pollingActive = true;
   try {
     const updates = await telegramApi('getUpdates', {
@@ -336,8 +367,17 @@ async function pollTelegramOnce() {
     }
     TELEGRAM.lastError = '';
   } catch (error) {
-    TELEGRAM.lastError = error.message;
-    console.warn(`[Telegram] poll failed: ${error.message}`);
+    if (/can't use getUpdates method while webhook is active/i.test(error.message)) {
+      const webhookInfo = await refreshTelegramWebhookInfo();
+      TELEGRAM.pollingBlocked = true;
+      TELEGRAM.lastError = webhookInfo && webhookInfo.url
+        ? `Webhook activo en ${webhookInfo.url}; desactivalo o usa el bridge publico para entrada Telegram.`
+        : 'Webhook activo; desactivalo antes de usar polling local.';
+      console.warn(`[Telegram] polling disabled: ${TELEGRAM.lastError}`);
+    } else {
+      TELEGRAM.lastError = error.message;
+      console.warn(`[Telegram] poll failed: ${error.message}`);
+    }
   } finally {
     TELEGRAM.pollingActive = false;
   }
@@ -352,7 +392,14 @@ async function initTelegram() {
     TELEGRAM.lastError = error.message;
     console.warn(`[Telegram] getMe failed: ${error.message}`);
   }
+  await refreshTelegramWebhookInfo();
   if (CONFIG.telegramPolling) {
+    if (TELEGRAM.webhookInfo && TELEGRAM.webhookInfo.url) {
+      TELEGRAM.pollingBlocked = true;
+      TELEGRAM.lastError = `Webhook activo en ${TELEGRAM.webhookInfo.url}; el polling local queda desactivado para evitar conflicto.`;
+      console.warn(`[Telegram] polling disabled: ${TELEGRAM.lastError}`);
+      return;
+    }
     setInterval(pollTelegramOnce, 2500);
     pollTelegramOnce();
   }
@@ -533,6 +580,7 @@ const server = http.createServer((req, res) => {
         ok: true,
         configured: isTelegramConfigured(),
         polling: CONFIG.telegramPolling,
+        pollingBlocked: TELEGRAM.pollingBlocked,
         bot: TELEGRAM.bot ? {
           id: TELEGRAM.bot.id,
           username: TELEGRAM.bot.username,
@@ -543,6 +591,7 @@ const server = http.createServer((req, res) => {
         queued: TELEGRAM.commands.length,
         lastCommandId: TELEGRAM.nextCommandId - 1,
         lastError: TELEGRAM.lastError,
+        webhook: TELEGRAM.webhookInfo,
       });
       return;
     }

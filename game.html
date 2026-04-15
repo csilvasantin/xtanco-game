@@ -36,6 +36,8 @@
     .tg-actions{height:28px;display:flex;gap:6px;padding:5px 6px;background:#071720;border-top:1px solid #14323c}
     .tg-actions button{border:1px solid #2a7585;border-radius:6px;background:#0c2a35;color:#bff7ff;font-family:monospace;font-size:10px;font-weight:bold;padding:2px 8px;cursor:pointer}
     .tg-actions button.primary{background:#14525f;color:#ffffff;border-color:#4ac6d8}
+    .tg-diagnostics{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;border-bottom:1px solid #14323c;background:#04111a;font-size:9px;line-height:1.3;color:#9ec7d0}
+    .tg-diagnostics span{display:inline-flex;max-width:100%;padding:1px 5px;border:1px solid #1d5260;border-radius:4px;background:#071720;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     #telegramLog{flex:1;overflow:auto;padding:7px 8px;background:#02080d;font-size:10px;line-height:1.35;color:#cceef5;white-space:pre-wrap}
     .tg-line{margin:0 0 5px 0;border-left:2px solid #25515b;padding-left:6px}
     .tg-line.in{border-left-color:#52d37c;color:#dcffe6}
@@ -101,6 +103,11 @@
   </div>
   <div class="tg-pane">
     <div class="tg-head"><span>Conversacion</span><span class="tg-status" id="telegramConnStatus">conectando</span></div>
+    <div class="tg-diagnostics" id="telegramDiagnostics">
+      <span id="telegramOrigin">Telegram: detectando</span>
+      <span id="grokOrigin">Grok: detectando</span>
+      <span id="telegramLastCommand">Ultimo: -</span>
+    </div>
     <div id="telegramLog"></div>
   </div>
 </div>
@@ -776,6 +783,7 @@ const TELEGRAM={
   proxyPort:Number(TELEGRAM_CONFIG.proxyPort)||9124,
   polling:TELEGRAM_CONFIG.polling!==false,
   lastCommandId:0,
+  lastCommandLabel:'',
   notify:0,
   lastError:'',
   lastState:'',
@@ -10381,7 +10389,7 @@ window.xtAPI = (function(){
 })();
 
 // ═══════════════════════════════════════════════════════════════
-//  Telegram bridge — bidirectional local bot control
+//  Telegram bridge — public workers or local proxy control
 // ═══════════════════════════════════════════════════════════════
 (function(){
   const dock=document.getElementById('telegramDock');
@@ -10392,6 +10400,32 @@ window.xtAPI = (function(){
   const logEl=document.getElementById('telegramLog');
   const sendStatus=document.getElementById('telegramSendStatus');
   const connStatus=document.getElementById('telegramConnStatus');
+  const telegramOriginEl=document.getElementById('telegramOrigin');
+  const grokOriginEl=document.getElementById('grokOrigin');
+  const lastCommandEl=document.getElementById('telegramLastCommand');
+  const BRIDGE_MODE=TELEGRAM.proxyUrl?'public-worker':(TELEGRAM.enabled?'local-proxy':'offline');
+  const GROK_MODE=GROK.proxyUrl?'public-worker':(GROK.enabled?'local-proxy':'offline');
+
+  function modeLabel(mode){
+    if(mode==='public-worker') return 'Worker publico';
+    if(mode==='local-proxy') return 'Proxy local';
+    return 'Sin enlace';
+  }
+
+  function trimLabel(text,max){
+    const clean=String(text||'').replace(/\s+/g,' ').trim();
+    if(!clean) return '-';
+    return clean.length>max?clean.slice(0,max-1)+'...':clean;
+  }
+
+  function refreshTelegramDiagnostics(){
+    if(telegramOriginEl) telegramOriginEl.textContent='Telegram: '+modeLabel(BRIDGE_MODE)+(TELEGRAM.proxyUrl?' '+trimLabel(TELEGRAM.proxyUrl.replace(/^https?:\/\//,''),38):'');
+    if(grokOriginEl) grokOriginEl.textContent='Grok: '+modeLabel(GROK_MODE)+(GROK.proxyUrl?' '+trimLabel(GROK.proxyUrl.replace(/^https?:\/\//,''),38):'');
+    if(lastCommandEl){
+      const last=TELEGRAM.lastError?'Error: '+trimLabel(TELEGRAM.lastError,42):(TELEGRAM.lastCommandLabel?'Ultimo: '+trimLabel(TELEGRAM.lastCommandLabel,42):'Ultimo: -');
+      lastCommandEl.textContent=last;
+    }
+  }
 
   function setTelegramUiStatus(text,isError){
     if(sendStatus) sendStatus.textContent=text;
@@ -10399,6 +10433,7 @@ window.xtAPI = (function(){
       connStatus.textContent=text;
       connStatus.style.color=isError?'#ffb6b6':'#9ec7d0';
     }
+    refreshTelegramDiagnostics();
   }
 
   function appendTelegramLog(kind,label,text){
@@ -10419,13 +10454,16 @@ window.xtAPI = (function(){
   }
 
   if(!TELEGRAM.enabled){
-    setTelegramUiStatus('modo local',false);
-    appendTelegramLog('bot','AdmiraXPBot','Modo local: los comandos funcionan dentro del juego. Para enviar/recibir Telegram real, configura telegram.proxyUrl o abre con node elgato-proxy.js.');
-    console.log('%cTelegram console local mode — configure XTANCO_TELEGRAM_BOT_TOKEN for real bot bridge','color:#55ccff');
+    setTelegramUiStatus('offline',false);
+    appendTelegramLog('bot','AdmiraXPBot','Modo local sin puente activo. Los comandos funcionan dentro del juego. Para conectar Telegram real, configura telegram.proxyUrl o abre el proxy local.');
+    console.log('%cTelegram console offline — configure telegram.proxyUrl or start elgato-proxy.js','color:#55ccff');
   } else {
-    setTelegramUiStatus('conectado',false);
-    appendTelegramLog('bot','AdmiraXPBot','Puente local conectado. Escribe /help o /status.');
+    setTelegramUiStatus(BRIDGE_MODE==='public-worker'?'worker publico':'proxy local',false);
+    appendTelegramLog('bot','AdmiraXPBot',BRIDGE_MODE==='public-worker'
+      ? 'Bridge publico activo. Telegram y Grok salen por Workers. Escribe /help o /status.'
+      : 'Proxy local activo. Escribe /help o /status.');
   }
+  refreshTelegramDiagnostics();
 
   function telegramUrl(path){
     if(TELEGRAM.proxyUrl) return TELEGRAM.proxyUrl+path;
@@ -10453,7 +10491,7 @@ window.xtAPI = (function(){
   async function telegramSend(text){
     if(!text) return {ok:false,message:'Mensaje vacio'};
     if(!TELEGRAM.enabled){
-      setTelegramUiStatus('modo local',false);
+      setTelegramUiStatus('offline',false);
       return {ok:true,message:'Modo local: no enviado a Telegram'};
     }
     try{
@@ -10463,6 +10501,7 @@ window.xtAPI = (function(){
         body:JSON.stringify({text:String(text).slice(0,3900)})
       });
       TELEGRAM.notify=120;TELEGRAM.lastError='';
+      TELEGRAM.lastCommandLabel='Salida manual';
       setTelegramUiStatus('enviado #'+(out.data&&out.data.messageId?out.data.messageId:out.messageId||''),false);
       return {ok:true,message:'Enviado a Telegram',data:out};
     }catch(e){
@@ -10486,6 +10525,7 @@ window.xtAPI = (function(){
         })
       });
       TELEGRAM.notify=120;TELEGRAM.lastError='';
+      TELEGRAM.lastCommandLabel='Respuesta a Telegram';
       setTelegramUiStatus('respondido',false);
     }catch(e){
       TELEGRAM.notify=120;TELEGRAM.lastError=e.message;
@@ -11032,6 +11072,7 @@ window.xtAPI = (function(){
       if(Array.isArray(data.commands)){
         for(const cmd of data.commands){
           TELEGRAM.lastCommandId=Math.max(TELEGRAM.lastCommandId,cmd.id);
+          TELEGRAM.lastCommandLabel=(cmd.from||'Telegram')+': '+String(cmd.text||'');
           appendTelegramLog('in',(cmd.from||'Telegram'),cmd.text);
           const answer=await executeTelegramText(cmd.text);
           appendTelegramLog('bot','AdmiraXPBot',answer);
@@ -11040,6 +11081,7 @@ window.xtAPI = (function(){
         }
       }
       TELEGRAM.lastError='';
+      refreshTelegramDiagnostics();
     }catch(e){
       TELEGRAM.lastError=e.message;
       setTelegramUiStatus('error',true);
@@ -11064,7 +11106,17 @@ window.xtAPI = (function(){
   }
 
   window.xtAPI.telegramSend=telegramSend;
-  window.xtAPI.telegramStatus=function(){return {ok:true,message:'Telegram bridge',data:{enabled:TELEGRAM.enabled,lastCommandId:TELEGRAM.lastCommandId,lastError:TELEGRAM.lastError}};};
+  window.xtAPI.telegramStatus=function(){return {ok:true,message:'Telegram bridge',data:{enabled:TELEGRAM.enabled,lastCommandId:TELEGRAM.lastCommandId,lastError:TELEGRAM.lastError,bridgeMode:BRIDGE_MODE,telegramOrigin:telegramUrl(''),grokOrigin:grokUrl('')}};};
+
+  function shouldAnnounceOnline(){
+    const key='xtanco_tg_online_announce_at';
+    const now=Date.now();
+    let last=0;
+    try{last=Number(sessionStorage.getItem(key)||0);}catch(e){}
+    if(now-last<5*60*1000) return false;
+    try{sessionStorage.setItem(key,String(now));}catch(e){}
+    return true;
+  }
 
   async function sendComposerText(text){
     const clean=String(text||'').trim();
@@ -11095,12 +11147,12 @@ window.xtAPI = (function(){
 
   setInterval(pollTelegramCommands,2500);
   setInterval(monitorGameForTelegram,3000);
-  if(TELEGRAM.enabled){
+  if(TELEGRAM.enabled&&shouldAnnounceOnline()){
     telegramSend('Admira XP v9.16 online. Usa /help para ver comandos.').then(res=>{
       appendTelegramLog(res.ok?'bot':'err','AdmiraXPBot',res.ok?'Online enviado a Telegram':res.message);
     });
   }
-  console.log('%cTelegram bridge ready — game <-> bot','color:#55ccff;font-size:14px;font-weight:bold');
+  console.log('%cTelegram bridge ready — '+modeLabel(BRIDGE_MODE),'color:#55ccff;font-size:14px;font-weight:bold');
 })();
 </script>
 </body>
