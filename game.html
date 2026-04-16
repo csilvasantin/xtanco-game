@@ -374,8 +374,13 @@ function initEQAnalyser(){
   }catch(e){eqAnalyser=null;}
 }
 function startMusic(){
-  // Audio starts disabled by default — user activates via ♪ button
-  musicStarted=true; // mark as ready, but don't auto-play
+  // Audio starts disabled by default — user activates via ♪ button.
+  // Force a silent start in case a previous session left the element playing.
+  musicStarted=true;
+  try{
+    bgMusic.pause();
+    bgMusic.currentTime=0;
+  }catch(e){}
 }
 function toggleMusic(){
   if(bgMusic.paused){bgMusic.play();initEQAnalyser();} else {bgMusic.pause();}
@@ -1115,7 +1120,7 @@ let monitorAlert={active:false,timer:0,msg:'',color:''};
 // ── SHOP TIME SYSTEM ─────────────────────────────────────────
 // Day runs from openHour to closeHour in DAY_DURATION_SEC real seconds
 const SHOP_TIME_DEFAULTS={
-  openHour:9,closeHour:21,dayDurationSec:300,
+  openHour:8,closeHour:22,dayDurationSec:300,
   nowPlaying:'Titi Me Preguntó - Bad Bunny',
   staff:[
     {name:'ANA',role:0},    // Cajera
@@ -1127,7 +1132,18 @@ const SHOP_TIME_DEFAULTS={
 let shopTimeSettings=JSON.parse(JSON.stringify(SHOP_TIME_DEFAULTS));
 // Load/save settings
 function loadShopSettings(){
-  try{const d=localStorage.getItem('xtanco_settings');if(d){Object.assign(shopTimeSettings,JSON.parse(d));}}catch(e){}
+  try{
+    const d=localStorage.getItem('xtanco_settings');
+    if(d){
+      const parsed=JSON.parse(d);
+      Object.assign(shopTimeSettings,parsed);
+      // Migrate legacy default hours to the new Xtanco schedule.
+      if(parsed&&parsed.openHour===9&&parsed.closeHour===21){
+        shopTimeSettings.openHour=SHOP_TIME_DEFAULTS.openHour;
+        shopTimeSettings.closeHour=SHOP_TIME_DEFAULTS.closeHour;
+      }
+    }
+  }catch(e){}
 }
 function saveShopSettings(){
   try{localStorage.setItem('xtanco_settings',JSON.stringify(shopTimeSettings));}catch(e){}
@@ -2249,6 +2265,10 @@ function astarPath(sc,sr,ec,er){
 let G={};
 function initGame(){
   stopAllMedia();
+  try{
+    bgMusic.pause();
+    bgMusic.currentTime=0;
+  }catch(e){}
   // shopLayout is already authoritative in memory (loaded at page start
   // via loadLayout() at line 1203, or updated live by the editor).
   // Do NOT call loadLayout() here — it would overwrite the in-memory
@@ -2784,6 +2804,10 @@ function doAction(id){
   // NPC editor intercepts all clicks when open
   if(npcEdOpen&&handleNPCEditorClick(id))return;
   checkGuidedTut(id);
+  if(id==='turnKioskCall'){
+    callTurnNumber('');
+    return;
+  }
   if(id.startsWith('era')){
     const idx=parseInt(id.slice(3),10);
     if(Number.isFinite(idx)) launchEra(idx);
@@ -3945,7 +3969,9 @@ function updateGame(){
         }
       }
     } else if(c.st==='queue'){
-      const queueOrder=(G.custs||[]).filter(x=>x.st==='queue'||x.st==='buy').sort((a,b)=>(a.queueNumber||9999)-(b.queueNumber||9999));
+      const queueOrder=(G.custs||[])
+        .filter(x=>x.st==='queue'||x.st==='buy')
+        .sort((a,b)=>queueSortWeight(a)-queueSortWeight(b));
       const idx=Math.max(0,queueOrder.findIndex(x=>x.id===c.id));
       const spot=getQueueTarget(idx);
       const targetIso=toIso(spot.col,spot.row);
@@ -5688,20 +5714,6 @@ function drawMenu(){
   r(optX,optY,optW,optH,'#0a0a18');rx(optX,optY,optW,optH,P.gray,1);
   tx(T().menuSettingsBtn,optX+optW/2,optY+18,P.gray,9,'center');
   BTNS['menuSettings']={x:optX,y:optY,w:optW,h:optH};
-  // Auto-start countdown (5 seconds)
-  if(!demoMode){
-    const elapsed=Date.now()-menuEnteredAt;
-    const remaining=Math.max(0,Math.ceil((AUTOSTART_MS-elapsed)/1000));
-    if(remaining>0){
-      cx.globalAlpha=0.5+0.3*Math.abs(Math.sin(tt*0.08));
-      tx('Auto-inicio en '+remaining+'s...',W/2,optY+optH+20,'#88ccaa',9,'center');
-      cx.globalAlpha=1;
-      // Progress bar
-      const pct=Math.min(1,elapsed/AUTOSTART_MS);
-      const pbW=140,pbH=4,pbX=W/2-pbW/2,pbY=optY+optH+26;
-      r(pbX,pbY,pbW,pbH,'#1a1a2a');r(pbX,pbY,(pbW*pct)|0,pbH,P.neon1);
-    }
-  }
   cx.globalAlpha=0.3;tx('Admira XP // The Xpace OS · '+APP_VERSION+' · '+APP_BUILD_DATE,W/2,H-8,P.gray,6,'center');cx.globalAlpha=1;
 }
 
@@ -7763,6 +7775,7 @@ function drawIsoTurnKiosk(col,row){
   r(tabX+2,tabY+2,tabW-4,8,'#0c2433');
   tx('TURNO',tabX+tabW/2,tabY+8,'#8defff',6,'center');
   tx(String(currentTurnNumber()).padStart(3,'0'),tabX+tabW/2,tabY+16,'#d9a83f',8,'center');
+  BTNS['turnKioskCall']={x:tabX-3,y:tabY-3,w:tabW+6,h:tabH+8};
   r(tabX+5,tabY+tabH+1,12,3,'#d7b45b');
   tx('ticket',tabX+tabW/2,tabY+tabH+11,'#f3dc9e',5,'center');
 }
@@ -9795,6 +9808,74 @@ function currentTurnNumber(){
   return active.queueNumber||(((active.id||1)-1)%999+1);
 }
 
+function formatTurnNumber(n){
+  return String(Math.max(0,Math.round(Number(n)||0))).padStart(3,'0');
+}
+
+function getWaitingTurnCustomers(){
+  if(!G||!Array.isArray(G.custs)) return [];
+  return G.custs
+    .filter(c=>c&&c.queueNumber>0&&c.st!=='leave')
+    .sort((a,b)=>(a.queueNumber||9999)-(b.queueNumber||9999));
+}
+
+function retargetCustomerToQueue(c,index=0){
+  if(!c) return;
+  const curTile=screenToIso(c.x+5,c.y+20);
+  const fromCol=Math.max(0,Math.min(ISO.cols-1,Math.round(curTile.col)));
+  const fromRow=Math.max(0,Math.min(ISO.rows-1,Math.round(curTile.row)));
+  const target=getQueueTarget(index);
+  c.path=astarPath(fromCol,fromRow,target.col,target.row)||[];
+  c.pathIdx=0;
+  c.roamPath=null;
+  c.roamIdx=0;
+  c.leavePath=null;
+  c.leaveIdx=0;
+  c.st='queue';
+}
+
+function queueSortWeight(c){
+  if(!c) return 99999;
+  if(G&&G.turns&&G.turns.servingId!=null&&c.id===G.turns.servingId) return -1;
+  return c.queueNumber||99999;
+}
+
+function callTurnNumber(value){
+  const err=needsGame();if(err) return err;
+  const waiting=getWaitingTurnCustomers();
+  if(waiting.length===0) return 'No hay turnos en cola.';
+
+  const requested=String(value||'').trim();
+  let target=null;
+  if(requested){
+    const match=requested.match(/\d+/);
+    if(!match) return 'Uso: /turno 12';
+    const turnNumber=Math.max(1,Math.min(999,parseInt(match[0],10)));
+    target=waiting.find(c=>(c.queueNumber||0)===turnNumber)||null;
+    if(!target) return 'No existe el turno '+formatTurnNumber(turnNumber)+' en cola.';
+  }else{
+    target=waiting.find(c=>c.id!==(G.turns&&G.turns.servingId))||waiting[0]||null;
+  }
+  if(!target) return 'No hay turnos en cola.';
+
+  const active=(G.custs||[]).find(c=>G.turns&&c.id===G.turns.servingId)||null;
+  if(active&&active.id!==target.id&&active.st==='buy'){
+    active.serviceTimer=0;
+    active.bMsg='Espera tu turno';
+    active.bTimer=90;
+    retargetCustomerToQueue(active,1);
+  }
+
+  G.turns.current=target.queueNumber||0;
+  G.turns.servingId=target.id;
+  target.serviceTimer=Math.max(110,target.serviceTimer||0);
+  target.bMsg='Turno '+formatTurnNumber(target.queueNumber)+' en caja';
+  target.bTimer=130;
+  retargetCustomerToQueue(target,0);
+  showEv('Turno '+formatTurnNumber(target.queueNumber)+' a caja','#55ccff');
+  return 'Llamando turno '+formatTurnNumber(target.queueNumber)+'.';
+}
+
 function assignCustomerTurn(c){
   if(!c||c.queueNumber||!G||!G.turns) return c&&c.queueNumber?c.queueNumber:0;
   c.queueNumber=G.turns.next++;
@@ -11196,15 +11277,11 @@ function loop(){
   try{updateMobileSkipButton();}catch(e){}
   try{if(videoPlaying){updateVideoPosition();updateDSCanvases();}}catch(e){}
 
-  // Auto-start game after 5 seconds idle on MENU — skip straight to game
-  if(!demoMode&&state===S.MENU&&Date.now()-menuEnteredAt>=AUTOSTART_MS){
-    lang=menuSel===0?'es':'en';clientSel=0;modelSel=0;initGame();
-    state=S.GAME;startVideo();startMusic();guidedTut={active:false,step:0,timer:0};
-    menuEnteredAt=Date.now(); // prevent re-trigger
-  }
-  // Check idle → activate demo mode after 30 seconds from MENU only
-  if(!demoMode&&state===S.MENU&&Date.now()-lastInput>DEMO_IDLE_MS){
-    demoMode=true;demoTimer=0;
+  // No auto-start from selection screens:
+  // the game should only begin after an explicit action that enters gameplay.
+  if(demoMode&&state!==S.GAME){
+    demoMode=false;
+    demoTimer=0;
   }
 
   cx.clearRect(0,0,W,H);
@@ -12246,6 +12323,7 @@ window.xtAPI = (function(){
       '/weather normal|rain|sun',
       '/time am|pm|night',
       '/reloj 14:30',
+      '/turno | /turno 12',
       '/set money 12000 | /money 12000',
       '/set sat 90 | /sat 90',
       '/set fame 80 | /fame 80',
@@ -12316,6 +12394,7 @@ window.xtAPI = (function(){
         return 'Uso: /mobiliario inicio | /mobiliario on | /mobiliario off';
       }
       if(cmd==='reloj'||cmd==='clock') return setClockTime(arg);
+      if(cmd==='turno'||cmd==='turn'||cmd==='ticket') return callTurnNumber(arg);
       if(cmd==='ladron'||cmd==='ladrón'||cmd==='thief') return setThiefCommand(arg);
       if(cmd==='guardiacivil'||cmd==='guardia-civil'||cmd==='gc') return setGuardiaCivilCommand(arg);
       if(cmd==='guardia') return setGuardiaCivilCommand(arg.replace(/^civil\s+/i,''));
@@ -12517,8 +12596,6 @@ window.xtAPI = (function(){
 
   async function sendComposerText(text){
     const clean=String(text||'').trim();
-    telegramComposeStart=false;
-    setTelegramFocusMode(true,true);
     if(!clean) return;
     rememberMemory('dialog','Consola local: '+clean);
     appendTelegramLog('out','Juego',clean);
