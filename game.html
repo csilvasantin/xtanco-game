@@ -200,7 +200,7 @@
 <script src="xtanco-runtime-config.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  ADMIRA XP // THE XPACE OS — XTANCO — v9.16 — 2026-04-12
+//  ADMIRA XP // THE XPACE OS — XTANCO — runtime version/build
 // ═══════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
@@ -217,6 +217,19 @@ const PRELOAD_TARGETS={
   amiga:{id:'amiga', tape:'AMIGA500', label:'Amiga 500 Preview', media:'video', videoSrc:PRELOAD_AMIGA_VIDEO_SRC, program:'AMIGA500/PREVIO'},
 };
 const APP_META=window.XTANCO_APP||{build:'dev'};
+const APP_VERSION=APP_META.version||'dev';
+const APP_BUILD=String(APP_META.build||'dev');
+const APP_BUILD_DATE=(()=>{
+  const match=APP_BUILD.match(/^(\d{4})(\d{2})(\d{2})/);
+  return match ? (match[1]+'-'+match[2]+'-'+match[3]) : APP_BUILD;
+})();
+const APP_VERSION_LABEL='Admira XP '+APP_VERSION;
+const APP_FORMULA_LABEL=(()=>{
+  const match=APP_BUILD.match(/^(\d{4})(\d{2})(\d{2})/);
+  if(!match) return 'Admira · '+APP_VERSION;
+  const [,year,month,day]=match;
+  return 'Admira '+year+' · '+day+' · '+month+' · '+APP_VERSION;
+})();
 const AMIGA_PAGE0_TODO=['BUY SHIP','FIND BIGWHOOP','DEFEAT LECHUCK','MARRY ELAINE!'];
 let amigaPage0Todo=AMIGA_PAGE0_TODO.slice();
 let amigaPage0TodoLoaded=false;
@@ -1550,7 +1563,7 @@ function getClientLaunchLabel(client,index){
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
   es:{
-    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'PLATAFORMA OPERATIVA MULTICLIENTE — v9.16',
+    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'PLATAFORMA OPERATIVA MULTICLIENTE',
     menuDeck:'Catalogo vivo de experiencias por cliente',
     langPick:'SELECCIONA IDIOMA',menuStartBtn:'ABRIR CATALOGO XP',menuHint:'Xtanco ya esta en vivo. Loterias y Retail avanzan en la hoja de lanzamiento.',
     menuGuideBtn:'▶ MANUAL XP',menuSettingsBtn:'⚙ XPACE CONFIG',
@@ -1631,7 +1644,7 @@ const LANGS={
     modelStart:['€3.500','€2.800','€4.500','€6.000'],
   },
   en:{
-    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'MULTI-CLIENT OPERATIONS PLATFORM — v9.16',
+    menuEyebrow:'THE XPACE OS',menuTitle:'ADMIRA XP',menuSub:'MULTI-CLIENT OPERATIONS PLATFORM',
     menuDeck:'Living catalog of client-based experiences',
     langPick:'SELECT LANGUAGE',menuStartBtn:'OPEN XP CATALOG',menuHint:'Xtanco is live. Lottery and Retail are moving through the launch pipeline.',
     menuGuideBtn:'▶ XP MANUAL',menuSettingsBtn:'⚙ XPACE CONFIG',
@@ -5689,7 +5702,7 @@ function drawMenu(){
       r(pbX,pbY,pbW,pbH,'#1a1a2a');r(pbX,pbY,(pbW*pct)|0,pbH,P.neon1);
     }
   }
-  cx.globalAlpha=0.3;tx('Admira XP // The Xpace OS · v9.16 · 2026-04-12',W/2,H-8,P.gray,6,'center');cx.globalAlpha=1;
+  cx.globalAlpha=0.3;tx('Admira XP // The Xpace OS · '+APP_VERSION+' · '+APP_BUILD_DATE,W/2,H-8,P.gray,6,'center');cx.globalAlpha=1;
 }
 
 // ── INTRO / HOW TO PLAY ───────────────────────────────────────
@@ -5972,6 +5985,11 @@ function drawIntro(){
   const slideTitles=['BIENVENIDA','EL OBJETIVO','LOS CLIENTES','EL STOCK','TU EQUIPO','LA COMPETENCIA','EVENTOS','CONTROLES'];
   r(8,8,170,18,'#0a1020');rx(8,8,170,18,P.neon2,1);
   cx.font='bold 9px monospace';cx.textAlign='left';cx.fillStyle=P.neon2;cx.fillText('▶  '+slideTitles[sl],14,21);
+  // ── Intro version header (top right) ──
+  r(W-286,8,278,30,'#0a1020');rx(W-286,8,278,30,P.neon3,1);
+  cx.textAlign='right';
+  cx.font='bold 9px monospace';cx.fillStyle=P.neon3;cx.fillText(APP_VERSION_LABEL,W-16,20);
+  cx.font='8px monospace';cx.fillStyle=P.uiT3;cx.fillText(APP_FORMULA_LABEL,W-16,31);
 }
 
 // ── PLATFORM SELECT SCREEN ────────────────────────────────────
@@ -12562,7 +12580,7 @@ window.xtAPI = (function(){
   setInterval(refreshBridgeStatus,4000);
   refreshBridgeStatus();
   if(TELEGRAM.enabled&&shouldAnnounceOnline()){
-    telegramSend('Admira XP v9.16 online. Usa /help para ver comandos.').then(res=>{
+    telegramSend('Admira XP '+APP_VERSION+' online. Usa /help para ver comandos.').then(res=>{
       appendTelegramLog(res.ok?'bot':'err','AdmiraXPBot',res.ok?'Online enviado a Telegram':res.message);
     });
   }
