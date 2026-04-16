@@ -54,11 +54,18 @@
     .char-head.clients{color:#ffd86b}
     .char-status{color:#9ec7d0;font-size:7px;font-weight:normal;text-transform:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}
     .char-toggle-btn{border:1px solid #2a7585;border-radius:4px;background:#0c2a35;color:#bff7ff;font-family:monospace;font-size:8px;font-weight:bold;padding:1px 6px;cursor:pointer}
-    .char-body{flex:1;padding:6px 8px;background:#02080d;font-size:10px;line-height:1.3;color:#cceef5;display:flex;flex-direction:column;gap:4px}
-    .char-row{display:grid;grid-template-columns:minmax(58px,1fr) minmax(72px,1fr) minmax(68px,1fr) minmax(54px,1fr) minmax(54px,1fr) minmax(64px,1fr) auto;gap:8px;align-items:center}
+    .char-scroll-btn{border:1px solid #2a7585;border-radius:4px;background:#0c2a35;color:#bff7ff;font-family:monospace;font-size:8px;font-weight:bold;padding:0 5px;height:16px;min-width:18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+    .char-scroll-btn:disabled{opacity:.35;cursor:default}
+    .char-body{flex:1;padding:6px 8px;background:#02080d;font-size:10px;line-height:1.3;color:#cceef5;display:flex;flex-direction:column;gap:2px}
+    .char-row{display:grid;grid-template-columns:42px minmax(86px,1.05fr) minmax(82px,.95fr) minmax(86px,.95fr) 56px 58px 54px auto;gap:5px;align-items:center;padding:2px 4px;border-radius:3px}
+    .char-row.is-head,.char-row.is-summary{padding:0;background:transparent}
+    .char-row.row-even{background:rgba(18,46,58,0.34)}
+    .char-row.row-odd{background:rgba(8,20,28,0.72)}
     .char-row span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .char-row .ok{color:#88ee88}
     .char-row .muted{color:#6c94a1}
+    .char-trigger{display:inline-flex;align-items:center;justify-content:flex-start;padding:0;margin:0;border:none;background:transparent;color:inherit;cursor:pointer}
+    .char-trigger:focus-visible{outline:1px solid #55ccff;outline-offset:2px}
     .char-person{display:flex;align-items:center;gap:6px;min-width:0}
     .char-avatar{position:relative;width:12px;height:16px;flex:0 0 12px}
     .char-avatar i{position:absolute;display:block}
@@ -139,7 +146,7 @@
     <div class="char-body" id="characterTeamBody"></div>
   </div>
   <div class="char-pane clients">
-    <div class="char-head clients"><div class="char-head-left"><span>Clientes</span><button type="button" class="char-toggle-btn" id="characterTeamFocusBtn">Equipo</button></div><span class="char-status" id="characterClientStatus">0 dentro</span></div>
+    <div class="char-head clients"><div class="char-head-left"><span>Clientes</span><button type="button" class="char-toggle-btn" id="characterTeamFocusBtn">Equipo</button></div><div class="char-head-right"><button type="button" class="char-scroll-btn" id="characterClientUpBtn" aria-label="Clientes anteriores">▲</button><button type="button" class="char-scroll-btn" id="characterClientDownBtn" aria-label="Clientes siguientes">▼</button><span class="char-status" id="characterClientStatus">0 dentro</span></div></div>
     <div class="char-body" id="characterClientBody"></div>
   </div>
 </div>
@@ -213,6 +220,7 @@ let amigaPage0Todo=AMIGA_PAGE0_TODO.slice();
 let amigaPage0TodoLoaded=false;
 let telegramDockHidden=false;
 let characterDockFocus='split';
+let characterClientScroll=0;
 let telegramComposeStart=true;
 bootVideoEl.src=PRELOAD_VIDEO_SRC;
 bootVideoEl.loop=false;
@@ -255,24 +263,40 @@ const SFX=(()=>{
 })();
 
 // ── RESPONSIVE FULLSCREEN ────────────────────────────────────
+function isGameplayUiState(currentState){
+  return currentState==='game'||currentState==='pause'||currentState==='editor';
+}
+
+function syncGameplayChrome(){
+  const dock=document.getElementById('telegramDock');
+  const characterDock=document.getElementById('characterDock');
+  let currentState=null;
+  try{currentState=state;}catch(e){currentState=null;}
+  const inGameplay=isGameplayUiState(currentState);
+  if(dock){
+    dock.classList.toggle('show',inGameplay);
+    dock.classList.toggle('hide-dock',telegramDockHidden&&inGameplay);
+    dock.classList.toggle('compose-start',inGameplay&&!telegramDockHidden&&telegramComposeStart);
+  }
+  if(characterDock){
+    characterDock.classList.toggle('show',inGameplay);
+    characterDock.classList.toggle('hide-telegram',telegramDockHidden&&inGameplay);
+    characterDock.classList.toggle('compose-start',inGameplay&&!telegramDockHidden&&telegramComposeStart);
+  }
+}
+
 function resizeCanvas(){
   const vw=window.innerWidth, vh=window.innerHeight;
   const barH=document.getElementById('topBar').classList.contains('show')?34:0;
   const dock=document.getElementById('telegramDock');
   const characterDock=document.getElementById('characterDock');
-  let telegramInGame=false;
-  try{telegramInGame=state==='game';}catch(e){telegramInGame=false;}
-  if(dock){
-    dock.classList.toggle('show',telegramInGame);
-    dock.classList.toggle('hide-dock',telegramDockHidden&&telegramInGame);
-  }
-  if(characterDock) characterDock.classList.toggle('show',telegramInGame);
-  if(characterDock) characterDock.classList.toggle('hide-telegram',telegramDockHidden&&telegramInGame);
-  const composeStart=telegramInGame&&!telegramDockHidden&&telegramComposeStart;
-  if(dock) dock.classList.toggle('compose-start',composeStart);
-  if(characterDock) characterDock.classList.toggle('compose-start',composeStart);
-  const dockH=(telegramInGame&&dock&&!telegramDockHidden&&!composeStart)?dock.offsetHeight:0;
-  const characterDockH=(telegramInGame&&characterDock)?characterDock.offsetHeight:0;
+  syncGameplayChrome();
+  let currentState=null;
+  try{currentState=state;}catch(e){currentState=null;}
+  const inGameplay=isGameplayUiState(currentState);
+  const composeStart=inGameplay&&!telegramDockHidden&&telegramComposeStart;
+  const dockH=(inGameplay&&dock&&!telegramDockHidden&&!composeStart)?dock.offsetHeight:0;
+  const characterDockH=(inGameplay&&characterDock)?characterDock.offsetHeight:0;
   const availH=vh-barH-dockH-characterDockH;
   const ratio=W/H;
   let cw,ch;
@@ -876,7 +900,7 @@ function repositionTopBarSub(){
   subBar.style.right=(window.innerWidth-mr.right)+'px';
 }
 function updateHtmlBar(){
-  const show=state===S.GAME||state===S.PAUSE||state===S.EDITOR;
+  const show=isGameplayUiState(state);
   bbEl.classList.toggle('show',show);
   if(!show||!G||!G.staff){resizeCanvas();return;}
   const staff=G.staff||[];
@@ -9757,17 +9781,21 @@ function drawCharacterGroupsPanel(){
   const clientBody=document.getElementById('characterClientBody');
   const teamFocusBtn=document.getElementById('characterTeamFocusBtn');
   const clientFocusBtn=document.getElementById('characterClientFocusBtn');
+  const clientUpBtn=document.getElementById('characterClientUpBtn');
+  const clientDownBtn=document.getElementById('characterClientDownBtn');
   if(!dock||!teamStatus||!clientStatus||!teamBody||!clientBody) return;
-  if(!G||state!==S.GAME){
+  if(!G||!isGameplayUiState(state)){
     dock.classList.remove('show');
     dock.classList.remove('focus-team');
     teamStatus.textContent='0 total | Caja 0 Repo 0 Aza 0 Mgr 0 DJ 0';
     clientStatus.textContent='0 total | Entr 0 Sal 0 Dentro 0';
     teamBody.innerHTML='';
     clientBody.innerHTML='';
+    characterClientScroll=0;
+    if(clientUpBtn) clientUpBtn.style.display='none';
+    if(clientDownBtn) clientDownBtn.style.display='none';
     return;
   }
-  dock.classList.add('show');
   dock.classList.toggle('focus-team',characterDockFocus==='team');
   if(teamFocusBtn) teamFocusBtn.style.display=characterDockFocus==='team'?'none':'inline-flex';
   if(clientFocusBtn) clientFocusBtn.style.display=characterDockFocus==='team'?'inline-flex':'none';
@@ -9786,14 +9814,30 @@ function drawCharacterGroupsPanel(){
     if(Number.isInteger(s.role)&&roleCounts[s.role]!==undefined) roleCounts[s.role]++;
   });
   const teamMaxRows=2;
-  const clientMaxRows=dock.classList.contains('hide-telegram')?Math.max(2,clients.length):2;
+  const bodyHeight=clientBody.clientHeight||0;
+  const clientVisibleRows=Math.max(3,Math.floor((bodyHeight-22)/22)-1);
+  const clientMaxRows=Math.min(clients.length,clientVisibleRows);
+  const maxClientScroll=Math.max(0,clients.length-clientMaxRows);
+  characterClientScroll=Math.max(0,Math.min(characterClientScroll,maxClientScroll));
+  const visibleClients=clients.slice(characterClientScroll,characterClientScroll+clientMaxRows);
   teamStatus.textContent=hired.length+' total | Caja '+roleCounts[0]+' Repo '+roleCounts[1]+' Aza '+roleCounts[2]+' Mgr '+roleCounts[3]+' DJ '+roleCounts[4];
   clientStatus.textContent=clients.length+' total | Entr '+(G.custIn||0)+' Sal '+(G.custOut||0)+' Dentro '+clients.length;
+  if(clientUpBtn){
+    clientUpBtn.style.display=maxClientScroll>0?'inline-flex':'none';
+    clientUpBtn.disabled=characterClientScroll<=0;
+  }
+  if(clientDownBtn){
+    clientDownBtn.style.display=maxClientScroll>0?'inline-flex':'none';
+    clientDownBtn.disabled=characterClientScroll>=maxClientScroll;
+  }
   teamBody.innerHTML=hired.length
-    ? hired.slice(0,teamMaxRows).map(s=>{
+    ? hired.slice(0,teamMaxRows).map((s,rowIdx)=>{
+        const staffIdx=G.staff.indexOf(s);
         const status=s.busy>0?'ocupado':'listo';
-        return '<div class="char-row">'
-          +staffMiniAvatar(s)+'<span>'+String(s.name||'').toUpperCase()+'</span></span>'
+        const rowClass=rowIdx%2===0?'row-even':'row-odd';
+        return '<div class="char-row '+rowClass+'">'
+          +'<button type="button" class="char-trigger" data-staff-idx="'+staffIdx+'" aria-label="Abrir ficha de '+String(s.name||'miembro')+'" onpointerdown="window.openCharacterDockStaffDetail&&window.openCharacterDockStaffDetail('+staffIdx+');event.preventDefault();event.stopPropagation();return false;" onclick="event.preventDefault();event.stopPropagation();return false;">'+staffMiniAvatar(s)+'</button>'
+          +'<span>'+String(s.name||'').toUpperCase()+'</span>'
           +'<span>'+roleShortLabel(s.role)+' LV'+(s.level||1)+'</span>'
           +'<span>E'+Math.round(s.energy||0)+' M'+Math.round(s.morale||0)+'</span>'
           +'<span class="'+(status==='ocupado'?'ok':'muted')+'">'+status+'</span>'
@@ -9801,19 +9845,22 @@ function drawCharacterGroupsPanel(){
       }).join('')
     : '<div class="char-row"><span class="muted">Sin equipo activo</span><span></span><span></span><span></span></div>';
   if(hired.length>teamMaxRows){
-    teamBody.innerHTML+='<div class="char-row"><span class="muted">+'+(hired.length-teamMaxRows)+' más</span><span></span><span></span><span></span></div>';
+    teamBody.innerHTML+='<div class="char-row is-summary"><span class="muted">+'+(hired.length-teamMaxRows)+' más</span><span></span><span></span><span></span></div>';
   }
 
-  clientBody.innerHTML='<div class="char-row"><span class="muted">Tipo</span><span class="muted">Que hace</span><span class="muted">Mira</span><span class="muted">Upselling</span><span class="muted">Turno</span><span class="muted">Tiempo</span><span class="muted">Ticket</span><span class="muted"></span></div>'
-    +clients.slice(0,clientMaxRows).map(c=>{
+  clientBody.innerHTML='<div class="char-row is-head"><span class="muted">Tipo</span><span class="muted">Que hace</span><span class="muted">Mira</span><span class="muted">Upselling</span><span class="muted">Turno</span><span class="muted">Tiempo</span><span class="muted">Ticket</span><span class="muted"></span></div>'
+    +visibleClients.map((c,rowIdx)=>{
+    const custIdx=G.custs.indexOf(c);
     const typeLabel=customerTypeLabel(c);
     const looking=customerNearbyFixtureLabel(c);
     const upselling=customerUpsellingLabel(c);
     const turn=c.queueNumber?String(c.queueNumber).padStart(3,'0'):'-';
     const dwell=customerDwellLabel(c);
     const ticket=customerTicketLabel(c);
-    return '<div class="char-row">'
-      +customerMiniAvatar(c)+'<span style="color:'+customerTone(c)+'">'+typeLabel+'</span></span>'
+    const rowClass=rowIdx%2===0?'row-even':'row-odd';
+    return '<div class="char-row '+rowClass+'">'
+      +'<button type="button" class="char-trigger" data-customer-idx="'+custIdx+'" aria-label="Abrir ficha de '+typeLabel+'" onpointerdown="window.openCharacterDockCustomerDetail&&window.openCharacterDockCustomerDetail('+custIdx+');event.preventDefault();event.stopPropagation();return false;" onclick="event.preventDefault();event.stopPropagation();return false;">'+customerMiniAvatar(c)+'</button>'
+      +'<span style="color:'+customerTone(c)+'">'+typeLabel+'</span>'
       +'<span>'+customerStateLabel(c)+'</span>'
       +'<span>'+looking+'</span>'
       +'<span>'+upselling+'</span>'
@@ -9823,11 +9870,7 @@ function drawCharacterGroupsPanel(){
       +'<span class="'+(c.bought?'ok':'muted')+'">'+(c.bought?'ok':'')+'</span>'
       +'</div>';
   }).join('');
-  if(clients.length>clientMaxRows){
-    clientBody.innerHTML+='<div class="char-row"><span class="muted">+'+(clients.length-clientMaxRows)+' más</span><span class="muted">VIP '+vipCount+'</span><span class="muted">Cola '+queueCount+'</span><span class="muted">Mira '+browsingCount+'</span><span class="muted">Turnos '+issuedTurns+'</span><span></span><span></span><span></span></div>';
-  }else{
-    clientBody.innerHTML+='<div class="char-row"><span class="muted">VIP '+vipCount+'</span><span class="muted">Cola '+queueCount+'</span><span class="muted">Mira '+browsingCount+'</span><span class="muted">Turnos '+issuedTurns+'</span><span></span><span></span><span></span><span></span></div>';
-  }
+  clientBody.innerHTML+='<div class="char-row is-summary"><span class="muted">'+(maxClientScroll>0?((characterClientScroll+1)+'-'+(characterClientScroll+visibleClients.length)+' / '+clients.length):('VIP '+vipCount))+'</span><span class="muted">VIP '+vipCount+'</span><span class="muted">Cola '+queueCount+'</span><span class="muted">Mira '+browsingCount+'</span><span class="muted">Turnos '+issuedTurns+'</span><span></span><span></span><span></span></div>';
 }
 
 // ── DRAW BOTTOM BAR (GDS style: Yr Sales | Yr Profit | Status | Menu) ──
@@ -11076,6 +11119,10 @@ function loop(){
 
   // Always update HTML bar + video position first
   try{updateHtmlBar();}catch(e){}
+  try{syncGameplayChrome();}catch(e){}
+  try{
+    if(!isGameplayUiState(state)&&bgMusic&&!bgMusic.paused) bgMusic.pause();
+  }catch(e){}
   try{updateMobileSkipButton();}catch(e){}
   try{if(videoPlaying){updateVideoPosition();updateDSCanvases();}}catch(e){}
 
@@ -11463,6 +11510,8 @@ window.xtAPI = (function(){
   const characterDock=document.getElementById('characterDock');
   const teamFocusBtn=document.getElementById('characterTeamFocusBtn');
   const clientFocusBtn=document.getElementById('characterClientFocusBtn');
+  const clientUpBtn=document.getElementById('characterClientUpBtn');
+  const clientDownBtn=document.getElementById('characterClientDownBtn');
   const logEl=document.getElementById('telegramLog');
   const sendStatus=document.getElementById('telegramSendStatus');
   const connStatus=document.getElementById('telegramConnStatus');
@@ -12351,6 +12400,45 @@ window.xtAPI = (function(){
     resizeCanvas();
   }
 
+  function openCharacterDockDetail(target){
+    if(!target||!G||!(target instanceof Element)) return;
+    const trigger=target.closest('.char-trigger');
+    if(!trigger) return;
+    const staffIdx=trigger.dataset.staffIdx;
+    const customerIdx=trigger.dataset.customerIdx;
+    if(staffIdx!==undefined&&staffIdx!==''){
+      const idx=Number(staffIdx);
+      if(Number.isInteger(idx)&&idx>=0&&G.staff&&G.staff[idx]){
+        trigger.blur();
+        openNPCEditor(idx);
+      }
+      return;
+    }
+    if(customerIdx!==undefined&&customerIdx!==''){
+      const idx=Number(customerIdx);
+      if(Number.isInteger(idx)&&idx>=0&&G.custs&&G.custs[idx]){
+        trigger.blur();
+        openCustomerEditor(idx);
+      }
+    }
+  }
+
+  window.openCharacterDockStaffDetail=function(idx){
+    if(!G||!G.staff) return false;
+    const num=Number(idx);
+    if(!Number.isInteger(num)||num<0||!G.staff[num]) return false;
+    openNPCEditor(num);
+    return false;
+  };
+
+  window.openCharacterDockCustomerDetail=function(idx){
+    if(!G||!G.custs) return false;
+    const num=Number(idx);
+    if(!Number.isInteger(num)||num<0||!G.custs[num]) return false;
+    openCustomerEditor(num);
+    return false;
+  };
+
   async function sendComposerText(text){
     const clean=String(text||'').trim();
     telegramComposeStart=false;
@@ -12387,8 +12475,13 @@ window.xtAPI = (function(){
   bindDockButton(helpBtn,()=>sendComposerText('/help'));
   bindDockButton(statusBtn,()=>sendComposerText('/status'));
   bindDockButton(hideBtn,()=>setTelegramDockHidden(!telegramDockHidden));
-  bindDockButton(teamFocusBtn,()=>{characterDockFocus='team';});
-  bindDockButton(clientFocusBtn,()=>{characterDockFocus='split';});
+  bindDockButton(teamFocusBtn,()=>{characterDockFocus='team';characterClientScroll=0;});
+  bindDockButton(clientFocusBtn,()=>{characterDockFocus='split';characterClientScroll=0;});
+  bindDockButton(clientUpBtn,()=>{characterClientScroll=Math.max(0,characterClientScroll-1);});
+  bindDockButton(clientDownBtn,()=>{characterClientScroll=characterClientScroll+1;});
+  if(characterDock){
+    characterDock.addEventListener('click',e=>openCharacterDockDetail(e.target));
+  }
   if(hideBtn) hideBtn.textContent=telegramDockHidden?'Mostrar':'Ocultar';
   if(cliBtn){
     cliBtn.textContent=telegramDockHidden?'> CLI':'v CLI';
@@ -12398,7 +12491,7 @@ window.xtAPI = (function(){
     telegramBtn.textContent=telegramDockHidden?'Telegram OFF':'Telegram ON';
     window.toggleTelegramDock=()=>setTelegramDockHidden(!telegramDockHidden);
   }
-  setTelegramFocusMode(true,false);
+  setTelegramFocusMode(false,false);
   if(composer){
     composer.addEventListener('keydown',e=>{
       if(e.key==='Enter'&&!e.shiftKey){
