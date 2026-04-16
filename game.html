@@ -1741,7 +1741,7 @@ function updateTransition(){if(!tran.active)return;tran.timer++;if(tran.timer===
 function drawTransition(){if(!tran.active)return;const half=tran.dur/2;const alpha=tran.timer<=half?tran.timer/half:1-(tran.timer-half)/half;cx.globalAlpha=Math.max(0,Math.min(1,alpha));cx.fillStyle='#000';cx.fillRect(0,0,W,H);cx.globalAlpha=1;}
 function updateMobileSkipButton(){
   if(!mobileSkipBtn) return;
-  const show=[S.ERA_SEL,S.PRELOAD,S.MENU,S.CLIENT_SEL,S.MODEL_SEL,S.INTRO].includes(state);
+  const show=[S.ERA_SEL,S.PRELOAD,S.CLIENT_SEL,S.MODEL_SEL,S.INTRO].includes(state);
   mobileSkipBtn.classList.toggle('show',show);
 }
 const ERAS=[
