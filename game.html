@@ -54,10 +54,11 @@
     .char-head.clients{color:#ffd86b}
     .char-status{color:#9ec7d0;font-size:7px;font-weight:normal;text-transform:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}
     .char-toggle-btn{border:1px solid #2a7585;border-radius:4px;background:#0c2a35;color:#bff7ff;font-family:monospace;font-size:8px;font-weight:bold;padding:1px 6px;cursor:pointer}
-    .char-scroll-btn{border:1px solid #2a7585;border-radius:4px;background:#0c2a35;color:#bff7ff;font-family:monospace;font-size:8px;font-weight:bold;padding:0 5px;height:16px;min-width:18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
-    .char-scroll-btn:disabled{opacity:.35;cursor:default}
-    .char-body{flex:1;padding:6px 8px;background:#02080d;font-size:10px;line-height:1.3;color:#cceef5;display:flex;flex-direction:column;gap:2px}
-    .char-row{display:grid;grid-template-columns:42px minmax(86px,1.05fr) minmax(82px,.95fr) minmax(86px,.95fr) 56px 58px 54px auto;gap:5px;align-items:center;padding:2px 4px;border-radius:3px}
+    .char-body{flex:1;padding:6px 8px;background:#02080d;font-size:10px;line-height:1.3;color:#cceef5;display:flex;flex-direction:column;gap:2px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#2a7585 #07131b}
+    .char-body::-webkit-scrollbar{width:8px}
+    .char-body::-webkit-scrollbar-track{background:#07131b}
+    .char-body::-webkit-scrollbar-thumb{background:#2a7585;border-radius:6px}
+    .char-row{display:grid;grid-template-columns:58px minmax(74px,.95fr) minmax(126px,1.35fr) 58px 50px 46px auto;gap:3px;align-items:center;padding:2px 3px;border-radius:3px}
     .char-row.is-head,.char-row.is-summary{padding:0;background:transparent}
     .char-row.row-even{background:rgba(18,46,58,0.34)}
     .char-row.row-odd{background:rgba(8,20,28,0.72)}
@@ -146,7 +147,7 @@
     <div class="char-body" id="characterTeamBody"></div>
   </div>
   <div class="char-pane clients">
-    <div class="char-head clients"><div class="char-head-left"><span>Clientes</span><button type="button" class="char-toggle-btn" id="characterTeamFocusBtn">Equipo</button></div><div class="char-head-right"><button type="button" class="char-scroll-btn" id="characterClientUpBtn" aria-label="Clientes anteriores">▲</button><button type="button" class="char-scroll-btn" id="characterClientDownBtn" aria-label="Clientes siguientes">▼</button><span class="char-status" id="characterClientStatus">0 dentro</span></div></div>
+    <div class="char-head clients"><div class="char-head-left"><span>Clientes</span><button type="button" class="char-toggle-btn" id="characterTeamFocusBtn">Equipo</button></div><span class="char-status" id="characterClientStatus">0 dentro</span></div>
     <div class="char-body" id="characterClientBody"></div>
   </div>
 </div>
@@ -220,7 +221,6 @@ let amigaPage0Todo=AMIGA_PAGE0_TODO.slice();
 let amigaPage0TodoLoaded=false;
 let telegramDockHidden=false;
 let characterDockFocus='split';
-let characterClientScroll=0;
 let telegramComposeStart=true;
 bootVideoEl.src=PRELOAD_VIDEO_SRC;
 bootVideoEl.loop=false;
@@ -1132,6 +1132,41 @@ function getSkyColors(hour){
   return ['#0a0a1a','#1a1a2a','#2a2a3a']; // night
 }
 
+const MAX_CUSTOMERS_IN_STORE=7;
+function getCustomerFlowProfile(hour){
+  const h=Number.isFinite(hour)?hour:shopTimeSettings.openHour;
+  if(h<10.5) return {cap:3,spawnMult:0.55,label:'valle-manana'};
+  if(h<13.5) return {cap:6,spawnMult:1.05,label:'subida-manana'};
+  if(h<16.5) return {cap:4,spawnMult:0.72,label:'valle-mediodia'};
+  if(h<19.5) return {cap:7,spawnMult:1.25,label:'hora-punta'};
+  return {cap:5,spawnMult:0.82,label:'cierre'};
+}
+function getCurrentCustomerCap(){
+  return Math.max(1,Math.min(MAX_CUSTOMERS_IN_STORE,getCustomerFlowProfile(G&&G.gameTime).cap|0));
+}
+function getCurrentCustomerSpawnMult(){
+  return Math.max(0.2,getCustomerFlowProfile(G&&G.gameTime).spawnMult||1);
+}
+function trimCustomersToHourCap(){
+  if(!G) return;
+  if(!Number.isFinite(G.customerCapAdjustTimer)) G.customerCapAdjustTimer=0;
+  if(G.customerCapAdjustTimer>0){G.customerCapAdjustTimer--;return;}
+  const cap=getCurrentCustomerCap();
+  const extra=(G.custs||[]).length-cap;
+  if(extra<=0) return;
+  const candidates=(G.custs||[])
+    .filter(c=>c&&c.st!=='queue'&&c.st!=='buy'&&c.st!=='leave')
+    .sort((a,b)=>(b.dwellTicks||0)-(a.dwellTicks||0));
+  if(candidates.length===0) return;
+  const target=candidates[0];
+  target.bMsg='Vuelvo luego';
+  target.bTimer=Math.max(target.bTimer||0,80);
+  target.timer=Math.min(target.timer||80,30);
+  target.stayTargetTicks=Math.min(target.stayTargetTicks||999999,(target.dwellTicks||0)+30);
+  if(target.st==='walk') startCustomerLeave(target);
+  G.customerCapAdjustTimer=75;
+}
+
 async function elgatoFetch(path,opts){
   // When served from the proxy (localhost:9124), use same origin
   // When served from GitHub Pages, try proxy URLs
@@ -1912,6 +1947,7 @@ const DEFAULT_LAYOUT=[
   {id:'djBooth',type:'djBooth',col:11,row:3,sx:1,sy:1,label:'Mesa DJ'},
   {id:'tablet',type:'tablet',col:13,row:5,sx:1,sy:1,label:'Tablet Satisfacción'},
   {id:'turnKiosk',type:'turnKiosk',col:12,row:6,sx:1,sy:1,label:'Gestor Turnos'},
+  {id:'aroma',type:'aroma',col:12,row:1,sx:1,sy:1,label:'Máquina olores'},
 ];
 let shopLayout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
 let shopFurnitureVisible=true;
@@ -2120,7 +2156,7 @@ function screenToIso(sx,sy){
 const FURNITURE_SIZE={
   counter:[1,2], shelves:[1,2], wineRack:[2,1], lottery:[2,1],
   vending:[1,1], magazines:[2,1], manager:[2,1], plant:[1,1],
-  floorLamp:[1,1], rug:[2,2], djBooth:[2,1], tablet:[1,1], turnKiosk:[1,1],
+  floorLamp:[1,1], rug:[2,2], djBooth:[2,1], tablet:[1,1], turnKiosk:[1,1], aroma:[1,1],
 };
 
 // Check if a tile is blocked by furniture
@@ -2128,7 +2164,7 @@ function isTileBlocked(col,row){
   if(!shopFurnitureVisible) return false;
   const c=Math.round(col), r=Math.round(row);
   for(const item of shopLayout){
-    if(item.type==='rug'||item.type==='led'||item.type==='tft') continue; // walkable
+    if(item.type==='rug'||item.type==='led'||item.type==='tft'||item.type==='aroma') continue; // walkable / wall-mounted
     const sz=FURNITURE_SIZE[item.type]||[1,1];
     if(c>=item.col && c<item.col+sz[0] && r>=item.row && r<item.row+sz[1]) return true;
   }
@@ -3818,8 +3854,11 @@ function updateGame(){
   const compSteal=G.comp&&G.comp.promoTimer>0?CFG.COMP_PROMO_STEAL:0;
   const repMod=G.reviews?G.reviews.spawnMod:1;
   const escapMod=G.escaparate&&G.escaparate.active?(G.escaparate.boost>0?1.35:1.15):1;
+  const hourSpawnMod=getCurrentCustomerSpawnMult();
+  const currentCustomerCap=getCurrentCustomerCap();
+  trimCustomersToHourCap();
   if(G.customerSpawnDelay>0) G.customerSpawnDelay--;
-  else if(Math.random()<0.006*Math.max(1,G.staff.filter(s=>s.hired).length)*(G.rush.active?2:1)*weatherMod*holidaySpawn*(1-compSteal)*repMod*escapMod) spawnCust();
+  else if(G.custs.length<currentCustomerCap&&Math.random()<0.006*Math.max(1,G.staff.filter(s=>s.hired).length)*(G.rush.active?2:1)*weatherMod*holidaySpawn*(1-compSteal)*repMod*escapMod*hourSpawnMod) spawnCust();
   for(let i=G.custs.length-1;i>=0;i--){
     const c=G.custs[i];c.ft++;if(c.ft>10){c.fr=(c.fr+1)%2;c.ft=0;}
     c.dwellTicks=(c.dwellTicks|0)+1;
@@ -4161,7 +4200,7 @@ function updateGame(){
 }
 
 function spawnCust(isVip){
-  if(G.custs.length>=7) return;
+  if(G.custs.length>=getCurrentCustomerCap()) return;
   const ci=Math.floor(Math.random()*6);
   const isV=!!isVip;
   const avgTicket=isV
@@ -7056,8 +7095,6 @@ function drawShop(){
   drawBackWallLED();
   // ── AIR CONDITIONING on left wall (drawn AFTER LED so it's visible) ──
   drawAirConditioning();
-  // ── AROMATIZER on back wall (right side, low) ──
-  drawAromatizer();
   // ── TURN MANAGER between the back-wall displays/windows ──
   drawTurnManager();
   // ── SECURITY CAMERA in the corner, aimed at the entrance ──
@@ -7073,11 +7110,11 @@ function drawShop(){
     return p.y;
   }
 
-  // Furniture from editable layout (skip wall-mounted: led, tft)
+  // Furniture from editable layout (skip wall-mounted overlays handled elsewhere)
   if(shopFurnitureVisible||editorSceneActive){
     for(const item of shopLayout){
       if(item.type==='led'||item.type==='tft') continue;
-      const d=item.type==='rug'?-999:isoDepth(item.col,item.row+1);
+      const d=item.type==='rug'?-999:item.type==='aroma'?-1200:isoDepth(item.col,item.row+1);
       entities.push({type:item.type,col:item.col,row:item.row,depth:d,layoutId:item.id,sx:item.sx||1,sy:item.sy||1,flipX:item.flipX||false,rot:item.rot||0});
     }
   }
@@ -7152,6 +7189,7 @@ function drawShop(){
       case 'djBooth': drawScaled(e,drawIsoDJBooth); break;
       case 'tablet': drawScaled(e,drawIsoTabletKiosk); break;
       case 'turnKiosk': drawScaled(e,drawIsoTurnKiosk); break;
+      case 'aroma': drawAromatizer(e.col,e.row); break;
       case 'staff': drawIsoStaff(e.data); break;
       case 'cust': drawIsoCust(e.data); break;
       case 'saca': drawIsoSaca(e.data); break;
@@ -8386,9 +8424,9 @@ function drawAirConditioning(){
 // ── AROMATIZER on back wall ──────────────────────────────────
 let aromaOn=false; // Aromatizer state: false=off, true=on (diffusing particles)
 
-function drawAromatizer(){
-  // Position on right wall, above the door area, near top-right corner
-  const ap=toIso(ISO.cols,1.2);
+function drawAromatizer(col=12,row=1){
+  // Wall-mounted fixture anchored to the editable layout tile
+  const ap=toIso(col+1,row+0.18);
   const ax=ap.x-20, baseY=ap.y;
   const aw=16, ah=22;
   const ay=baseY-Math.floor(ISO.wallH*0.55);
@@ -8436,7 +8474,7 @@ function drawAromatizer(){
   cx.textAlign='left';
 
   // Clickable area
-  BTNS['aromaToggle']={x:ax,y:ay,w:aw,h:ah};
+  if(!editorSceneActive) BTNS['aromaToggle']={x:ax,y:ay,w:aw,h:ah};
 
   // ── Scent waves (when ON) — 5s on, 5s off cycle, very slow ──
   if(aromaOn){
@@ -9672,6 +9710,18 @@ function customerTypeLabel(c){
   return 'Anonimo';
 }
 
+function customerPriority(c){
+  if(!c) return 9;
+  if(c.vip) return 0;
+  if(c.bought||c.st==='queue'||c.st==='buy') return 1;
+  return 2;
+}
+
+function customerStatePriority(c){
+  const map={buy:0,queue:1,browse:2,walk:3,leave:4};
+  return map[c&&c.st]??9;
+}
+
 function customerUpsellingLabel(c){
   if(!c||c.wantsProdIdx<0) return '-';
   const wanted=String(prodName(c.wantsProdIdx)||'').toLowerCase();
@@ -9781,8 +9831,6 @@ function drawCharacterGroupsPanel(){
   const clientBody=document.getElementById('characterClientBody');
   const teamFocusBtn=document.getElementById('characterTeamFocusBtn');
   const clientFocusBtn=document.getElementById('characterClientFocusBtn');
-  const clientUpBtn=document.getElementById('characterClientUpBtn');
-  const clientDownBtn=document.getElementById('characterClientDownBtn');
   if(!dock||!teamStatus||!clientStatus||!teamBody||!clientBody) return;
   if(!G||!isGameplayUiState(state)){
     dock.classList.remove('show');
@@ -9791,9 +9839,6 @@ function drawCharacterGroupsPanel(){
     clientStatus.textContent='0 total | Entr 0 Sal 0 Dentro 0';
     teamBody.innerHTML='';
     clientBody.innerHTML='';
-    characterClientScroll=0;
-    if(clientUpBtn) clientUpBtn.style.display='none';
-    if(clientDownBtn) clientDownBtn.style.display='none';
     return;
   }
   dock.classList.toggle('focus-team',characterDockFocus==='team');
@@ -9801,9 +9846,13 @@ function drawCharacterGroupsPanel(){
   if(clientFocusBtn) clientFocusBtn.style.display=characterDockFocus==='team'?'inline-flex':'none';
   const hired=(G.staff||[]).filter(s=>s.hired&&!s.fired);
   const clients=(G.custs||[]).slice().sort((a,b)=>{
-    const av=a.vip?0:1, bv=b.vip?0:1;
-    if(av!==bv) return av-bv;
-    return String(a.st||'').localeCompare(String(b.st||''));
+    const prDiff=customerPriority(a)-customerPriority(b);
+    if(prDiff!==0) return prDiff;
+    const stDiff=customerStatePriority(a)-customerStatePriority(b);
+    if(stDiff!==0) return stDiff;
+    const dwellDiff=(b.dwellTicks||0)-(a.dwellTicks||0);
+    if(dwellDiff!==0) return dwellDiff;
+    return (a.id||0)-(b.id||0);
   });
   const vipCount=clients.filter(c=>c.vip).length;
   const queueCount=clients.filter(c=>c.st==='queue').length;
@@ -9814,22 +9863,8 @@ function drawCharacterGroupsPanel(){
     if(Number.isInteger(s.role)&&roleCounts[s.role]!==undefined) roleCounts[s.role]++;
   });
   const teamMaxRows=2;
-  const bodyHeight=clientBody.clientHeight||0;
-  const clientVisibleRows=Math.max(3,Math.floor((bodyHeight-22)/22)-1);
-  const clientMaxRows=Math.min(clients.length,clientVisibleRows);
-  const maxClientScroll=Math.max(0,clients.length-clientMaxRows);
-  characterClientScroll=Math.max(0,Math.min(characterClientScroll,maxClientScroll));
-  const visibleClients=clients.slice(characterClientScroll,characterClientScroll+clientMaxRows);
   teamStatus.textContent=hired.length+' total | Caja '+roleCounts[0]+' Repo '+roleCounts[1]+' Aza '+roleCounts[2]+' Mgr '+roleCounts[3]+' DJ '+roleCounts[4];
   clientStatus.textContent=clients.length+' total | Entr '+(G.custIn||0)+' Sal '+(G.custOut||0)+' Dentro '+clients.length;
-  if(clientUpBtn){
-    clientUpBtn.style.display=maxClientScroll>0?'inline-flex':'none';
-    clientUpBtn.disabled=characterClientScroll<=0;
-  }
-  if(clientDownBtn){
-    clientDownBtn.style.display=maxClientScroll>0?'inline-flex':'none';
-    clientDownBtn.disabled=characterClientScroll>=maxClientScroll;
-  }
   teamBody.innerHTML=hired.length
     ? hired.slice(0,teamMaxRows).map((s,rowIdx)=>{
         const staffIdx=G.staff.indexOf(s);
@@ -9848,21 +9883,22 @@ function drawCharacterGroupsPanel(){
     teamBody.innerHTML+='<div class="char-row is-summary"><span class="muted">+'+(hired.length-teamMaxRows)+' más</span><span></span><span></span><span></span></div>';
   }
 
-  clientBody.innerHTML='<div class="char-row is-head"><span class="muted">Tipo</span><span class="muted">Que hace</span><span class="muted">Mira</span><span class="muted">Upselling</span><span class="muted">Turno</span><span class="muted">Tiempo</span><span class="muted">Ticket</span><span class="muted"></span></div>'
-    +visibleClients.map((c,rowIdx)=>{
+  clientBody.innerHTML='<div class="char-row is-head"><span class="muted">Tipo</span><span class="muted">Que hace / Zona</span><span class="muted">Upselling</span><span class="muted">Turno</span><span class="muted">Tiempo</span><span class="muted">Ticket</span><span class="muted"></span></div>'
+    +clients.map((c,rowIdx)=>{
     const custIdx=G.custs.indexOf(c);
     const typeLabel=customerTypeLabel(c);
-    const looking=customerNearbyFixtureLabel(c);
+    const zoneLabel=customerNearbyFixtureLabel(c);
     const upselling=customerUpsellingLabel(c);
     const turn=c.queueNumber?String(c.queueNumber).padStart(3,'0'):'-';
     const dwell=customerDwellLabel(c);
     const ticket=customerTicketLabel(c);
     const rowClass=rowIdx%2===0?'row-even':'row-odd';
+    const activityZone=customerStateLabel(c)+(zoneLabel&&zoneLabel!=='-'?' · '+zoneLabel:'');
+    const indexLabel=String(rowIdx+1).padStart(2,'0');
     return '<div class="char-row '+rowClass+'">'
-      +'<button type="button" class="char-trigger" data-customer-idx="'+custIdx+'" aria-label="Abrir ficha de '+typeLabel+'" onpointerdown="window.openCharacterDockCustomerDetail&&window.openCharacterDockCustomerDetail('+custIdx+');event.preventDefault();event.stopPropagation();return false;" onclick="event.preventDefault();event.stopPropagation();return false;">'+customerMiniAvatar(c)+'</button>'
+      +'<span><span class="muted">'+indexLabel+'</span> <button type="button" class="char-trigger" data-customer-idx="'+custIdx+'" aria-label="Abrir ficha de '+typeLabel+'" onpointerdown="window.openCharacterDockCustomerDetail&&window.openCharacterDockCustomerDetail('+custIdx+');event.preventDefault();event.stopPropagation();return false;" onclick="event.preventDefault();event.stopPropagation();return false;">'+customerMiniAvatar(c)+'</button></span>'
       +'<span style="color:'+customerTone(c)+'">'+typeLabel+'</span>'
-      +'<span>'+customerStateLabel(c)+'</span>'
-      +'<span>'+looking+'</span>'
+      +'<span>'+activityZone+'</span>'
       +'<span>'+upselling+'</span>'
       +'<span>'+turn+'</span>'
       +'<span>'+dwell+'</span>'
@@ -9870,7 +9906,7 @@ function drawCharacterGroupsPanel(){
       +'<span class="'+(c.bought?'ok':'muted')+'">'+(c.bought?'ok':'')+'</span>'
       +'</div>';
   }).join('');
-  clientBody.innerHTML+='<div class="char-row is-summary"><span class="muted">'+(maxClientScroll>0?((characterClientScroll+1)+'-'+(characterClientScroll+visibleClients.length)+' / '+clients.length):('VIP '+vipCount))+'</span><span class="muted">VIP '+vipCount+'</span><span class="muted">Cola '+queueCount+'</span><span class="muted">Mira '+browsingCount+'</span><span class="muted">Turnos '+issuedTurns+'</span><span></span><span></span><span></span></div>';
+  clientBody.innerHTML+='<div class="char-row is-summary"><span class="muted">'+clients.length+' clientes</span><span class="muted">VIP '+vipCount+' · Zona '+browsingCount+'</span><span class="muted">Cola '+queueCount+'</span><span class="muted">Turnos '+issuedTurns+'</span><span></span><span></span><span></span></div>';
 }
 
 // ── DRAW BOTTOM BAR (GDS style: Yr Sales | Yr Profit | Status | Menu) ──
@@ -11510,8 +11546,6 @@ window.xtAPI = (function(){
   const characterDock=document.getElementById('characterDock');
   const teamFocusBtn=document.getElementById('characterTeamFocusBtn');
   const clientFocusBtn=document.getElementById('characterClientFocusBtn');
-  const clientUpBtn=document.getElementById('characterClientUpBtn');
-  const clientDownBtn=document.getElementById('characterClientDownBtn');
   const logEl=document.getElementById('telegramLog');
   const sendStatus=document.getElementById('telegramSendStatus');
   const connStatus=document.getElementById('telegramConnStatus');
@@ -12427,6 +12461,10 @@ window.xtAPI = (function(){
     if(!G||!G.staff) return false;
     const num=Number(idx);
     if(!Number.isInteger(num)||num<0||!G.staff[num]) return false;
+    if(npcEdOpen&&npcEdKind==='staff'&&npcEdIdx===num){
+      closeNPCEditor();
+      return false;
+    }
     openNPCEditor(num);
     return false;
   };
@@ -12435,6 +12473,10 @@ window.xtAPI = (function(){
     if(!G||!G.custs) return false;
     const num=Number(idx);
     if(!Number.isInteger(num)||num<0||!G.custs[num]) return false;
+    if(npcEdOpen&&npcEdKind==='customer'&&npcEdIdx===num){
+      closeNPCEditor();
+      return false;
+    }
     openCustomerEditor(num);
     return false;
   };
@@ -12475,10 +12517,8 @@ window.xtAPI = (function(){
   bindDockButton(helpBtn,()=>sendComposerText('/help'));
   bindDockButton(statusBtn,()=>sendComposerText('/status'));
   bindDockButton(hideBtn,()=>setTelegramDockHidden(!telegramDockHidden));
-  bindDockButton(teamFocusBtn,()=>{characterDockFocus='team';characterClientScroll=0;});
-  bindDockButton(clientFocusBtn,()=>{characterDockFocus='split';characterClientScroll=0;});
-  bindDockButton(clientUpBtn,()=>{characterClientScroll=Math.max(0,characterClientScroll-1);});
-  bindDockButton(clientDownBtn,()=>{characterClientScroll=characterClientScroll+1;});
+  bindDockButton(teamFocusBtn,()=>{characterDockFocus='team';});
+  bindDockButton(clientFocusBtn,()=>{characterDockFocus='split';});
   if(characterDock){
     characterDock.addEventListener('click',e=>openCharacterDockDetail(e.target));
   }
