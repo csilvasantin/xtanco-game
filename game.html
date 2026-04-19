@@ -93,12 +93,33 @@
     .tg-line.err{border-left-color:#f05b5b;color:#ffd0d0}
     #mobileSkipBtn{display:none;position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:40;border:2px solid #55ffcc;border-radius:6px;background:#06110f;color:#d9fff5;font-family:monospace;font-size:13px;font-weight:bold;letter-spacing:0;padding:10px 18px;box-shadow:0 0 14px rgba(85,255,204,.45);cursor:pointer;touch-action:manipulation}
     #mobileSkipBtn.show{display:block}
+    #eraVerticalDock{display:none;position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:39;width:min(860px,calc(100vw - 28px));padding:10px 12px;border:2px solid #2e4d63;background:rgba(4,10,16,0.94);box-shadow:0 0 0 1px rgba(91,216,255,0.12),0 8px 28px rgba(0,0,0,0.38)}
+    #eraVerticalDock.show{display:block}
+    .evd-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;color:#dce8f6;font-size:11px}
+    .evd-head-left{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .evd-head-right{display:flex;align-items:center;gap:8px}
+    .evd-head strong{color:#ffffff;font-size:12px}
+    .evd-mute{border:1px solid #4d6e86;background:#0a1620;color:#bfe8ff;padding:4px 8px;font-family:monospace;font-size:11px;cursor:pointer;min-width:42px}
+    .evd-mute.is-off{color:#7a8c9d;border-color:#3b4b58}
+    .evd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .evd-btn{border:1px solid #446177;background:linear-gradient(180deg,rgba(18,28,40,0.98),rgba(8,14,20,0.98));color:#c4d3e8;padding:10px 10px;text-align:left;font-family:monospace;cursor:pointer}
+    .evd-btn strong{display:block;font-size:13px;line-height:1.1}
+    .evd-btn span{display:block;margin-top:4px;font-size:9px;line-height:1.2;opacity:0.82}
+    .evd-btn.is-active{box-shadow:0 0 0 2px currentColor inset;background:linear-gradient(180deg,rgba(32,48,64,0.98),rgba(12,20,30,0.98))}
+    .evd-btn.is-locked{opacity:0.68}
     @media (max-width:700px){
       #telegramDock{height:192px;gap:5px;padding:5px}
       #characterDock{bottom:192px;height:72px;gap:5px}
       #characterDock.hide-telegram{height:264px}
       #telegramComposer{font-size:11px}
       .tg-head{font-size:8px}
+      #eraVerticalDock{bottom:70px;width:min(100vw - 18px,860px);padding:8px}
+      .evd-head{font-size:9px}
+      .evd-head strong{font-size:10px}
+      .evd-grid{grid-template-columns:1fr;gap:6px}
+      .evd-btn{padding:8px}
+      .evd-btn strong{font-size:11px}
+      .evd-btn span{font-size:8px}
       #telegramLog{font-size:9px}
       #mobileSkipBtn{bottom:10px;font-size:12px;padding:9px 16px}
     }
@@ -141,6 +162,23 @@
 <video id="dsVideo" preload="auto" playsinline style="display:none"></video>
 <video id="bootVideo" preload="auto" playsinline webkit-playsinline style="display:none"></video>
 <canvas id="c" width="800" height="500"></canvas>
+<div id="eraVerticalDock" aria-label="Selector de verticales">
+  <div class="evd-head">
+    <div class="evd-head-left">
+      <strong id="evdTitle">VERTICALES XP</strong>
+      <span id="evdHint">Selecciona vertical antes de entrar</span>
+    </div>
+    <div class="evd-head-right">
+      <span id="evdCurrent">XTANCO / ESTANCOS</span>
+      <button id="evdMuteBtn" class="evd-mute" type="button" aria-label="Silenciar música">🔊</button>
+    </div>
+  </div>
+  <div class="evd-grid">
+    <button type="button" class="evd-btn" data-client="0"><strong>XTANCO</strong><span>Estancos · tabaco · impulso</span></button>
+    <button type="button" class="evd-btn" data-client="1"><strong>LOTERÍAS</strong><span>Terminal · campañas · cola</span></button>
+    <button type="button" class="evd-btn" data-client="2"><strong>SUPERMERCADO</strong><span>Helados · comida · frescos</span></button>
+  </div>
+</div>
 <button id="mobileSkipBtn" type="button" aria-label="Saltar al juego">SKIP AL JUEGO</button>
 <div id="characterDock" aria-label="Equipo y clientes">
   <div class="char-pane team">
@@ -205,6 +243,10 @@
 const cv=document.getElementById('c'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=false;
 const mobileSkipBtn=document.getElementById('mobileSkipBtn');
+const eraVerticalDock=document.getElementById('eraVerticalDock');
+const eraVerticalButtons=eraVerticalDock?[...eraVerticalDock.querySelectorAll('[data-client]')]:[];
+const evdCurrent=document.getElementById('evdCurrent');
+const evdMuteBtn=document.getElementById('evdMuteBtn');
 const W=800,H=500;
 const bootVideoEl=document.getElementById('bootVideo');
 const PRELOAD_VIDEO_SRC='assets/videos/precarga_xpace.mp4';
@@ -223,13 +265,8 @@ const APP_BUILD_DATE=(()=>{
   const match=APP_BUILD.match(/^(\d{4})(\d{2})(\d{2})/);
   return match ? (match[1]+'-'+match[2]+'-'+match[3]) : APP_BUILD;
 })();
-const APP_VERSION_LABEL='Admira XP '+APP_VERSION;
-const APP_FORMULA_LABEL=(()=>{
-  const match=APP_BUILD.match(/^(\d{4})(\d{2})(\d{2})/);
-  if(!match) return 'Admira · '+APP_VERSION;
-  const [,year,month,day]=match;
-  return 'Admira '+year+' · '+day+' · '+month+' · '+APP_VERSION;
-})();
+const APP_VERSION_LABEL=APP_VERSION;
+const APP_FORMULA_LABEL='build '+APP_BUILD;
 const AMIGA_PAGE0_TODO=['BUY SHIP','FIND BIGWHOOP','DEFEAT LECHUCK','MARRY ELAINE!'];
 let amigaPage0Todo=AMIGA_PAGE0_TODO.slice();
 let amigaPage0TodoLoaded=false;
@@ -275,6 +312,94 @@ const SFX=(()=>{
     voteSad(){tone(400,0.12,'sine',0.1);tone(300,0.15,'sine',0.1,0.13);tone(220,0.2,'sine',0.08,0.28);},
   };
 })();
+
+// ── HOME CHIPTUNE ────────────────────────────────────────────
+let homeMusicCtx=null;
+let homeMusicTimer=null;
+let homeMusicStep=0;
+let homeMusicArmed=false;
+let homeMusicMuted=false;
+const HOME_MUSIC_TEMPO=0.18;
+const HOME_MUSIC_SCORE=[
+  {lead:659,bass:131},
+  {lead:784,bass:131},
+  {lead:988,bass:165},
+  {lead:784,bass:196},
+  {lead:659,bass:165},
+  {lead:523,bass:131},
+  {lead:587,bass:147},
+  {lead:659,bass:165},
+  {lead:880,bass:196},
+  {lead:1047,bass:220},
+  {lead:784,bass:196},
+  {lead:659,bass:165},
+  {lead:587,bass:147},
+  {lead:523,bass:131},
+  {lead:659,bass:147},
+  {lead:784,bass:196},
+];
+function getHomeMusicCtx(){
+  if(homeMusicCtx) return homeMusicCtx;
+  try{homeMusicCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}
+  return homeMusicCtx;
+}
+function playHomeMusicVoice(freq,dur,type,gain,detune=0){
+  const ac=getHomeMusicCtx();
+  if(!ac||!freq) return;
+  const osc=ac.createOscillator();
+  const amp=ac.createGain();
+  osc.type=type;
+  osc.frequency.value=freq;
+  osc.detune.value=detune;
+  amp.gain.setValueAtTime(Math.max(0.0001,gain),ac.currentTime);
+  amp.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+dur);
+  osc.connect(amp);
+  amp.connect(ac.destination);
+  osc.start(ac.currentTime);
+  osc.stop(ac.currentTime+dur);
+}
+function homeMusicTick(){
+  const step=HOME_MUSIC_SCORE[homeMusicStep%HOME_MUSIC_SCORE.length];
+  const accent=(homeMusicStep%4===0)?1.12:1;
+  playHomeMusicVoice(step.lead,HOME_MUSIC_TEMPO*0.88,'square',0.03*accent);
+  playHomeMusicVoice(step.lead?step.lead/2:0,HOME_MUSIC_TEMPO*0.5,'triangle',0.014,4);
+  playHomeMusicVoice(step.bass,HOME_MUSIC_TEMPO*0.95,'triangle',0.026);
+  homeMusicStep++;
+}
+async function startHomeMusic(){
+  if(homeMusicMuted||homeMusicTimer) return;
+  const ac=getHomeMusicCtx();
+  if(!ac) return;
+  if(ac.state==='suspended'){
+    try{await ac.resume();}catch(e){return;}
+  }
+  homeMusicTick();
+  homeMusicTimer=setInterval(homeMusicTick,HOME_MUSIC_TEMPO*1000);
+}
+function stopHomeMusic(){
+  if(homeMusicTimer){
+    clearInterval(homeMusicTimer);
+    homeMusicTimer=null;
+  }
+}
+function shouldPlayHomeMusic(){
+  return homeMusicArmed && !homeMusicMuted && [S.ERA_SEL,S.PRELOAD,S.MENU,S.CLIENT_SEL,S.MODEL_SEL,S.INTRO].includes(state);
+}
+function syncHomeMusic(){
+  if(shouldPlayHomeMusic()){ startHomeMusic(); return; }
+  stopHomeMusic();
+}
+function toggleHomeMusic(force){
+  homeMusicArmed=true;
+  homeMusicMuted=typeof force==='boolean'?force:!homeMusicMuted;
+  syncHomeMusic();
+  updateEraVerticalDock();
+}
+function armHomeMusic(){
+  if(homeMusicArmed) return;
+  homeMusicArmed=true;
+  syncHomeMusic();
+}
 
 // ── RESPONSIVE FULLSCREEN ────────────────────────────────────
 function isGameplayUiState(currentState){
@@ -874,6 +999,7 @@ function toggleDigitalSignagePlayback(){
 
 function stopAllMedia(){
   try{bgMusic.pause();}catch(e){}
+  stopHomeMusic();
   try{dsVideoEl.pause();}catch(e){}
   try{dsVideoEl.currentTime=0;}catch(e){}
   try{dsVideoEl.removeAttribute('src');dsVideoEl.load();}catch(e){}
@@ -1549,7 +1675,7 @@ const XTANCO_MODELS=[
 const CLIENTS=[
   {id:'xtanco', available:true, accent:P.neon3, bg:'#0a1a2a', models:XTANCO_MODELS},
   {id:'loterias', available:false, accent:'#44ddaa', bg:'#102018', models:[], quickModels:XTANCO_MODELS},
-  {id:'retail', available:false, accent:'#44aaff', bg:'#10182a', models:[]},
+  {id:'supermercado', available:true, accent:'#7ae35a', bg:'#10220f', models:[], quickModels:XTANCO_MODELS},
 ];
 let activeClient=0;
 let activeModel=0;
@@ -1575,6 +1701,28 @@ function getClientLaunchLabel(client,index){
   const base=(T().clientNames[index]||client.id).split(' / ')[0];
   return lang==='es' ? 'ENTRAR EN '+base : 'ENTER '+base;
 }
+function isSupermarketClient(clientIndex){
+  const idx=Number.isInteger(clientIndex)?clientIndex:activeClient;
+  return (CLIENTS[idx]||{}).id==='supermercado';
+}
+function getProductLabelsForClient(clientIndex){
+  if(isSupermarketClient(clientIndex)){
+    return lang==='es'
+      ? ['Fruta','Bebidas','Congelados','Pan','Snacks','Comida','Premium','Limpieza']
+      : ['Fruit','Drinks','Frozen','Bakery','Snacks','Food','Premium','Cleaning'];
+  }
+  return T().prodLabel;
+}
+function getProductLabel(index,clientIndex){
+  return getProductLabelsForClient(clientIndex)[index] || (lang==='es'?'Producto':'Product')+' '+index;
+}
+function getLayoutStoragePrefix(){
+  const id=(getActiveClient()||CLIENTS[0]).id||'xtanco';
+  return id==='xtanco' ? 'xtanco' : 'xtanco_'+id;
+}
+function getCurrentVenueBrand(){
+  return isSupermarketClient() ? 'SUPER' : 'XTANCO';
+}
 
 // ── I18N ──────────────────────────────────────────────────────
 const LANGS={
@@ -1592,13 +1740,13 @@ const LANGS={
     clientStateLive:'LIVE',
     clientStatePipeline:'PIPELINE',
     clientCodes:['XP-01','XP-02','XP-03'],
-    clientTracks:['ESTANCOS','LOTERIAS','RETAIL'],
-    clientNames:['XTANCO / ESTANCOS','ADMIRA LOTERÍAS','ADMIRA RETAIL'],
-    clientBadges:['Disponible ahora','En producción','En producción'],
+    clientTracks:['ESTANCOS','LOTERIAS','SUPERMERCADO'],
+    clientNames:['XTANCO / ESTANCOS','ADMIRA LOTERÍAS','ADMIRA SUPERMERCADO'],
+    clientBadges:['Disponible ahora','En producción','Disponible ahora'],
     clientBlurbs:[
       'Gestión de estancos, staff, stock, signage y operaciones de tienda.\n4 layouts jugables hoy.',
       'Sorteos, campañas, estacionalidad y operativa de terminal.\nPróximo simulador en esta colección.',
-      'Retail conectado, tráfico, experiencia en sala y ventas omnicanal.\nPróxima expansión del motor.',
+      'Pasillos, frescos, congelados y punto de impulso.\nMismo motor XP con layout de supermercado.',
     ],
     tut:[
       {title:'BIENVENIDO A XTANCO',lines:['Gestiona tu estanco durante 5 años.','Alcanza el objetivo de ventas cada año','para avanzar y construir tu negocio.','¡Contrata personal, repón stock y fideliza clientes!']},
@@ -1673,13 +1821,13 @@ const LANGS={
     clientStateLive:'LIVE',
     clientStatePipeline:'PIPELINE',
     clientCodes:['XP-01','XP-02','XP-03'],
-    clientTracks:['TOBACCO','LOTTERY','RETAIL'],
-    clientNames:['XTANCO / TOBACCO','ADMIRA LOTTERY','ADMIRA RETAIL'],
-    clientBadges:['Available now','In production','In production'],
+    clientTracks:['TOBACCO','LOTTERY','SUPERMARKET'],
+    clientNames:['XTANCO / TOBACCO','ADMIRA LOTTERY','ADMIRA SUPERMARKET'],
+    clientBadges:['Available now','In production','Available now'],
     clientBlurbs:[
       'Tobacco shop operations, staff, stock, signage and store gameplay.\n4 playable layouts today.',
       'Draw campaigns, seasonality and terminal operations.\nNext simulator in this collection.',
-      'Connected retail, floor traffic, store experience and omnichannel sales.\nNext expansion of the engine.',
+      'Aisles, frozen products, impulse zones and checkout flow.\nSame XP engine with supermarket layout.',
     ],
     tut:[
       {title:'WELCOME TO XTANCO',lines:['Manage your shop for 5 years.','Reach the annual sales target','to progress and grow your business.','Hire staff, restock and keep customers happy!']},
@@ -1759,6 +1907,29 @@ function updateMobileSkipButton(){
   if(!mobileSkipBtn) return;
   const show=[S.ERA_SEL,S.PRELOAD,S.CLIENT_SEL,S.MODEL_SEL,S.INTRO].includes(state);
   mobileSkipBtn.classList.toggle('show',show);
+}
+function updateEraVerticalDock(){
+  if(!eraVerticalDock) return;
+  const show=state===S.ERA_SEL;
+  eraVerticalDock.classList.toggle('show',show);
+  if(evdCurrent){
+    const selected=(T().clientNames[clientSel]||getSelectedClient().id||'').toUpperCase();
+    evdCurrent.textContent=selected;
+  }
+  if(evdMuteBtn){
+    evdMuteBtn.textContent=homeMusicMuted?'🔇':'🔊';
+    evdMuteBtn.classList.toggle('is-off',homeMusicMuted);
+    evdMuteBtn.setAttribute('aria-label',homeMusicMuted?'Activar música':'Silenciar música');
+    evdMuteBtn.title=homeMusicMuted?'Activar música':'Silenciar música';
+  }
+  if(!show) return;
+  eraVerticalButtons.forEach((button,idx)=>{
+    const client=CLIENTS[idx];
+    if(!client) return;
+    button.classList.toggle('is-active',idx===clientSel);
+    button.classList.toggle('is-locked',!client.available);
+    button.style.color=client.accent;
+  });
 }
 const ERAS=[
   {id:'spectrum',title:'ZX Spectrum',bits:'8 bits',years:'1982-1987',route:'INTERFAZ SPECTRUM',desc:'LOAD"" y cinta digital',accent:'#5bd8ff',available:true},
@@ -1858,6 +2029,15 @@ function exitPreloadToMenu(){
   demoMode=false;
   resetPreloadState();
   startTransition(S.MENU);
+}
+function goToClientSelector(preferredClient){
+  menuEnteredAt=Date.now();
+  lastInput=Date.now();
+  demoMode=false;
+  if(Number.isInteger(preferredClient)&&CLIENTS[preferredClient]) clientSel=preferredClient;
+  else if(Number.isInteger(activeClient)&&CLIENTS[activeClient]) clientSel=activeClient;
+  modelSel=0;
+  startTransition(S.CLIENT_SEL);
 }
 function beginPreloadPlayback(){
   preloadPhase='loading';
@@ -1962,7 +2142,8 @@ function drawGuidedTut(){
 
 // ── LAYOUT EDITOR ────────────────────────────────────────────
 // Furniture layout — editable positions
-const DEFAULT_LAYOUT=[
+const FACTORY_LAYOUTS={
+  xtanco:[
   {id:'counter',type:'counter',col:1,row:2,sx:1,sy:1,label:'Mostrador+Caja+PC'},
   {id:'shelves',type:'shelves',col:4,row:1,sx:1,sy:1,label:'Estantería'},
   {id:'wineRack',type:'wineRack',col:6,row:1,sx:1,sy:1,label:'Botellero'},
@@ -1978,7 +2159,26 @@ const DEFAULT_LAYOUT=[
   {id:'tablet',type:'tablet',col:13,row:5,sx:1,sy:1,label:'Tablet Satisfacción'},
   {id:'turnKiosk',type:'turnKiosk',col:12,row:6,sx:1,sy:1,label:'Gestor Turnos'},
   {id:'aroma',type:'aroma',col:13,row:1,sx:1,sy:1,label:'Máquina olores'},
-];
+  ],
+  supermercado:[
+  {id:'counter',type:'counter',col:1,row:2,sx:1,sy:1,label:'Caja+TPV'},
+  {id:'shelves',type:'shelves',col:3,row:1,sx:1.1,sy:1,label:'Pasillo Seco'},
+  {id:'wineRack',type:'wineRack',col:6,row:1,sx:1,sy:1,label:'Frescos'},
+  {id:'lottery',type:'lottery',col:7,row:2,sx:1,sy:1,label:'Panadería'},
+  {id:'vending',type:'vending',col:9,row:2,sx:1,sy:1,label:'Helados y Comida'},
+  {id:'magazines',type:'magazines',col:2,row:3,sx:1,sy:1,label:'Impulso'},
+  {id:'manager',type:'manager',col:5,row:4,sx:1,sy:1,label:'Oficina'},
+  {id:'plant1',type:'plant',col:0,row:1,sx:1,sy:1,label:'Planta 1'},
+  {id:'plant3',type:'plant',col:0,row:5,sx:1,sy:1,label:'Planta 2'},
+  {id:'floorLamp',type:'floorLamp',col:10,row:5,sx:1,sy:1,label:'Lámpara pie'},
+  {id:'led',type:'led',col:0,row:0,sx:1,sy:1,label:'LED Ofertas'},
+  {id:'djBooth',type:'djBooth',col:11,row:3,sx:1,sy:1,label:'Hilo Musical'},
+  {id:'tablet',type:'tablet',col:13,row:5,sx:1,sy:1,label:'Tablet Valoración'},
+  {id:'turnKiosk',type:'turnKiosk',col:12,row:6,sx:1,sy:1,label:'Gestor Turnos'},
+  {id:'aroma',type:'aroma',col:13,row:1,sx:1,sy:1,label:'Aroma Fresco'},
+  ],
+};
+let DEFAULT_LAYOUT=JSON.parse(JSON.stringify(FACTORY_LAYOUTS.xtanco));
 let shopLayout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
 let shopFurnitureVisible=true;
 let edSelIdx=-1;       // selected furniture index in editor
@@ -2028,9 +2228,13 @@ function loadLayout(){
   // Do NOT reference ISO here — use raw numbers or simple checks only.
   try{
     // Try primary key, then explicit initial snapshot, then backup key
-    let d=localStorage.getItem('xtanco_layout_user');
-    if(!d) d=localStorage.getItem('xtanco_layout_initial');
-    if(!d) d=localStorage.getItem('xtanco_layout_backup');
+    const prefix=getLayoutStoragePrefix();
+    let d=localStorage.getItem(prefix+'_layout_user');
+    if(!d) d=localStorage.getItem(prefix+'_layout_initial');
+    if(!d) d=localStorage.getItem(prefix+'_layout_backup');
+    if(!d&&prefix==='xtanco') d=localStorage.getItem('xtanco_layout_user');
+    if(!d&&prefix==='xtanco') d=localStorage.getItem('xtanco_layout_initial');
+    if(!d&&prefix==='xtanco') d=localStorage.getItem('xtanco_layout_backup');
     if(d){
       const saved=JSON.parse(d);
       if(Array.isArray(saved)&&saved.length>0){
@@ -2063,8 +2267,8 @@ function loadLayout(){
         }
         console.log('[Layout] ✓ Loaded saved layout ('+shopLayout.length+' items)');
         // Also load staff positions
-        try{const sp=localStorage.getItem('xtanco_staff_pos');if(sp) shopStaffPos=JSON.parse(sp);}catch(e){}
-        try{const sz=localStorage.getItem('xtanco_staff_zones');if(sz) shopStaffZones=JSON.parse(sz);}catch(e){}
+        try{const sp=localStorage.getItem(prefix+'_staff_pos');if(sp) shopStaffPos=JSON.parse(sp);}catch(e){}
+        try{const sz=localStorage.getItem(prefix+'_staff_zones');if(sz) shopStaffZones=JSON.parse(sz);}catch(e){}
         return;
       }
     }
@@ -2077,15 +2281,15 @@ function loadLayout(){
 function saveLayout(){
   const data=JSON.stringify(shopLayout);
   try{
-    localStorage.setItem('xtanco_layout_user',data);
-    localStorage.setItem('xtanco_layout_initial',data);
-    localStorage.setItem('xtanco_layout_backup',data);
+    const prefix=getLayoutStoragePrefix();
+    localStorage.setItem(prefix+'_layout_user',data);
+    localStorage.setItem(prefix+'_layout_initial',data);
+    localStorage.setItem(prefix+'_layout_backup',data);
     // Also mirror into DEFAULT_LAYOUT so that if localStorage ever fails,
     // the in-session fallback already has the user's layout (not factory positions).
-    DEFAULT_LAYOUT.length=0;
-    for(const it of shopLayout) DEFAULT_LAYOUT.push(JSON.parse(JSON.stringify(it)));
-    if(shopStaffPos) localStorage.setItem('xtanco_staff_pos',JSON.stringify(shopStaffPos));
-    if(shopStaffZones) localStorage.setItem('xtanco_staff_zones',JSON.stringify(shopStaffZones));
+    DEFAULT_LAYOUT=JSON.parse(JSON.stringify(shopLayout));
+    if(shopStaffPos) localStorage.setItem(prefix+'_staff_pos',JSON.stringify(shopStaffPos));
+    if(shopStaffZones) localStorage.setItem(prefix+'_staff_zones',JSON.stringify(shopStaffZones));
     console.log('[Layout] ✓ Saved ('+shopLayout.length+' items) → localStorage + DEFAULT_LAYOUT updated');
   }catch(e){console.warn('[Layout] Save error:',e);}
 }
@@ -2111,7 +2315,7 @@ function clampGridCol(col){return Math.max(0,Math.min(ISO.cols-1,Math.round(col)
 function clampGridRow(row){return Math.max(0,Math.min(ISO.rows-1,Math.round(row)));}
 function clampZoneRadius(radius){return Math.max(0,Math.min(6,Math.round(radius)));}
 function prodName(i){
-  try{return T().prodLabel[i]||('Producto '+i);}catch(e){return 'Producto '+i;}
+  try{return getProductLabel(i);}catch(e){return 'Producto '+i;}
 }
 function moveStaffToTile(staff,col,row){
   const iso=toIso(col,row);
@@ -2275,6 +2479,8 @@ function initGame(){
   // layout with localStorage, which may be stale or fail silently.
   activeClient=clientSel;
   activeModel=modelSel;
+  DEFAULT_LAYOUT=JSON.parse(JSON.stringify(FACTORY_LAYOUTS[getActiveClient().id]||FACTORY_LAYOUTS.xtanco));
+  loadLayout();
   const models=getActiveModels();
   const M=models[activeModel] || models[0];
   if(!M) return;
@@ -2405,6 +2611,31 @@ if(mobileSkipBtn){
     updateMobileSkipButton();
   });
 }
+if(eraVerticalDock){
+  ['keydown','keyup','keypress','mousedown','mouseup','click','touchstart','touchend','wheel'].forEach(ev=>{
+    eraVerticalDock.addEventListener(ev,e=>e.stopPropagation(),{passive:false});
+  });
+  eraVerticalButtons.forEach(button=>{
+    button.addEventListener('click',e=>{
+      e.preventDefault();
+      const idx=Number(button.dataset.client);
+      if(Number.isFinite(idx)&&CLIENTS[idx]){
+        clientSel=idx;
+        armHomeMusic();
+        updateEraVerticalDock();
+      }
+    });
+  });
+  if(evdMuteBtn){
+    evdMuteBtn.addEventListener('click',e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      toggleHomeMusic();
+    });
+  }
+}
+window.addEventListener('pointerdown',armHomeMusic,{passive:true});
+window.addEventListener('keydown',armHomeMusic,{passive:true});
 
 // ── SAVE / LOAD ───────────────────────────────────────────────
 function saveGame(){
@@ -2636,7 +2867,7 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(state===S.GAME_END){
-    if(e.code==='Enter'||e.code==='Space'){state=S.MENU;menuSel=0;}
+    if(e.code==='Enter'||e.code==='Space'){goToClientSelector();}
     return;
   }
   if(state===S.PAUSE){
@@ -2722,7 +2953,7 @@ cv.addEventListener('click',e=>{
   if(state===S.TUT){tutPage++;if(tutPage>=T().tut.length){state=S.GAME;startMusic();}return;}
   if(state===S.PAUSE){state=S.GAME;return;}
   if(state===S.YEAR_END&&G.yearEndAnim>80){advanceYear();return;}
-  if(state===S.GAME_END){startTransition(S.MENU);menuSel=0;return;}
+  if(state===S.GAME_END){goToClientSelector();return;}
   if(state!==S.GAME&&state!==S.EDITOR&&state!==S.SETTINGS&&state!==S.MENU&&state!==S.HELP&&state!==S.CLIENT_SEL&&state!==S.MODEL_SEL&&state!==S.ERA_SEL) return;
   if(state===S.GAME){
     const displayHit=getDigitalSignageHitIndex(e.clientX,e.clientY);
@@ -3192,7 +3423,7 @@ function doAction(id){
   if(id==='menu'){uiOpen=!uiOpen;return;}
   if(id==='closeUI'){uiOpen=false;return;}
   if(id==='save'){saveGame();showEv('💾 Saved!','#88aa55');SFX.cashRegister();return;}
-  if(id==='quit'){saveGame();stopAllMedia();startTransition(S.MENU);menuSel=0;return;}
+  if(id==='quit'){saveGame();stopAllMedia();goToClientSelector();return;}
   if(id==='editor'){state=S.EDITOR;edSelIdx=-1;edStaffSelIdx=-1;edMode='furniture';return;}
   // ── Editor actions ──
   if(id==='edSave'){saveLayout();edSaveNotify=90;playSaveBeep();return;}
@@ -5433,12 +5664,15 @@ function drawEraSelect(){
   });
 
   if(eraNoticeTimer>0&&eraNoticeMsg){
-    const boxW=420,boxH=30,boxX=W/2-boxW/2,boxY=448;
+    const boxW=280,boxH=24,boxX=W/2-boxW/2,boxY=452;
     r(boxX,boxY,boxW,boxH,'#111a10');
     rx(boxX,boxY,boxW,boxH,'#9be24b',1);
-    tx(eraNoticeMsg,W/2,boxY+19,'#d8f6b4',7,'center');
+    tx(eraNoticeMsg,boxX+boxW/2,boxY+16,'#d8f6b4',6,'center');
   }else{
-    tx('FLECHAS + ENTER o 1-2-3 directo · Z = Loterias isometrico',W/2,464,'#8ea0bc',7,'center');
+    const hint=lang==='es'
+      ?'El vertical se elige abajo, encima de Skip al Juego'
+      :'Pick the vertical below, above Skip Game';
+    tx(hint,W/2,466,'#8ea0bc',7,'center');
   }
 }
 function drawReadyPlayerRoomBackdrop(){
@@ -6058,79 +6292,279 @@ function _drawMiniStore16bit(cx2,cy){
   cx.globalAlpha=0.18;const shd=cx.createRadialGradient(cx2+8,cy-10,0,cx2+8,cy-10,8);shd.addColorStop(0,'rgba(0,0,0,0.4)');shd.addColorStop(1,'rgba(0,0,0,0)');cx.fillStyle=shd;cx.beginPath();cx.ellipse(cx2+8,cy-10,8,3,0,0,Math.PI*2);cx.fill();cx.globalAlpha=1;
 }
 
-function drawClientSelect(){
-  r(0,0,W,H,'#080812');
-  cx.globalAlpha=0.08;for(let y=0;y<H;y+=2){cx.fillStyle='#aaccff';cx.fillRect(0,y,W,1);}cx.globalAlpha=1;
-  nl(0,5,W,5,P.neon2,2);nl(0,H-5,W,H-5,P.neon1,2);
-  const eyebrowW=126,eyebrowH=18,eyebrowX=W/2-eyebrowW/2,eyebrowY=18;
-  r(eyebrowX,eyebrowY,eyebrowW,eyebrowH,'#081018');
-  glow(P.neon2,8);rx(eyebrowX,eyebrowY,eyebrowW,eyebrowH,P.neon2,1);nog();
-  tx(T().menuEyebrow,W/2,eyebrowY+13,P.neon2,9,'center');
-  glow(P.neon3,18);tx(T().clientPick,W/2,52,P.neon3,24,'center');nog();
-  cx.globalAlpha=0.7;tx(T().menuDeck,W/2,71,P.neon2,8,'center');cx.globalAlpha=1;
-  cx.globalAlpha=0.55;tx(T().clientHint,W/2,83,'#9a8a6a',9,'center');cx.globalAlpha=1;
+const CLIENT_WORLD_NODES=[
+  {x:112,y:314,type:'support'},
+  {x:216,y:252,type:'xtanco'},
+  {x:306,y:336,type:'support'},
+  {x:378,y:228,type:'loterias'},
+  {x:480,y:308,type:'support'},
+  {x:584,y:208,type:'retail'},
+  {x:688,y:292,type:'support'},
+];
+const CLIENT_WORLD_LINKS=[
+  [0,1],[1,2],[2,3],[2,4],[3,4],[4,5],[5,6]
+];
 
-  const cardW=220,cardH=236,cardGap=18,cardY=100;
-  const cardX=W/2-((cardW*CLIENTS.length)+(cardGap*(CLIENTS.length-1)))/2;
+function getClientWorldLabel(nodeType){
+  if(nodeType==='xtanco') return T().clientNames[0].split(' / ')[0];
+  if(nodeType==='loterias') return T().clientNames[1];
+  if(nodeType==='retail'||nodeType==='supermercado') return T().clientNames[2];
+  if(lang==='es') return 'Servicios XP';
+  return 'XP Services';
+}
 
-  CLIENTS.forEach((client,i)=>{
-    const x=cardX+i*(cardW+cardGap);
-    const selected=i===clientSel;
-    const accent=client.accent;
-    r(x,cardY,cardW,cardH,selected?client.bg:'#06060e');
-    rx(x,cardY,cardW,cardH,selected?accent:'#222233',selected?2:1);
-    if(selected){glow(accent,14);rx(x,cardY,cardW,cardH,accent,1);nog();}
-    cx.globalAlpha=0.22;
-    r(x,cardY,cardW,24,accent);
-    cx.globalAlpha=1;
-    tx(T().clientCodes[i],x+12,cardY+18,'#081018',8);
-    tx(getClientStatusLabel(client),x+cardW-12,cardY+18,selected?P.white:'#e8f6ff',7,'right');
-    tx(T().clientTracks[i],x+12,cardY+36,accent,8);
-    tx(T().clientNames[i],x+12,cardY+49,selected?P.white:'#d9e6ff',10);
+function getClientWorldMeta(nodeType){
+  if(nodeType==='xtanco') return lang==='es' ? '4 layouts activos' : '4 active layouts';
+  if(nodeType==='loterias') return lang==='es' ? 'cola · campañas · terminal' : 'queue · campaigns · terminal';
+  if(nodeType==='retail'||nodeType==='supermercado') return lang==='es' ? 'helados · comida · impulso' : 'ice cream · food · impulse';
+  return lang==='es' ? 'motores compartidos' : 'shared systems';
+}
 
-    cx.save();
+function getClientNodeAccent(nodeType){
+  if(nodeType==='xtanco') return CLIENTS[0].accent;
+  if(nodeType==='loterias') return CLIENTS[1].accent;
+  if(nodeType==='retail'||nodeType==='supermercado') return CLIENTS[2].accent;
+  return '#8abf62';
+}
+
+function getClientNodeIndex(nodeType){
+  if(nodeType==='xtanco') return 0;
+  if(nodeType==='loterias') return 1;
+  if(nodeType==='retail'||nodeType==='supermercado') return 2;
+  return -1;
+}
+
+function drawPixelCloud(x,y,s){
+  const c='#f4fbff',o='#d8e7f7';
+  r(x,y,18*s,10*s,c);r(x+8*s,y-6*s,16*s,12*s,c);r(x+20*s,y-2*s,18*s,12*s,c);
+  r(x+2*s,y+8*s,32*s,5*s,o);
+}
+
+function drawClientWorldMap(originX,originY,w,h){
+  const sky=cx.createLinearGradient(0,originY,0,originY+h);
+  sky.addColorStop(0,'#77b8ff');
+  sky.addColorStop(1,'#d9eeff');
+  cx.fillStyle=sky;
+  cx.fillRect(originX,originY,w,h);
+
+  drawPixelCloud(originX+36,originY+28,2);
+  drawPixelCloud(originX+260,originY+44,3);
+  drawPixelCloud(originX+500,originY+34,2.4);
+
+  const groundY=originY+h-126;
+  const mapGrad=cx.createLinearGradient(originX,groundY,originX,originY+h);
+  mapGrad.addColorStop(0,'#d6d1c4');
+  mapGrad.addColorStop(1,'#b4af9f');
+  cx.fillStyle=mapGrad;
+  cx.fillRect(originX,groundY,w,126);
+
+  cx.strokeStyle='rgba(240,240,220,0.55)';
+  cx.lineWidth=2;
+  for(let i=0;i<9;i++){
+    const yy=groundY+12+i*13;
+    cx.beginPath();cx.moveTo(originX,yy);cx.lineTo(originX+w,yy-24);cx.stroke();
+  }
+  for(let i=0;i<10;i++){
+    const xx=originX+20+i*74;
+    cx.beginPath();cx.moveTo(xx,groundY);cx.lineTo(xx+58,originY+h);cx.stroke();
+  }
+
+  cx.strokeStyle='#49b436';
+  cx.lineCap='round';
+  cx.lineJoin='round';
+  cx.lineWidth=8;
+  CLIENT_WORLD_LINKS.forEach(([from,to])=>{
+    const a=CLIENT_WORLD_NODES[from],b=CLIENT_WORLD_NODES[to];
+    const ax=originX+a.x, ay=originY+a.y;
+    const bx=originX+b.x, by=originY+b.y;
     cx.beginPath();
-    cx.rect(x+10,cardY+58,cardW-20,82);
-    cx.clip();
-    if(i===0){
-      const prevMode=renderMode;
-      renderMode='16bit';
-      _drawMiniStore16bit(x+cardW/2,cardY+112);
-      renderMode=prevMode;
-    } else {
-      const stripe=cx.createLinearGradient(x+10,cardY+60,x+cardW-10,cardY+122);
-      stripe.addColorStop(0,client.accent);
-      stripe.addColorStop(1,'#223344');
-      cx.fillStyle=stripe;
-      cx.fillRect(x+16,cardY+68,cardW-32,48);
-      cx.globalAlpha=0.25;
-      for(let sy=cardY+72;sy<cardY+116;sy+=4) cx.fillRect(x+16,sy,cardW-32,1);
-      cx.globalAlpha=1;
-      tx(T().clientCodes[i],x+cardW/2,cardY+96,'#ffffff',16,'center');
-      tx(T().clientTracks[i],x+cardW/2,cardY+112,'#dcecff',8,'center');
-    }
-    cx.restore();
-
-    const descLines=T().clientBlurbs[i].split('\n');
-    descLines.forEach((line,idx)=>tx(line,x+12,cardY+154+idx*13,P.uiT3,7));
-    tx(client.available?'▶ '+T().startBtn:'● '+T().clientLocked,x+12,cardY+216,client.available?P.green:P.yellow,8);
-    tx(T().clientBadges[i],x+cardW-12,cardY+216,P.uiT2,7,'right');
-    BTNS['clientSel'+i]={x,y:cardY,w:cardW,h:cardH};
+    cx.moveTo(ax,ay);
+    cx.lineTo((ax+bx)/2,ay+(by-ay)*0.15);
+    cx.lineTo(bx,by);
+    cx.stroke();
+  });
+  cx.lineWidth=3;
+  cx.strokeStyle='rgba(255,255,255,0.32)';
+  CLIENT_WORLD_LINKS.forEach(([from,to])=>{
+    const a=CLIENT_WORLD_NODES[from],b=CLIENT_WORLD_NODES[to];
+    const ax=originX+a.x, ay=originY+a.y;
+    const bx=originX+b.x, by=originY+b.y;
+    cx.beginPath();
+    cx.moveTo(ax,ay);
+    cx.lineTo((ax+bx)/2,ay+(by-ay)*0.15);
+    cx.lineTo(bx,by);
+    cx.stroke();
   });
 
+  CLIENT_WORLD_NODES.forEach((node)=>{
+    const nx=originX+node.x, ny=originY+node.y;
+    const idx=getClientNodeIndex(node.type);
+    const accent=getClientNodeAccent(node.type);
+    const active=idx===clientSel;
+    const available=idx<0 ? true : CLIENTS[idx].available;
+    const bubbleW=idx<0?114:148;
+    const bubbleH=idx<0?38:46;
+    const bubbleX=nx-20, bubbleY=ny-34;
+    const shadow=cx.createRadialGradient(nx,ny+10,2,nx,ny+10,18);
+    shadow.addColorStop(0,'rgba(0,0,0,0.25)');
+    shadow.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=shadow;
+    cx.beginPath();cx.ellipse(nx,ny+10,24,10,0,0,Math.PI*2);cx.fill();
+
+    cx.fillStyle=available?accent:'#7f7f88';
+    cx.beginPath();cx.arc(nx,ny,16,0,Math.PI*2);cx.fill();
+    cx.fillStyle=available?cDark(accent,28):'#55555c';
+    cx.beginPath();cx.moveTo(nx-5,ny+12);cx.lineTo(nx+5,ny+12);cx.lineTo(nx,ny+22);cx.closePath();cx.fill();
+
+    r(bubbleX,bubbleY,bubbleW,bubbleH,'#fffdf6');
+    rx(bubbleX,bubbleY,bubbleW,bubbleH,active?accent:'#c4c4c4',active?2:1);
+    if(active){glow(accent,8);rx(bubbleX,bubbleY,bubbleW,bubbleH,accent,1);nog();}
+    tx(getClientWorldLabel(node.type),bubbleX+12,bubbleY+16,active?accent:'#555',8);
+    tx(getClientWorldMeta(node.type),bubbleX+12,bubbleY+30,available?'#5c7f55':'#888',6);
+    if(idx>=0){
+      const stateLabel=available?T().clientStateLive:T().clientStatePipeline;
+      tx(stateLabel,bubbleX+bubbleW-10,bubbleY+16,available?P.green:P.yellow,6,'right');
+      BTNS['clientSel'+idx]={x:bubbleX,y:bubbleY,w:bubbleW,h:bubbleH+18};
+    }
+  });
+}
+
+function drawClientSelect(){
+  r(0,0,W,H,'#080812');
+  nl(0,5,W,5,P.neon2,2);nl(0,H-5,W,H-5,P.neon1,2);
+  const headerH=62;
+  r(0,0,W,headerH,'#f2efe7');
+  nl(0,headerH,W,headerH,'#6da548',3);
+  drawPixelCloud(16,16,2.2);
+  tx(T().clientPick,W/2,40,'#485364',36,'center');
+  cx.globalAlpha=0.45;tx(T().menuDeck,W/2,56,'#65778a',8,'center');cx.globalAlpha=1;
+
+  drawClientWorldMap(0,headerH,W,H-headerH-118);
+
   const selectedClient=getSelectedClient();
+  const panelX=60,panelY=392,panelW=680,panelH=74;
+  r(panelX,panelY,panelW,panelH,'#0b1118ee');
+  rx(panelX,panelY,panelW,panelH,selectedClient.accent,2);
+  tx(T().clientTracks[clientSel],panelX+14,panelY+16,selectedClient.accent,8);
+  tx(T().clientNames[clientSel],panelX+14,panelY+31,P.white,15);
+  const descLines=T().clientBlurbs[clientSel].split('\n');
+  descLines.forEach((line,idx)=>tx(line,panelX+14,panelY+46+idx*10,'#cfddea',7));
+  tx(getClientFooter(selectedClient),panelX+14,panelY+64,P.uiT2,6);
+
+  const chipW=104,chipH=20;
+  tx(T().clientBadges[clientSel],panelX+panelW-170,panelY+18,P.uiT3,7,'center');
+  r(panelX+panelW-222,panelY+26,chipW,chipH,selectedClient.available?'#14311d':'#2d2820');
+  rx(panelX+panelW-222,panelY+26,chipW,chipH,selectedClient.available?P.green:P.yellow,1);
+  tx(getClientStatusLabel(selectedClient),panelX+panelW-170,panelY+40,selectedClient.available?P.green:P.yellow,8,'center');
+  r(panelX+panelW-108,panelY+26,84,chipH,'#14222e');
+  rx(panelX+panelW-108,panelY+26,84,chipH,'#88ccff',1);
+  tx(T().clientCodes[clientSel],panelX+panelW-66,panelY+40,'#88ccff',8,'center');
+
   const buttonColor=selectedClient.available?selectedClient.accent:P.gray;
-  const buttonText=getClientLaunchLabel(selectedClient,clientSel);
-  const buttonW=240,buttonH=36,buttonX=W/2-buttonW/2,buttonY=362;
+  const buttonText=selectedClient.available?(lang==='es'?'ENTRAR EN '+T().clientTracks[clientSel]:'ENTER '+T().clientTracks[clientSel]):T().clientLocked;
+  const buttonW=240,buttonH=36,buttonX=W-286,buttonY=408;
   r(buttonX,buttonY,buttonW,buttonH,'#08080f');
   if(selectedClient.available){glow(buttonColor,12);}
   rx(buttonX,buttonY,buttonW,buttonH,buttonColor,2);nog();
   cx.globalAlpha=0.75+0.25*Math.abs(Math.sin(tt*0.05));
-  tx(buttonText,W/2,buttonY+24,buttonColor,13,'center');cx.globalAlpha=1;
+  tx(buttonText,buttonX+buttonW/2,buttonY+24,buttonColor,13,'center');cx.globalAlpha=1;
   if(selectedClient.available) BTNS['clientConfirm']={x:buttonX,y:buttonY,w:buttonW,h:buttonH};
+  cx.globalAlpha=0.35;tx(lang==='es'?'← → para elegir vertical · ENTER para abrir':'← → choose vertical · ENTER to open',W/2,484,'#666677',8,'center');cx.globalAlpha=1;
+}
 
-  cx.globalAlpha=0.62;tx(getClientFooter(selectedClient),W/2,buttonY+buttonH+18,P.uiT2,8,'center');cx.globalAlpha=1;
-  cx.globalAlpha=0.35;tx(lang==='es'?'← → para elegir   ·   ENTER para abrir':'← → to choose   ·   ENTER to open',W/2,buttonY+buttonH+30,'#666677',8,'center');cx.globalAlpha=1;
+function drawEraClientMiniMap(originX,originY,w,h){
+  r(originX,originY,w,h,'#081018dd');
+  rx(originX,originY,w,h,'#28435c',1);
+
+  cx.save();
+  cx.beginPath();
+  cx.rect(originX+8,originY+8,w-16,h-16);
+  cx.clip();
+
+  const sky=cx.createLinearGradient(0,originY,0,originY+h);
+  sky.addColorStop(0,'#78b7ff');
+  sky.addColorStop(1,'#d3ecff');
+  cx.fillStyle=sky;
+  cx.fillRect(originX,originY,w,h);
+
+  drawPixelCloud(originX+18,originY+12,1.4);
+  drawPixelCloud(originX+152,originY+18,1.8);
+  drawPixelCloud(originX+336,originY+10,1.5);
+
+  const groundY=originY+h-68;
+  const mapGrad=cx.createLinearGradient(originX,groundY,originX,originY+h);
+  mapGrad.addColorStop(0,'#d7d0c1');
+  mapGrad.addColorStop(1,'#b5b09d');
+  cx.fillStyle=mapGrad;
+  cx.fillRect(originX,groundY,w,68);
+
+  cx.strokeStyle='rgba(250,250,230,0.45)';
+  cx.lineWidth=1;
+  for(let i=0;i<5;i++){
+    const yy=groundY+8+i*12;
+    cx.beginPath();cx.moveTo(originX,yy);cx.lineTo(originX+w,yy-12);cx.stroke();
+  }
+  for(let i=0;i<8;i++){
+    const xx=originX+10+i*70;
+    cx.beginPath();cx.moveTo(xx,groundY);cx.lineTo(xx+40,originY+h);cx.stroke();
+  }
+
+  const scaleX=w/800, scaleY=h/220;
+  cx.strokeStyle='#41b532';
+  cx.lineWidth=5;
+  cx.lineCap='round';
+  cx.lineJoin='round';
+  CLIENT_WORLD_LINKS.forEach(([from,to])=>{
+    const a=CLIENT_WORLD_NODES[from],b=CLIENT_WORLD_NODES[to];
+    const ax=originX+a.x*scaleX, ay=originY+(a.y-180)*scaleY+74;
+    const bx=originX+b.x*scaleX, by=originY+(b.y-180)*scaleY+74;
+    cx.beginPath();
+    cx.moveTo(ax,ay);
+    cx.lineTo((ax+bx)/2,ay+(by-ay)*0.2);
+    cx.lineTo(bx,by);
+    cx.stroke();
+  });
+  cx.lineWidth=2;
+  cx.strokeStyle='rgba(255,255,255,0.28)';
+  CLIENT_WORLD_LINKS.forEach(([from,to])=>{
+    const a=CLIENT_WORLD_NODES[from],b=CLIENT_WORLD_NODES[to];
+    const ax=originX+a.x*scaleX, ay=originY+(a.y-180)*scaleY+74;
+    const bx=originX+b.x*scaleX, by=originY+(b.y-180)*scaleY+74;
+    cx.beginPath();
+    cx.moveTo(ax,ay);
+    cx.lineTo((ax+bx)/2,ay+(by-ay)*0.2);
+    cx.lineTo(bx,by);
+    cx.stroke();
+  });
+
+  CLIENT_WORLD_NODES.forEach((node)=>{
+    const idx=getClientNodeIndex(node.type);
+    if(idx<0) return;
+    const active=idx===clientSel;
+    const client=CLIENTS[idx];
+    const accent=client.accent;
+    const available=client.available;
+    const nx=originX+node.x*scaleX;
+    const ny=originY+(node.y-180)*scaleY+74;
+    const bubbleW=idx===1?106:94;
+    const bubbleH=24;
+    const bubbleX=nx-bubbleW/2;
+    const bubbleY=ny-36;
+
+    cx.fillStyle=available?accent:'#7d7d86';
+    cx.beginPath();cx.arc(nx,ny,10,0,Math.PI*2);cx.fill();
+    cx.fillStyle=available?cDark(accent,24):'#5b5b63';
+    cx.beginPath();cx.moveTo(nx-4,ny+7);cx.lineTo(nx+4,ny+7);cx.lineTo(nx,ny+14);cx.closePath();cx.fill();
+
+    r(bubbleX,bubbleY,bubbleW,bubbleH,'#fffdf5');
+    rx(bubbleX,bubbleY,bubbleW,bubbleH,active?accent:'#c0c0c0',active?2:1);
+    if(active){glow(accent,7);rx(bubbleX,bubbleY,bubbleW,bubbleH,accent,1);nog();}
+    tx((T().clientTracks[idx]||client.id).toUpperCase(),bubbleX+8,bubbleY+15,active?accent:'#555',7);
+    if(!available) tx('SOON',bubbleX+bubbleW-8,bubbleY+15,'#a08a55',6,'right');
+    BTNS['clientSel'+idx]={x:bubbleX,y:bubbleY,w:bubbleW,h:bubbleH+16};
+  });
+
+  cx.restore();
 }
 
 // ── HELP / MANUAL SCREEN ─────────────────────────────────────
@@ -8129,7 +8563,7 @@ function drawAltadisTFT(){
     const pi=G.tftStockIdx;
     const prod=G.prods[pi];
     const stk=prod.stock/prod.max;
-    const prodName=T().prodLabel[pi]||'Producto';
+    const prodName=getProductLabel(pi);
     cx.fillStyle='#0a1a2a';cx.fillRect(0,0,vW,vH);
     // Color bar top
     cx.fillStyle=prod.color;cx.fillRect(0,0,vW,6);
@@ -8727,8 +9161,8 @@ function drawIsoMonitor(col,row){
   rx(p.x-12,p.y-30,24,18,'#1a1a1a',1);
   // Screen (blue-ish with content)
   r(p.x-10,p.y-28,20,14,'#1a3050');
-  // Screen content: XTANCO logo
-  tx('XTANCO',p.x,p.y-22,'#88bbdd',6,'center');
+  // Screen content: current venue brand
+  tx(getCurrentVenueBrand(),p.x,p.y-22,'#88bbdd',6,'center');
   // Blinking cursor
   if(Math.floor(tt/30)%2===0){
     r(p.x-4,p.y-17,6,1,'#66aacc');
@@ -8926,6 +9360,21 @@ function drawIsoPlant(col,row){
 }
 
 function drawIsoVending(col,row){
+  if(isSupermarketClient()){
+    drawIsoBlock(col,row,1,1,44,'#d7fff2','#7dc8b4','#9ce1cf',null);
+    const p=toIso(col+0.5,row+0.5);
+    r(p.x-10,p.y-46,20,28,'#eefdf8');
+    r(p.x-10,p.y-46,20,4,'#49bf7a');
+    r(p.x-8,p.y-14,16,3,'#b9ded2');
+    r(p.x-9,p.y-40,18,22,'#f6fff9');rx(p.x-9,p.y-40,18,22,'#5e8f7a',1);
+    const flavors=['#ff8cc6','#ffd35a','#7ae0ff','#ff9966','#9be36c','#d4b2ff'];
+    for(let i=0;i<3;i++){cx.beginPath();cx.arc(p.x-4+i*4,p.y-34,3,0,Math.PI*2);cx.fillStyle=flavors[i];cx.fill();}
+    for(let i=0;i<3;i++){r(p.x-7+i*6,p.y-25,5,5,['#ffb36a','#6cc96c','#d86d4d'][i]);}
+    r(p.x-2,p.y-15,4,3,'#4e7062');
+    r(p.x-8,p.y-47,16,5,'#2e9c58');
+    tx('FRESH',p.x,p.y-43,'#fff',5,'center');
+    return;
+  }
   // Vending machine: white/gray body
   drawIsoBlock(col,row,1,1,44,'#dddddd','#aaaaaa','#bbbbbb',null);
   const p=toIso(col+0.5,row+0.5);
@@ -11279,6 +11728,8 @@ function loop(){
     if(!isGameplayUiState(state)&&bgMusic&&!bgMusic.paused) bgMusic.pause();
   }catch(e){}
   try{updateMobileSkipButton();}catch(e){}
+  try{updateEraVerticalDock();}catch(e){}
+  try{syncHomeMusic();}catch(e){}
   try{if(videoPlaying){updateVideoPosition();updateDSCanvases();}}catch(e){}
 
   // No auto-start from selection screens:
@@ -11356,7 +11807,7 @@ window.xtAPI = (function(){
   ROLE_LOOKUP['store manager']=3; ROLE_LOOKUP['encargado']=3;
 
   function prodName(i){
-    try{ return T().prodLabel[i]||('Producto '+i); }catch(e){ return 'Producto '+i; }
+    try{ return getProductLabel(i); }catch(e){ return 'Producto '+i; }
   }
 
   function staffRoleAliases(roleId){
