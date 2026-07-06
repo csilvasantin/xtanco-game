@@ -8,6 +8,7 @@ const { spawn, execFile } = require('child_process');
 
 const GAME_DIR = __dirname;
 const LOCAL_CONFIG_PATH = path.join(GAME_DIR, 'xtanco.config.local.json');
+const STREAMDECK_MANIFEST_PATH = path.join(GAME_DIR, 'streamdeck-manifest.json');
 
 const YT_DLP_CANDIDATES = ['/opt/homebrew/bin/yt-dlp', '/usr/local/bin/yt-dlp', 'yt-dlp'];
 function resolveYtDlpBin() {
@@ -893,6 +894,42 @@ function grokChat(prompt, context = '') {
 // la mata por inactividad → el navegador ve "Failed to fetch". El audio termina
 // antes y por eso sí funciona. Solución: trocear en peticiones cortas.
 const TUBE_JOBS = new Map();
+const SD_QUEUE = [];
+const SD_RESULTS = new Map();
+const SD_MAX_QUEUE = 80;
+const SD_MAX_RESULTS = 120;
+
+function readStreamDeckManifest() {
+  return JSON.parse(fs.readFileSync(STREAMDECK_MANIFEST_PATH, 'utf8'));
+}
+
+function findStreamDeckButton(manifest, pageId, buttonRef) {
+  const pages = Array.isArray(manifest && manifest.pages) ? manifest.pages : [];
+  const page = pages.find(p => p && p.id === pageId) || pages[0];
+  if (!page || !Array.isArray(page.buttons)) return { page: null, button: null, index: -1 };
+  let index = -1;
+  if (Number.isFinite(Number(buttonRef))) {
+    index = Number(buttonRef);
+  } else if (typeof buttonRef === 'string') {
+    index = page.buttons.findIndex(b => b && b.id === buttonRef);
+  }
+  const button = index >= 0 ? page.buttons[index] : null;
+  return { page, button, index };
+}
+
+function pruneStreamDeckResults() {
+  while (SD_RESULTS.size > SD_MAX_RESULTS) {
+    const firstKey = SD_RESULTS.keys().next().value;
+    if (!firstKey) break;
+    SD_RESULTS.delete(firstKey);
+  }
+}
+
+function recordStreamDeckResult(result) {
+  if (!result || !result.requestId) return;
+  SD_RESULTS.set(result.requestId, { ...result, receivedAt: new Date().toISOString() });
+  pruneStreamDeckResults();
+}
 
 function tubeHostAllowed(host) {
   host = String(host || '').toLowerCase();
@@ -1237,6 +1274,100 @@ const server = http.createServer((req, res) => {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
     });
     res.end(runtimeConfigScript());
+    return;
+  }
+
+  if (requestPath.startsWith('/sd/')) {
+    setCors(res);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    if (requestPath === '/sd/manifest' && req.method === 'GET') {
+      try {
+        sendJson(res, 200, { ok: true, manifest: readStreamDeckManifest() });
+      } catch (error) {
+        sendJson(res, 500, { ok: false, error: 'manifest unavailable', message: error.message });
+      }
+      return;
+    }
+
+    if (requestPath === '/sd/press' && req.method === 'POST') {
+      collectJsonBody(req, (error, body = {}) => {
+        if (error) {
+          sendJson(res, 400, { ok: false, error: 'Invalid JSON', message: error.message });
+          return;
+        }
+        let manifest;
+        try {
+          manifest = readStreamDeckManifest();
+        } catch (manifestError) {
+          sendJson(res, 500, { ok: false, error: 'manifest unavailable', message: manifestError.message });
+          return;
+        }
+        const pageId = typeof body.pageId === 'string' && body.pageId.trim()
+          ? body.pageId.trim()
+          : manifest.pages && manifest.pages[0] && manifest.pages[0].id;
+        const buttonRef = body.buttonId != null ? body.buttonId : body.btnIdx;
+        const found = findStreamDeckButton(manifest, pageId, buttonRef);
+        if (!found.page || !found.button) {
+          sendJson(res, 404, { ok: false, error: 'button not found', pageId, buttonRef });
+          return;
+        }
+        const requestId = typeof body.requestId === 'string' && body.requestId.trim()
+          ? body.requestId.trim()
+          : crypto.randomUUID();
+        const item = {
+          requestId,
+          pageId: found.page.id,
+          btnIdx: found.index,
+          buttonId: found.button.id,
+          cmd: found.button.cmd,
+          queuedAt: new Date().toISOString(),
+        };
+        SD_QUEUE.push(item);
+        while (SD_QUEUE.length > SD_MAX_QUEUE) SD_QUEUE.shift();
+        sendJson(res, 202, { ok: true, queued: item, queueLength: SD_QUEUE.length });
+      });
+      return;
+    }
+
+    if (requestPath === '/sd/pending' && req.method === 'GET') {
+      const item = SD_QUEUE.shift() || null;
+      sendJson(res, 200, { ok: true, item, queueLength: SD_QUEUE.length });
+      return;
+    }
+
+    if (requestPath === '/sd/result' && req.method === 'POST') {
+      collectJsonBody(req, (error, body = {}) => {
+        if (error) {
+          sendJson(res, 400, { ok: false, error: 'Invalid JSON', message: error.message });
+          return;
+        }
+        if (!body || typeof body.requestId !== 'string' || !body.requestId.trim()) {
+          sendJson(res, 400, { ok: false, error: 'Missing requestId' });
+          return;
+        }
+        recordStreamDeckResult(body);
+        sendJson(res, 200, { ok: true });
+      });
+      return;
+    }
+
+    if (requestPath === '/sd/result' && req.method === 'GET') {
+      const requestId = requestUrl.searchParams.get('requestId') || '';
+      if (!requestId) {
+        sendJson(res, 400, { ok: false, error: 'Missing requestId' });
+        return;
+      }
+      const result = SD_RESULTS.get(requestId) || null;
+      sendJson(res, result ? 200 : 404, { ok: Boolean(result), result });
+      return;
+    }
+
+    sendJson(res, 404, { ok: false, error: 'Unknown Stream Deck endpoint' });
     return;
   }
 

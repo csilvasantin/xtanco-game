@@ -29845,6 +29845,70 @@ window.xtAPI = (function(){
   // (que devuelve JSON {ok,data} → salía crudo en /status).
   try{ window.__xtExec=executeTelegramText; }catch(_){}
 
+  // HTTP relay local para el Galleon: boton fisico -> elgato-proxy /sd/press ->
+  // esta pagina consume /sd/pending y ejecuta la misma ruta que el overlay.
+  (function initStreamDeckHttpRelay(){
+    const SD=window.AdmiraXP_StreamDeck;
+    if(!SD || window.__admiraSdHttpRelayStarted) return;
+    window.__admiraSdHttpRelayStarted=true;
+    let busy=false;
+
+    function streamDeckRelayBase(){
+      try{
+        if(location.protocol==='http:' && /^(localhost|127\.0\.0\.1)$/i.test(location.hostname)) return location.origin;
+        const cfg=window.XTANCO_RUNTIME_CONFIG||{};
+        if(cfg.tube && cfg.tube.proxyUrl) return String(cfg.tube.proxyUrl).replace(/\/+$/,'');
+      }catch(_){}
+      return '';
+    }
+
+    async function postStreamDeckResult(base,item,result){
+      try{
+        await fetch(base+'/sd/result',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            requestId:item.requestId,
+            pageId:item.pageId,
+            btnIdx:item.btnIdx,
+            buttonId:item.buttonId,
+            ok:!!(result&&result.ok),
+            error:result&&result.error||'',
+            result:result&&result.result||'',
+          })
+        });
+      }catch(_){}
+    }
+
+    async function pollStreamDeckPending(){
+      const base=streamDeckRelayBase();
+      if(!base || busy) return;
+      busy=true;
+      try{
+        const res=await fetch(base+'/sd/pending',{cache:'no-store'});
+        if(!res.ok) return;
+        const payload=await res.json();
+        const item=payload&&payload.item;
+        if(!item) return;
+        const result=await SD.press(item.pageId||'admira-events', item.btnIdx!=null?item.btnIdx:item.buttonId);
+        await postStreamDeckResult(base,item,result);
+        const status=document.getElementById('sdFootStatus');
+        if(status){
+          status.textContent=(result&&result.ok)
+            ? 'HTTP ✓ '+(item.cmd||item.buttonId||item.btnIdx)
+            : 'HTTP ✗ '+(result&&result.error||'fallo');
+        }
+      }catch(_){
+      }finally{
+        busy=false;
+      }
+    }
+
+    setInterval(pollStreamDeckPending,900);
+    setTimeout(pollStreamDeckPending,300);
+    window.addEventListener('focus',pollStreamDeckPending);
+  })();
+
   function getStreamDeckPage(){
     const SD=window.AdmiraXP_StreamDeck;
     if(!SD || !Array.isArray(SD.pages) || !SD.pages.length) return null;

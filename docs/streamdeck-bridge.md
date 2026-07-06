@@ -130,13 +130,23 @@ await window.AdmiraXP_StreamDeck.press('admira-events', 'thief');
 
 ### C. HTTP local (si tu daemon es nativo y no comparte contexto con el navegador)
 
-**Aun no esta cableado.** Pidemelo y extiendo `elgato-proxy.js` con:
+**Cableado en `elgato-proxy.js` + `game.html`.** Flujo:
 
-- `GET  http://localhost:9126/sd/manifest`         → devuelve el manifest
-- `POST http://localhost:9126/sd/press` con body `{pageId, btnIdx, requestId?}` → relay a la pestana abierta del juego
-- `GET  http://localhost:9126/sd/pending` (long-poll, browser-side) → cola que el game.html consume
+- `GET  http://localhost:9126/sd/manifest` -> devuelve `{ok:true, manifest}`.
+- `POST http://localhost:9126/sd/press` con body `{pageId, btnIdx, requestId?}` -> encola un press validado contra el manifest.
+- `GET  http://localhost:9126/sd/pending` -> la pestana del juego consume el siguiente item.
+- `POST http://localhost:9126/sd/result` -> la pestana publica el resultado del comando.
+- `GET  http://localhost:9126/sd/result?requestId=...` -> el daemon puede leer el resultado si necesita feedback.
 
-El game ya expone el bridge en el window; me falta solo poner el relay HTTP. Si me confirmas que ese es el path, lo monto.
+El `game.html` hace polling suave a `/sd/pending` cuando detecta el bridge cargado. En localhost usa `location.origin`; desde GitHub Pages usa `XTANCO_RUNTIME_CONFIG.tube.proxyUrl`.
+
+Ejemplo:
+
+```bash
+curl -X POST http://localhost:9126/sd/press \
+  -H 'Content-Type: application/json' \
+  -d '{"pageId":"admira-events","btnIdx":0}'
+```
 
 ---
 
