@@ -7,6 +7,13 @@ ALLOWED_ORIGINS = "https://csilvasantin.github.io,http://localhost:9124,http://1
 JOIN_CODE = "XTANCO26"
 ACTIVE_WINDOW_SECONDS = "120"
 STAMPS_FOR_FREE = "5"
+# Gamification bridge: 'mock' simulates Open Loyalty inside the worker (default,
+# safe for the prod PoC). Set to 'live' + the OL_* secrets to hit OL cloud.
+OL_MODE = "mock"
+
+# Drain the Open Loyalty outbox every 5 minutes.
+[triggers]
+crons = ["*/5 * * * *"]
 
 [[d1_databases]]
 binding = "DB"

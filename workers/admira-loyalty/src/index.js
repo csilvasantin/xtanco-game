@@ -6,6 +6,16 @@
 //   POST /visit              { token, product, revenue }     -> { customer, free, stamps }
 //   GET  /active                                             -> { customers: [...active in window] }
 //   GET  /health                                             -> { ok:true }
+//
+// Gamification × Open Loyalty bridge (PoC, additive — see src/ol-driver.js):
+//   POST /events                        normalised ingest -> outbox (idempotent, rate-limited)
+//   POST /ol/webhook                    inbound OL webhook receiver (HMAC-SHA256)
+//   POST /admin/gamification/drain      force outbox drain (Bearer admin)
+//   GET  /gamification/me?subjectId=     mirror read: points, tier, badges, pending
+//   GET  /gamification/leaderboard?locationId=  weekly ISO ranking (top 10 + your rank)
+//   scheduled() cron */5 * * * *        drains the outbox
+
+import { createDriver, receiveWebhook, EVENT_TYPES, pointsCaseSql, isoWeekBounds } from './ol-driver.js';
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://csilvasantin.github.io',
@@ -633,7 +643,171 @@ async function routeAdmin(request, env, path) {
   if (request.method === 'POST' && path === '/admin/config')        return await handleAdminConfigSet(request, env);
   if (request.method === 'POST' && path === '/admin/member/adjust') return await handleAdminAdjust(request, env);
   if (request.method === 'POST' && path === '/admin/member/redeem') return await handleAdminRedeem(request, env);
+  if (request.method === 'POST' && path === '/admin/gamification/drain') return await handleAdminDrain(request, env);
   return json(request, env, 404, { error: 'not_found', path });
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Gamification × Open Loyalty bridge (PoC). All additive; see ol-driver.js.
+// ─────────────────────────────────────────────────────────────────────
+
+// Strip PII we never want to forward to OL. If any is present it is dropped and
+// a flag is recorded, so the ingest stays privacy-minimal by construction.
+const PII_KEYS = ['email', 'phone', 'name', 'firstName', 'lastName', 'tel', 'mobile'];
+function sanitizeMetadata(meta) {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return { meta: {}, pii: false };
+  const out = {}; let pii = false;
+  for (const [k, v] of Object.entries(meta)) {
+    if (PII_KEYS.includes(k)) { pii = true; continue; }
+    out[k] = v;
+  }
+  return { meta: out, pii };
+}
+
+function parseTs(v) {
+  if (v == null) return null;
+  if (typeof v === 'number' && Number.isFinite(v)) return Math.floor(v);
+  const p = Date.parse(String(v));
+  return Number.isFinite(p) ? Math.floor(p / 1000) : null;
+}
+
+async function handleEvents(request, env) {
+  const body = await readBody(request);
+  const eventId = String(body.eventId || '').trim();
+  const type = String(body.type || '').trim();
+  const subjectId = String(body.subjectId || '').trim();
+
+  if (!eventId) return json(request, env, 400, { error: 'missing_event_id' });
+  if (!EVENT_TYPES.has(type)) return json(request, env, 400, { error: 'invalid_type', type });
+  if (!subjectId) return json(request, env, 400, { error: 'missing_subject_id' });
+
+  // IDEMPOTENCY: event_id is PK. Check first so retries don't count against the
+  // rate limit and always return duplicate:true.
+  const existing = await env.DB.prepare('SELECT event_id FROM loyalty_events WHERE event_id = ?').bind(eventId).first();
+  if (existing) return json(request, env, 200, { ok: true, duplicate: true, eventId });
+
+  // RATE LIMIT over a rolling 60s window on received_at.
+  const t = now();
+  const windowStart = t - 60;
+  const subjCount = await env.DB.prepare(
+    'SELECT COUNT(*) AS c FROM loyalty_events WHERE subject_id = ? AND received_at >= ?'
+  ).bind(subjectId, windowStart).first();
+  if (Number(subjCount?.c || 0) >= 30) {
+    return json(request, env, 429, { error: 'rate_limited', scope: 'subject', limit: 30 });
+  }
+  const screenId = body.metadata && typeof body.metadata === 'object' ? body.metadata.screenId : null;
+  if (screenId != null) {
+    const scr = await env.DB.prepare(
+      "SELECT COUNT(*) AS c FROM loyalty_events WHERE json_extract(metadata, '$.screenId') = ? AND received_at >= ?"
+    ).bind(String(screenId), windowStart).first();
+    if (Number(scr?.c || 0) >= 120) {
+      return json(request, env, 429, { error: 'rate_limited', scope: 'screen', limit: 120 });
+    }
+  }
+
+  const { meta, pii } = sanitizeMetadata(body.metadata);
+  if (pii) meta._piiStripped = true;
+  const occurredAt = parseTs(body.occurredAt) || t;
+  const subjectKind = String(body.subjectKind || 'visitor').slice(0, 24);
+  const sourceApp = body.sourceApp != null ? String(body.sourceApp).slice(0, 64) : null;
+
+  // INSERT OR IGNORE closes the check-then-insert race: a concurrent duplicate
+  // with the same event_id is silently skipped rather than erroring.
+  await env.DB.prepare(`
+    INSERT OR IGNORE INTO loyalty_events
+      (event_id, type, subject_id, subject_kind, source_app, metadata, occurred_at, received_at, ol_status, attempts)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0)
+  `).bind(eventId, type, subjectId, subjectKind, sourceApp, JSON.stringify(meta), occurredAt, t).run();
+
+  return json(request, env, 200, { ok: true, duplicate: false, eventId, status: 'pending', piiStripped: pii });
+}
+
+async function handleOlWebhook(request, env) {
+  const r = await receiveWebhook(request, env);
+  return json(request, env, r.status, r.body);
+}
+
+// Drain the outbox: send pending events to OL (mock or live). attempts++ each
+// try; after 5 attempts a stuck event is parked as 'failed' (simple backoff).
+async function drainOutbox(env, limit = 25) {
+  const driver = createDriver(env);
+  const rows = (await env.DB.prepare(
+    "SELECT * FROM loyalty_events WHERE ol_status = 'pending' ORDER BY received_at ASC LIMIT ?"
+  ).bind(limit).all()).results || [];
+
+  let sent = 0, failed = 0;
+  for (const row of rows) {
+    const attempts = Number(row.attempts || 0) + 1;
+    try {
+      const res = await driver.sendEvent(row);
+      await env.DB.prepare(
+        "UPDATE loyalty_events SET ol_status = 'sent', sent_at = ?, attempts = ?, ol_response = ? WHERE event_id = ?"
+      ).bind(now(), attempts, JSON.stringify(res).slice(0, 4000), row.event_id).run();
+      sent++;
+    } catch (err) {
+      const status = attempts >= 5 ? 'failed' : 'pending';
+      if (status === 'failed') failed++;
+      await env.DB.prepare(
+        'UPDATE loyalty_events SET ol_status = ?, attempts = ?, ol_response = ? WHERE event_id = ?'
+      ).bind(status, attempts, JSON.stringify({ error: String(err && err.message || err) }).slice(0, 4000), row.event_id).run();
+    }
+  }
+  return { processed: rows.length, sent, failed };
+}
+
+async function handleAdminDrain(request, env) {
+  const result = await drainOutbox(env, 25);
+  await logAdmin(env, 'gam_drain', null, JSON.stringify(result));
+  return json(request, env, 200, { ok: true, ...result });
+}
+
+async function handleGamMe(request, env) {
+  const subjectId = String(new URL(request.url).searchParams.get('subjectId') || '').trim();
+  if (!subjectId) return json(request, env, 400, { error: 'missing_subject_id' });
+  const wallet = await env.DB.prepare('SELECT points, tier, updated_at FROM gam_wallets WHERE subject_id = ?').bind(subjectId).first();
+  const badges = (await env.DB.prepare('SELECT badge, earned_at FROM gam_badges WHERE subject_id = ? ORDER BY earned_at ASC').bind(subjectId).all()).results || [];
+  const pending = await env.DB.prepare("SELECT COUNT(*) AS c FROM loyalty_events WHERE subject_id = ? AND ol_status = 'pending'").bind(subjectId).first();
+  const lastSent = await env.DB.prepare("SELECT MAX(sent_at) AS s FROM loyalty_events WHERE subject_id = ? AND ol_status = 'sent'").bind(subjectId).first();
+  return json(request, env, 200, {
+    subjectId,
+    points: Number(wallet?.points || 0),
+    tier: wallet?.tier || 'bronze',
+    badges: badges.map(b => ({ badge: b.badge, earnedAt: b.earned_at })),
+    pendingEvents: Number(pending?.c || 0),
+    lastSync: Number(lastSent?.s || wallet?.updated_at || 0) || null,
+  });
+}
+
+async function handleGamLeaderboard(request, env) {
+  const url = new URL(request.url);
+  const locationId = String(url.searchParams.get('locationId') || '').trim();
+  const subjectId = String(url.searchParams.get('subjectId') || '').trim();
+  if (!locationId) return json(request, env, 400, { error: 'missing_location_id' });
+
+  const { start, end } = isoWeekBounds();
+  // Weekly ranking = points summed from sent events in the current ISO week for
+  // this location. Point values come from the driver's single-source CASE.
+  const rows = (await env.DB.prepare(`
+    SELECT subject_id, SUM(${pointsCaseSql()}) AS pts
+      FROM loyalty_events
+     WHERE ol_status = 'sent' AND received_at >= ? AND received_at < ?
+       AND json_extract(metadata, '$.locationId') = ?
+     GROUP BY subject_id
+     HAVING pts > 0
+     ORDER BY pts DESC
+     LIMIT 200
+  `).bind(start, end, locationId).all()).results || [];
+
+  const ranked = rows.map((r, i) => ({ rank: i + 1, subjectId: r.subject_id, points: Number(r.pts || 0) }));
+  const top = ranked.slice(0, 10);
+  let me = null;
+  if (subjectId) me = ranked.find(r => r.subjectId === subjectId) || { rank: null, subjectId, points: 0 };
+  return json(request, env, 200, {
+    locationId,
+    week: { start, end },
+    top,
+    me,
+  });
 }
 
 export default {
@@ -653,9 +827,19 @@ export default {
       if (request.method === 'POST' && path === '/visit')    return await handleVisit(request, env);
       if (request.method === 'POST' && path === '/shop/visit') return await handleShopVisit(request, env);
       if (request.method === 'GET'  && path === '/active')   return await handleActive(request, env);
+      // Gamification bridge (additive)
+      if (request.method === 'POST' && path === '/events')                  return await handleEvents(request, env);
+      if (request.method === 'POST' && path === '/ol/webhook')              return await handleOlWebhook(request, env);
+      if (request.method === 'GET'  && path === '/gamification/me')         return await handleGamMe(request, env);
+      if (request.method === 'GET'  && path === '/gamification/leaderboard') return await handleGamLeaderboard(request, env);
       return json(request, env, 404, { error: 'not_found', path });
     } catch (err) {
       return json(request, env, 500, { error: 'server_error', message: String(err && err.message || err) });
     }
+  },
+
+  // Cron drain of the OL outbox (wrangler.toml [triggers] crons = ["*/5 * * * *"]).
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(drainOutbox(env, 25));
   },
 };
