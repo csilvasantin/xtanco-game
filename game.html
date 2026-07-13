@@ -7,6 +7,16 @@
   <meta http-equiv="Pragma" content="no-cache"/>
   <meta http-equiv="Expires" content="0"/>
   <title>Admira XP // The Xpace OS — Xtanco</title>
+  <script>/* Entrada directa al Xtanco: cortina desde el primer paint — sin flash del arcade (misma
+     condicion que el autostart por defecto; safety de 6s para no quedarse nunca en negro). */
+  (function(){try{var q=new URLSearchParams(location.search);var as=(q.get('autostart')||'').toLowerCase();
+  var direct=as?(as!=='0'&&as!=='off'):(q.get('arcade')!=='1'&&!q.get('view')&&!q.get('distro')&&!q.get('present')&&!q.get('preview'));
+  if(direct){document.documentElement.classList.add('adm-direct');
+  setTimeout(function(){document.documentElement.classList.remove('adm-direct');},6000);}}catch(e){}})();</script>
+  <style>
+  body::after{content:'';position:fixed;inset:0;z-index:99999;background:#05080d;pointer-events:none;opacity:0;transition:opacity .45s ease}
+  html.adm-direct body::after{opacity:1;content:'· CARGANDO GEMELO ·';color:#3df08a;display:flex;align-items:center;justify-content:center;font:600 13px/1 ui-monospace,Menlo,monospace;letter-spacing:.22em}
+  </style>
   <!-- Favicon familia Admira (cubo iso cian sobre navy, estilo de Admira.app/Studio). Rutas
        RELATIVAS para que resuelvan en /admira-xp/ (preprod) y en / (admira.store, prod). -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -31683,7 +31693,7 @@ window.xtAPI = (function(){
       const _ci=Object.prototype.hasOwnProperty.call(_cmap,_as)?_cmap[_as]:0;
       const _ed=(_qs.get('editor')==='1'||_qs.get('editor')==='true');
       chooseJugar();   // oculta el splash
-      setTimeout(()=>{ try{ quickStartXtanco(_ci,_ed); }catch(e){ console.warn('autostart failed',e); } }, 200);
+      setTimeout(()=>{ try{ quickStartXtanco(_ci,_ed); setTimeout(function(){try{document.documentElement.classList.remove('adm-direct');}catch(e){}},1200); }catch(e){ console.warn('autostart failed',e); } }, 200);
     }
   }catch(e){}
   splash.addEventListener('click', (e)=>{
