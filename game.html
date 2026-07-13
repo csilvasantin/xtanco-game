@@ -22696,24 +22696,9 @@ function drawMarketplaceOverlay(){
     if(camp){
       window.MarketplaceBridge.drawPaperPoster(cx,s.x,s.y,s.w,s.h,camp,s.label);
     }else{
-      // Empty slot — render as dashed placeholder so the physical asset is always visible.
-      cx.save();
-      cx.setLineDash([4,3]);
-      cx.strokeStyle='rgba(255,216,102,0.55)';
-      cx.lineWidth=1;
-      cx.strokeRect(s.x+0.5,s.y+0.5,s.w-1,s.h-1);
-      cx.setLineDash([]);
-      cx.fillStyle='rgba(255,216,102,0.06)';
-      cx.fillRect(s.x,s.y,s.w,s.h);
-      cx.fillStyle='rgba(255,216,102,0.85)';
-      cx.font='bold 8px monospace';
-      cx.textAlign='center';
-      cx.fillText(s.label,s.x+s.w/2,s.y+s.h/2-3);
-      cx.font='6px monospace';
-      cx.fillStyle='rgba(255,216,102,0.55)';
-      cx.fillText('subastable',s.x+s.w/2,s.y+s.h/2+8);
-      cx.textAlign='left';
-      cx.restore();
+      // Slot vacío: sin placeholder «subastable» ni hitbox (Carlos, 14-jul-2026).
+      // El slot solo se pinta cuando hay campaña real del marketplace.
+      continue;
     }
     BTNS['marketplaceClick_'+s.id]={x:s.x,y:s.y,w:s.w,h:s.h};
   }
