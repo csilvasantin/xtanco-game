@@ -31673,7 +31673,11 @@ window.xtAPI = (function(){
   // saltando splash/era/vertical. Para pantallas/kiosko, embed y QA/screenshots.
   try{
     const _qs=new URLSearchParams(location.search);
-    const _as=(_qs.get('autostart')||'').toLowerCase();
+    let _as=(_qs.get('autostart')||'').toLowerCase();
+      // Directo al Xtanco por defecto (Carlos, 13-jul-2026): fuera XPACE INVADERS del camino
+      // de entrada. El arcade queda como easter egg con ?arcade=1; los modos con entrada
+      // propia (view/distro/present/preview) siguen intactos. (sync desde xpaceos 0a9d317)
+      if(!_as && _qs.get('arcade')!=='1' && !_qs.get('view') && !_qs.get('distro') && !_qs.get('present') && !_qs.get('preview')){ _as='xtanco'; }
     if(_as){
       const _cmap={xtanco:0,loterias:1,supermercado:2,shoptalk:3,creator:4};
       const _ci=Object.prototype.hasOwnProperty.call(_cmap,_as)?_cmap[_as]:0;
