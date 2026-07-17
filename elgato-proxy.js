@@ -1239,6 +1239,17 @@ async function tubePublishToStockWhenReady(jobId, url, fmt, comment) {
     const r = await fetch(STOCK_PUBLISH_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const txt = await r.text().catch(() => '');
     console.log(`[import-to-stock] ${jobId} → publish ${r.status} ${txt.slice(0, 160)}`);
+    // El worker espera state:'published' para dar la importación por buena. Si el job se
+    // borra aquí mismo, su sondeo (cada 3 s) recibe 404 y canta "quedó sin estado final en
+    // el proxy" AUNQUE el vídeo se haya publicado bien: falsa alarma + Enlace basura en el
+    // Stock en CADA importación correcta. Se marca el estado final y se limpia con retardo.
+    const jok = TUBE_JOBS.get(jobId);
+    if (jok) {
+      if (r.ok) jok.status = 'published';
+      else { jok.status = 'error'; jok.error = `publish ${r.status}: ${txt.slice(0, 160)}`; }
+    }
+    setTimeout(() => { try { tubeDisposeJob(jobId); } catch (_) {} }, 90000);
+    return;
   } catch (e) {
     const msg = (e && e.message) || String(e);
     console.error(`[import-to-stock] ${jobId} ERROR: ${msg}`);
@@ -1252,7 +1263,6 @@ async function tubePublishToStockWhenReady(jobId, url, fmt, comment) {
     setTimeout(() => { try { tubeDisposeJob(jobId); } catch (_) {} }, 90000);
     return;
   }
-  try { tubeDisposeJob(jobId); } catch (e) {}   // éxito: limpiar ya
 }
 
 const server = http.createServer((req, res) => {
