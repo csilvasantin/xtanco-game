@@ -1240,10 +1240,19 @@ async function tubePublishToStockWhenReady(jobId, url, fmt, comment) {
     const txt = await r.text().catch(() => '');
     console.log(`[import-to-stock] ${jobId} → publish ${r.status} ${txt.slice(0, 160)}`);
   } catch (e) {
-    console.error(`[import-to-stock] ${jobId} ERROR: ${e && e.message || e}`);
-  } finally {
-    try { tubeDisposeJob(jobId); } catch (e) {}
+    const msg = (e && e.message) || String(e);
+    console.error(`[import-to-stock] ${jobId} ERROR: ${msg}`);
+    // NO borrar el job aquí. El worker pregunta por /tube/status cada 3 s y, si el job ya
+    // no existe, solo puede decir "quedó sin estado final en el proxy": el error REAL
+    // (p.ej. "yt-dlp failed (code 1)" por un post sin vídeo) se perdía en este log y nunca
+    // llegaba a Telegram. Se marca como error y se limpia con retardo, dándole tiempo a
+    // leerlo — el worker ya sabe reportar state:'error' con su mensaje.
+    const j = TUBE_JOBS.get(jobId);
+    if (j) { j.status = 'error'; j.error = msg.slice(0, 300); }
+    setTimeout(() => { try { tubeDisposeJob(jobId); } catch (_) {} }, 90000);
+    return;
   }
+  try { tubeDisposeJob(jobId); } catch (e) {}   // éxito: limpiar ya
 }
 
 const server = http.createServer((req, res) => {
