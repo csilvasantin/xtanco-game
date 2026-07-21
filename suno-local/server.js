@@ -174,7 +174,12 @@ let LAST_REAUTH_PROMPT = 0;
 const TELEGRAM_BOT = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_CHAT = process.env.TELEGRAM_CHAT_ID || '';
 
-function promptUserToReauth(reason) {
+// abrirVentana=false → avisa por Telegram pero NO abre nada. Se usa desde ensurePage(),
+// que se dispara en cada intento: abrir allí una ventana convertiría un fallo silencioso
+// en ventanas saltando cada 15 min (Carlos, 21-jul-2026: «abre solo suno.com de vez en
+// cuando»). La ventana de login solo la abre quien la pide a propósito.
+function promptUserToReauth(reason, abrirVentana) {
+  if (abrirVentana === undefined) abrirVentana = true;
   if (Date.now() - LAST_REAUTH_PROMPT < 15 * 60 * 1000) return;
   LAST_REAUTH_PROMPT = Date.now();
   // 1) Reintenta refrescar desde Chrome — quizá el usuario ya se logueó.
@@ -182,8 +187,8 @@ function promptUserToReauth(reason) {
     console.log('↻ Re-leído de Chrome tras error Clerk — JWT debería volver a funcionar.');
     return;
   }
-  console.log('⚠ Sesión Suno caducada en Chrome. Abriendo /sign-in…  motivo:', reason);
-  try { execSync(`open -a "Google Chrome" "https://suno.com/sign-in"`); } catch (_) {}
+  console.log('⚠ Sesión Suno caducada en Chrome.' + (abrirVentana ? ' Abriendo /sign-in…' : ' (no abro ventana)') + '  motivo:', reason);
+  if (abrirVentana) { try { execSync(`open -a "Google Chrome" "https://suno.com/sign-in"`); } catch (_) {} }
   if (TELEGRAM_BOT && TELEGRAM_CHAT) {
     const text = `⚠️ Admira DJ: sesión caducada (${reason}). Te he abierto la ventana de login para que vuelvas a entrar. Una vez logueado, el servicio retoma solo en ≤10 min (o reinícialo).`;
     const body = `chat_id=${encodeURIComponent(TELEGRAM_CHAT)}&text=${encodeURIComponent(text)}`;
@@ -341,10 +346,47 @@ function cleanProfileLocks(profileDir) {
   }
 }
 
+// Reengancha el Chrome que ya esté corriendo con ESTE perfil, en vez de abrir otro.
+// Puppeteer deja su endpoint en <perfil>/DevToolsActivePort; si responde, nos conectamos.
+// Si el fichero está pero el Chrome ya murió, no pasa nada: seguimos al lanzamiento normal.
+async function adoptarChromeVivo() {
+  const profileDir = process.env.SUNO_BROWSER_PROFILE_DIR || path.join(__dirname, '.suno-chrome-profile');
+  const f = path.join(profileDir, 'DevToolsActivePort');
+  if (!fs.existsSync(f)) return false;
+  const [puerto, ruta] = fs.readFileSync(f, 'utf8').split('\n');
+  if (!puerto) return false;
+  const ws = `ws://127.0.0.1:${puerto.trim()}${(ruta || '').trim()}`;
+  browser = await puppeteer.connect({ browserWSEndpoint: ws, defaultViewport: null });
+  browser.on('disconnected', () => { browser = null; page = null; pageReadyPromise = null; });
+  console.log('↺ Reenganchado al Chrome que ya estaba abierto (no abro ventana nueva)');
+  return true;
+}
+
+// Al morir el proxy (KeepAlive lo reinicia a menudo), cerrar SU Chrome. Sin esto cada
+// reinicio deja un Chrome huérfano: así se llegó a 11 vivos, uno de 8 horas.
+let cerrando = false;
+function cerrarChrome() {
+  if (cerrando) return; cerrando = true;
+  try { if (browser && browser.process()) browser.process().kill('SIGTERM'); } catch (_) {}
+}
+['SIGTERM','SIGINT','SIGHUP'].forEach(s => process.on(s, () => { cerrarChrome(); process.exit(0); }));
+process.on('exit', cerrarChrome);
+
 async function ensurePage() {
   if (page && !page.isClosed()) return page;
   if (pageReadyPromise) return pageReadyPromise;
   if (!puppeteer) throw new Error('puppeteer no instalado');
+  // ── UN SOLO CHROME, NO UNA VENTANA POR INTENTO ──────────────────────────────────────
+  // Carlos, 21-jul-2026: «abre solo suno.com de vez en cuando». El navegador va HEADFUL a
+  // propósito (Turnstile lo exige), así que cada arranque es una VENTANA que salta encima
+  // de lo que estés haciendo. Medido hoy: 7 arranques con UN solo reinicio del proxy y
+  // **11 Chrome huérfanos vivos** (el más viejo, de 8 horas).
+  //
+  // La causa: `browser` se pierde (crash, 'disconnected', reinicio por KeepAlive) pero el
+  // proceso Chrome NO muere — nadie lo cierra. Al siguiente intento se lanza otro y el
+  // anterior se queda ahí. Se arregla en dos sitios: aquí, adoptando el Chrome que ya
+  // esté vivo en este perfil en vez de abrir otro; y al salir (ver el handler de cierre).
+  if (!browser) { try { await adoptarChromeVivo(); } catch (_) {} }
   pageReadyPromise = (async () => {
     if (!browser) {
       // HEADFUL + perfil PERSISTENTE: Suno protege /generate con Turnstile/browser-token
@@ -780,6 +822,22 @@ function readBody(req) {
 async function handleHealthz(req, res) {
   // Usa la sesión de la PROPIA página del proxy (window.Clerk), no cookies del
   // servidor. Si no hay sesión → avisa de que hay que loguearse en su ventana.
+  //
+  // ⚠️ NO ABRE NAVEGADOR (Carlos, 21-jul-2026: «abre solo suno.com de vez en cuando»).
+  // Este endpoint es un SONDEO: game.html y pixeria lo llaman al cargar la página, solo
+  // para saber si el proxy está disponible. Como el Chrome del proxy va HEADFUL (Turnstile
+  // lo exige), llamar a ensurePage() aquí significaba que **cada visita a esas páginas
+  // abría una ventana de Suno encima de lo que estuvieras haciendo**. Verificado en vivo
+  // hoy: con 0 navegadores, un solo `curl /healthz` abría uno.
+  // Un chequeo de salud no debe tener efectos secundarios. Si el navegador ya está
+  // levantado, informamos de verdad; si no, decimos que está dormido — que es la verdad —
+  // y lo despierta /generate, que es quien sí necesita el navegador.
+  if (!page || page.isClosed()) {
+    return sendJson(res, 200, {
+      ok: false, sleeping: true,
+      error: 'proxy vivo, navegador dormido — se abre al generar (no lo levanto en un healthz)'
+    });
+  }
   try {
     const pg = await ensurePage();
     const info = await pg.evaluate(async () => {
