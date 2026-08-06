@@ -1245,6 +1245,15 @@ async function tubePublishToStockWhenReady(jobId, url, fmt, comment) {
     // Stock en CADA importación correcta. Se marca el estado final y se limpia con retardo.
     const jok = TUBE_JOBS.get(jobId);
     if (jok) {
+      // Se guarda la ficha del asset publicado: sin ella, el aviso de Telegram sólo
+      // puede decir "listo" y obliga a ir a buscar el vídeo a mano en el Stock.
+      if (r.ok) {
+        try {
+          const pub = JSON.parse(txt);
+          if (pub && pub.url) jok.assetUrl = String(pub.url);
+          if (pub && pub.id) jok.assetId = String(pub.id);
+        } catch (_) {}
+      }
       if (r.ok) jok.status = 'published';
       else { jok.status = 'error'; jok.error = `publish ${r.status}: ${txt.slice(0, 160)}`; }
     }
@@ -1621,7 +1630,7 @@ const server = http.createServer((req, res) => {
     const job = TUBE_JOBS.get(id);
     if (!job) { sendJson(res, 404, { ok: false, state: 'notfound' }); return; }
     const size = job.status === 'running' ? tubePartialSize(id) : job.size;
-    sendJson(res, 200, { ok: job.status !== 'error', state: job.status, size: size || 0, title: job.title || '', error: job.error || null });
+    sendJson(res, 200, { ok: job.status !== 'error', state: job.status, size: size || 0, title: job.title || '', error: job.error || null, assetUrl: job.assetUrl || '', assetId: job.assetId || '' });
     return;
   }
 
