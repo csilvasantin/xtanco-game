@@ -1207,7 +1207,7 @@ function tubeYtThumb(u) {
   const m = String(u).match(/(?:youtube\.com\/.*[?&]v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/);
   return m ? `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg` : null;
 }
-async function tubePublishToStockWhenReady(jobId, url, fmt, comment) {
+async function tubePublishToStockWhenReady(jobId, url, fmt, comment, tags) {
   const MAX_MS = 8 * 60 * 1000;
   const t0 = Date.now();
   try {
@@ -1231,6 +1231,7 @@ async function tubePublishToStockWhenReady(jobId, url, fmt, comment) {
       prompt: url,
       title: job.title || null,
       comment: comment || null,
+      tags: Array.isArray(tags) && tags.length ? tags : null,
       costEst: `gratis · ${(buf.length / 1024 / 1024).toFixed(2)}MB · Telegram`,
       thumbnail: tubeYtThumb(url),
       mime: fmt === 'audio' ? 'audio/mpeg' : 'video/mp4',
@@ -1678,12 +1679,15 @@ const server = http.createServer((req, res) => {
       const url = body.url.trim();
       const fmt = (body.format === 'audio') ? 'audio' : 'video';
       const comment = (typeof body.comment === 'string' && body.comment.trim()) ? body.comment.trim().slice(0, 500) : null;
+      const tags = Array.isArray(body.tags)
+        ? [...new Set(body.tags.map(tag => String(tag || '').trim().toLowerCase()).filter(Boolean))].slice(0, 12)
+        : [];
       let host;
       try { host = new URL(url).hostname.toLowerCase(); } catch (e) { sendJson(res, 400, { ok: false, error: 'Invalid URL' }); return; }
       if (!tubeHostAllowed(host)) { sendJson(res, 400, { ok: false, error: 'Host not allowed', host }); return; }
       const jobId = tubeStartJob(url, fmt);
       sendJson(res, 202, { ok: true, jobId, state: 'running' }); // responde ya; descarga+publica en segundo plano
-      tubePublishToStockWhenReady(jobId, url, fmt, comment);
+      tubePublishToStockWhenReady(jobId, url, fmt, comment, tags);
     });
     return;
   }
