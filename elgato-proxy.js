@@ -939,7 +939,62 @@ function tubeHostAllowed(host) {
     || host === 'tiktok.com' || host.endsWith('.tiktok.com') || host === 'vm.tiktok.com'
     || host === 'instagram.com' || host.endsWith('.instagram.com')
     || host === 'linkedin.com' || host.endsWith('.linkedin.com') || host === 'lnkd.in'
-    || host === 'suno.com' || host.endsWith('.suno.com');
+    || host === 'suno.com' || host.endsWith('.suno.com')
+    // Telegram (Carlos, 28-ago-2026). OJO: el bloque de /tube/download repite
+    // esta misma lista con flags sueltos; si se toca una, se tocan las dos.
+    || host === 't.me' || host === 'telegram.me' || host === 'telegram.dog';
+}
+
+// ─── Telegram · comprobación previa ─────────────────────────────────────────
+// yt-dlp saca el vídeo de un post de canal del MARCO PÚBLICO (t.me/<canal>/<id>
+// ?embed=1), no de la API de Telegram. Hay canales —los que activan la protección
+// de contenido, o los que suben ficheros grandes— cuyo marco NO trae media: solo
+// la miniatura .jpg y el rótulo «Please open Telegram to view this post». Con
+// esos, yt-dlp avisa «returned nothing», sale con código 0 y no deja fichero; y
+// como aquí se le llama con --quiet --no-warnings, lo que le llegaba al usuario
+// era un opaco «yt-dlp produced no file» DESPUÉS de esperar la descarga. Esto lo
+// detecta antes de bajar nada y dice qué pasa y qué hacer.
+//
+// OJO con el detector: los rótulos `message_media_not_supported` y
+// `message_media_view_in_telegram` están en la PLANTILLA de TODOS los marcos,
+// tengan media o no — buscarlos daba falso positivo en posts perfectamente
+// descargables. La única señal fiable es que aparezca una URL de vídeo del CDN.
+const TG_HOSTS = new Set(['t.me', 'telegram.me', 'telegram.dog']);
+const TG_MEDIA_RE = /https:\/\/cdn\d*\.telesco\.pe\/file\/[^"'\s]+\.(?:mp4|mov|webm|m4v)/i;
+const TG_SIN_MEDIA = 'Este post de Telegram no publica su vídeo en la web: el marco público solo trae la miniatura y el rótulo «Please open Telegram to view this post». Pasa cuando el canal tiene la protección de contenido activada, cuando el fichero es demasiado grande para el reproductor web, o cuando el post no lleva vídeo. Descárgalo desde la app de Telegram y súbelo con «ARCHIVO LOCAL → STOCK».';
+
+// cb(motivo) — motivo es null cuando se puede seguir.
+function telegramPreflight(url, cb) {
+  let done = false;
+  const acabar = (motivo) => { if (!done) { done = true; cb(motivo); } };
+  let probe;
+  try {
+    probe = new URL(url);
+    probe.searchParams.set('embed', '1');
+    probe.searchParams.set('mode', 'tme');
+  } catch (e) { acabar(null); return; }   // URL rara: que decida yt-dlp
+  const req = https.get(probe.toString(), {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' },
+    timeout: 12000,
+  }, (r) => {
+    if (r.statusCode !== 200) { r.resume(); acabar(null); return; }
+    let html = '';
+    r.setEncoding('utf8');
+    r.on('data', (d) => { html += d; if (html.length > 524288) r.destroy(); });
+    r.on('close', () => acabar(TG_MEDIA_RE.test(html) ? null : TG_SIN_MEDIA));
+  });
+  // Si la comprobación falla (red, timeout) NO bloqueamos: que lo intente yt-dlp.
+  req.on('timeout', () => { req.destroy(); acabar(null); });
+  req.on('error', () => acabar(null));
+}
+
+// Envuelve el arranque de cualquier ruta /tube/*: con Telegram comprueba antes.
+function conTelegramComprobado(res, url, host, sigue) {
+  if (!TG_HOSTS.has(host)) { sigue(); return; }
+  telegramPreflight(url, (motivo) => {
+    if (motivo) { sendJson(res, 400, { ok: false, error: 'Telegram no publica el media de este post', host, message: motivo }); return; }
+    sigue();
+  });
 }
 
 // ─── Suno: yt-dlp no soporta suno.com (baja un silencio de ~30s, ver yt-dlp#10368).
@@ -1508,11 +1563,17 @@ const server = http.createServer((req, res) => {
       const isInstagram= host === 'instagram.com' || host.endsWith('.instagram.com');
       const isLinkedIn = host === 'linkedin.com' || host.endsWith('.linkedin.com') || host === 'lnkd.in';
       const isSuno     = host === 'suno.com' || host.endsWith('.suno.com');
-      if (!(isYouTube || isVimeo || isTwitter || isTikTok || isInstagram || isLinkedIn || isSuno)) {
-        sendJson(res, 400, { ok: false, error: 'Host not allowed', host, allowed: ['youtube','vimeo','twitter/x','tiktok','instagram','linkedin','suno'] });
+      const isTelegram = TG_HOSTS.has(host);
+      if (!(isYouTube || isVimeo || isTwitter || isTikTok || isInstagram || isLinkedIn || isSuno || isTelegram)) {
+        sendJson(res, 400, { ok: false, error: 'Host not allowed', host, allowed: ['youtube','vimeo','twitter/x','tiktok','instagram','linkedin','suno','telegram'] });
         return;
       }
       if (isSuno) { sunoTubeDownload(res, url, host, fmt); return; }
+      conTelegramComprobado(res, url, host, arrancaYtDlp);
+
+      // El cuerpo de la descarga, en función aparte para poder llamarlo antes o
+      // después de la comprobación previa (las declaraciones se elevan).
+      function arrancaYtDlp() {
       const id = crypto.randomBytes(8).toString('hex');
       const outTpl = path.join(os.tmpdir(), `admira-tube-${id}.%(ext)s`);
       // Args base comunes
@@ -1602,6 +1663,7 @@ const server = http.createServer((req, res) => {
         cleanup();
         sendJson(res, 500, { ok: false, error: 'yt-dlp spawn failed', message: err.message });
       });
+      }
     });
     return;
   }
@@ -1616,9 +1678,11 @@ const server = http.createServer((req, res) => {
       const fmt = (body.format === 'audio') ? 'audio' : 'video';
       let host;
       try { host = new URL(url).hostname.toLowerCase(); } catch (e) { sendJson(res, 400, { ok: false, error: 'Invalid URL' }); return; }
-      if (!tubeHostAllowed(host)) { sendJson(res, 400, { ok: false, error: 'Host not allowed', host, allowed: ['youtube','vimeo','twitter/x','tiktok','instagram','linkedin','suno'] }); return; }
-      const jobId = tubeStartJob(url, fmt);
-      sendJson(res, 202, { ok: true, jobId, state: 'running' });
+      if (!tubeHostAllowed(host)) { sendJson(res, 400, { ok: false, error: 'Host not allowed', host, allowed: ['youtube','vimeo','twitter/x','tiktok','instagram','linkedin','suno','telegram'] }); return; }
+      conTelegramComprobado(res, url, host, () => {
+        const jobId = tubeStartJob(url, fmt);
+        sendJson(res, 202, { ok: true, jobId, state: 'running' });
+      });
     });
     return;
   }
@@ -1684,10 +1748,12 @@ const server = http.createServer((req, res) => {
         : [];
       let host;
       try { host = new URL(url).hostname.toLowerCase(); } catch (e) { sendJson(res, 400, { ok: false, error: 'Invalid URL' }); return; }
-      if (!tubeHostAllowed(host)) { sendJson(res, 400, { ok: false, error: 'Host not allowed', host }); return; }
-      const jobId = tubeStartJob(url, fmt);
-      sendJson(res, 202, { ok: true, jobId, state: 'running' }); // responde ya; descarga+publica en segundo plano
-      tubePublishToStockWhenReady(jobId, url, fmt, comment, tags);
+      if (!tubeHostAllowed(host)) { sendJson(res, 400, { ok: false, error: 'Host not allowed', host, allowed: ['youtube','vimeo','twitter/x','tiktok','instagram','linkedin','suno','telegram'] }); return; }
+      conTelegramComprobado(res, url, host, () => {
+        const jobId = tubeStartJob(url, fmt);
+        sendJson(res, 202, { ok: true, jobId, state: 'running' }); // responde ya; descarga+publica en segundo plano
+        tubePublishToStockWhenReady(jobId, url, fmt, comment, tags);
+      });
     });
     return;
   }
