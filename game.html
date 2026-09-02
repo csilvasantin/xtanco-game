@@ -649,8 +649,20 @@
     .splash-lang-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
     .splash-lang-btn.is-active{color:#0a0a0a;background:#ffd86a}
   </style>
-  <!-- Idioma por defecto inglés; respeta la elección guardada antes de cargar el panel de contacto -->
-  <script>try{document.documentElement.lang=localStorage.getItem('xtanco_lang')==='es'?'es':'en';}catch(e){document.documentElement.lang='en';}</script>
+  <!-- Idioma por defecto inglés; una ruta puede fijarlo sin alterar la interfaz ni la preferencia guardada -->
+  <script>
+    (function(){
+      var requested='';
+      try{ requested=new URLSearchParams(location.search).get('lang')||''; }catch(e){}
+      window.XPACE_LANG_OVERRIDE=(requested==='es'||requested==='en')?requested:'';
+      window.XPACE_LANG_LOCKED=!!window.XPACE_LANG_OVERRIDE && (function(){
+        try{ return new URLSearchParams(location.search).get('langlock')==='1'; }catch(e){ return false; }
+      })();
+      var initial=window.XPACE_LANG_OVERRIDE;
+      if(!initial){ try{ initial=localStorage.getItem('xtanco_lang')==='es'?'es':'en'; }catch(e){ initial='en'; } }
+      document.documentElement.lang=initial||'en';
+    })();
+  </script>
   <!-- Contacto del grupo Admira: mismo componente y datos que admira.app / admiranext.com / admira.studio -->
   <link rel="stylesheet" href="https://csilvasantin.github.io/admira-design/tokens.css">
   <link rel="stylesheet" href="https://csilvasantin.github.io/admira-design/contact-panel.css">
@@ -6177,13 +6189,17 @@ const LANGS={
     modelStart:['€3,500','€2,800','€4,500','€6,000'],
   },
 };
-let lang=(function(){try{return localStorage.getItem('xtanco_lang')==='es'?'es':'en';}catch(e){return 'en';}})();
+let lang=(function(){
+  if(window.XPACE_LANG_OVERRIDE==='es'||window.XPACE_LANG_OVERRIDE==='en') return window.XPACE_LANG_OVERRIDE;
+  try{return localStorage.getItem('xtanco_lang')==='es'?'es':'en';}catch(e){return 'en';}
+})();
 const T=()=>LANGS[lang];
 function setLanguage(nextLang){
+  if(window.XPACE_LANG_LOCKED && (window.XPACE_LANG_OVERRIDE==='es'||window.XPACE_LANG_OVERRIDE==='en')) nextLang=window.XPACE_LANG_OVERRIDE;
   lang=nextLang==='en'?'en':'es';
   menuSel=lang==='en'?1:0;
   document.documentElement.lang=lang;
-  try{localStorage.setItem('xtanco_lang',lang);}catch(e){}
+  if(!window.XPACE_LANG_LOCKED){ try{localStorage.setItem('xtanco_lang',lang);}catch(e){} }
   try{if(typeof applyHtmlLang==='function')applyHtmlLang(lang);}catch(e){}
   // El dock de Telegram (Enviar/Ocultar, cabeceras, placeholder, estados) NO está
   // en la tabla I18N: lo traduce syncDockLanguage(). Sin esta llamada los botones
@@ -6199,7 +6215,7 @@ const S={ERA_SEL:'eraSel',PRELOAD:'preload',MENU:'menu',CLIENT_SEL:'clientSel',M
 const RENDER_TIERS=['8bit','16bit','habbo','real'];
 let renderMode=(function(){ try{ const v=localStorage.getItem('xtanco_render'); if(RENDER_TIERS.indexOf(v)>=0) return v; }catch(_){} return '16bit'; })();
 function setRenderMode(m){ if(RENDER_TIERS.indexOf(m)<0) return false; renderMode=m; try{ localStorage.setItem('xtanco_render',m); }catch(_){} return true; }
-let state=S.ERA_SEL, eraSel=0, menuSel=0, clientSel=0, modelSel=0, tutPage=0, helpPage=0;
+let state=S.ERA_SEL, eraSel=0, menuSel=lang==='en'?1:0, clientSel=0, modelSel=0, tutPage=0, helpPage=0;
 // Señal para el motor de ambiente (assets/js/ambient.js): rumor/lluvia/cafetera solo
 // deben sonar en partida activa, no en menús, pausa ni fin de partida.
 window.ambientActive=function(){return state===S.GAME;};
@@ -27203,7 +27219,7 @@ window.xtAPI = (function(){
         customAction:'pixerai'
       },
       {
-        label:'✏ Mobiliario',
+        label:isEs?'✏ Mobiliario':'✏ Furniture',
         status:isEs?'editor':'editor',
         customAction:'editor'
       },
@@ -27222,7 +27238,7 @@ window.xtAPI = (function(){
       })(),
       {
         // Debajo de DVR / a la derecha de Menu (8º slot, fila 2 col 4). Mismo que /impactos.
-        label:'📊 Audiencia',
+        label:isEs?'📊 Audiencia':'📊 Audience',
         status:(typeof IMPACTS!=='undefined'&&IMPACTS.on)
           ?(isEs?'en vivo':'live')
           :(isEs?'impactos·CPM':'impacts·CPM'),
@@ -27260,7 +27276,7 @@ window.xtAPI = (function(){
     const tgHidden=!!(window.isTelegramDockHidden&&window.isTelegramDockHidden());
     return [
       {label:isEs?'Ladrón':'Thief',status:thiefActive?(isEs?'en tienda':'in store'):(isEs?'listo':'ready'),command:'/ladron',alert:thiefActive},
-      {label:'Guardia Civil',status:guardiaActive?(isEs?'activo':'active'):(isEs?'fuera':'away'),command:'/guardiacivil',active:guardiaActive},
+      {label:isEs?'Guardia Civil':'Civil Guard',status:guardiaActive?(isEs?'activo':'active'):(isEs?'fuera':'away'),command:'/guardiacivil',active:guardiaActive},
       {label:isEs?'Opinador':'Reviewer',status:opinadorActive?(isEs?'en ruta':'en route'):(isEs?'rápido':'quick'),command:'/opinador',active:opinadorActive},
       {label:'Unitree Bot',status:robotActive?(isEs?'en tienda':'in store'):'demo',command:'/robot',active:robotActive},
       {label:'🦆 Sponsor',status:sponsorActive?(isEs?'+1 más':'add 1 more'):(isEs?'invitar':'invite'),command:'/sponsor on',active:sponsorActive},
@@ -31058,7 +31074,7 @@ window.xtAPI = (function(){
     t.style.cssText='position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#04140a;border:2px solid #2ee06a;border-radius:10px;padding:10px 16px;color:#9effa0;font:700 13px monospace;box-shadow:0 0 24px rgba(46,224,106,.5);display:flex;align-items:center;gap:12px;';
     const span=document.createElement('span'); span.textContent=msg; t.appendChild(span);
     if(undoFn){
-      const b=document.createElement('button'); b.textContent='↶ Deshacer';
+      const b=document.createElement('button'); b.textContent=lang==='en'?'↶ Undo':'↶ Deshacer';
       b.style.cssText='cursor:pointer;background:#0a2a18;border:1px solid #2ee06a;color:#9effa0;border-radius:7px;padding:5px 10px;font:700 12px monospace;';
       b.onclick=()=>{ try{ undoFn(); }catch(_){ } try{ t.remove(); }catch(_){ } };
       t.appendChild(b);
@@ -31077,8 +31093,8 @@ window.xtAPI = (function(){
           const prev=window.XPACE_DISTRO.snapshot();   // sala actual → para "Deshacer"
           const item=await window.XPACE_DISTRO.get(p.id);
           const n=window.XPACE_DISTRO.apply(item);
-          mudanzaToast('🚚 Mudanza en '+screenId+' · '+(p.name||item.name||'')+' · '+n+' muebles',
-            ()=>{ const m=window.XPACE_DISTRO.apply(prev); reportCurrentLayout(); mudanzaToast('↶ Mudanza deshecha · '+m+' muebles'); });
+          mudanzaToast((lang==='en'?'🚚 Layout update at ':'🚚 Mudanza en ')+screenId+' · '+(p.name||item.name||'')+' · '+n+(lang==='en'?' items':' muebles'),
+            ()=>{ const m=window.XPACE_DISTRO.apply(prev); reportCurrentLayout(); mudanzaToast(lang==='en'?'↶ Layout restored · '+m+' items':'↶ Mudanza deshecha · '+m+' muebles'); });
           reportCurrentLayout();   // el estado actual cambió → repórtalo a pixeria
         }
       }
@@ -31169,17 +31185,17 @@ window.xtAPI = (function(){
       c.customSpriteImg=im;
       // El `name` puede traer la AUDIENCIA de pixeria empaquetada: "Anónimo||{json}".
       // La separamos: parte visible = nombre; parte de datos = segmento (sexo/edad/desc).
-      const raw=String(entry.name||'Anónimo');
+      const raw=String(entry.name||(lang==='en'?'Anonymous':'Anónimo'));
       let nm=raw, segData=null;
       const sep=raw.indexOf('||');
-      if(sep>=0){ nm=raw.slice(0,sep)||'Anónimo'; try{ segData=JSON.parse(raw.slice(sep+2)); }catch(_){ segData=null; } }
+      if(sep>=0){ nm=raw.slice(0,sep)||(lang==='en'?'Anonymous':'Anónimo'); try{ segData=JSON.parse(raw.slice(sep+2)); }catch(_){ segData=null; } }
       c.fanName=nm;
       c.npcSegment=segData;                   // {sex, age, desc} → ficha de cliente
       // Ack al worker EN CUANTO se crea el NPC (antes de los FX, para que un error
       // visual no impida confirmar a Pixeria que el NPC YA está en la tienda).
       if(entry&&entry.id){ try{ fetch(PIXER_WORKER+'/twin/spawn/ack',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:entry.id,screen:screenId})}); }catch(_){} }
       c.arriveFx=260;                         // ~4s de entrada llamativa (halo + rebote ¡!)
-      if(typeof showEv==='function') showEv('🏪 ¡'+nm+' acaba de entrar en la tienda!','#ffd23f');
+      if(typeof showEv==='function') showEv(lang==='en'?'🏪 '+nm+' just entered the store!':'🏪 ¡'+nm+' acaba de entrar en la tienda!','#ffd23f');
       twinArrivalBanner(nm);
       return true;
     }catch(_){ return false; }
@@ -31188,7 +31204,7 @@ window.xtAPI = (function(){
   function twinArrivalBanner(name){
     try{
       const t=document.createElement('div');
-      t.textContent='🏪 ¡'+name+' ya está en la tienda!';
+      t.textContent=lang==='en'?'🏪 '+name+' is now in the store!':'🏪 ¡'+name+' ya está en la tienda!';
       t.style.cssText='position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:2147483646;background:rgba(4,20,10,.96);border:2px solid #ffd23f;border-radius:12px;padding:11px 22px;color:#ffe98a;font:800 16px monospace;letter-spacing:.04em;box-shadow:0 0 30px rgba(255,210,63,.55);opacity:0;transition:opacity .35s,transform .35s;';
       document.body.appendChild(t);
       requestAnimationFrame(()=>{ t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)'; });
@@ -31749,7 +31765,10 @@ window.xtAPI = (function(){
       }catch(e){}
     });
   };
-  function curLang(){ try{ return localStorage.getItem('xtanco_lang')==='es'?'es':'en'; }catch(e){ return 'en'; } }
+  function curLang(){
+    if(window.XPACE_LANG_OVERRIDE==='es'||window.XPACE_LANG_OVERRIDE==='en') return window.XPACE_LANG_OVERRIDE;
+    try{ return localStorage.getItem('xtanco_lang')==='es'?'es':'en'; }catch(e){ return 'en'; }
+  }
   function wire(){
     var box = document.getElementById('splashLang');
     if(box) box.querySelectorAll('.splash-lang-btn').forEach(function(b){
@@ -31760,7 +31779,8 @@ window.xtAPI = (function(){
       });
     });
     var cur = curLang();
-    window.applyHtmlLang(cur);
+    if(typeof setLanguage==='function') setLanguage(cur); else window.applyHtmlLang(cur);
+    if(window.XPACE_LANG_LOCKED && box){ box.hidden=true; box.style.setProperty('display','none','important'); }
     document.querySelectorAll('#splashLang .splash-lang-btn').forEach(function(b){ b.classList.toggle('is-active', b.dataset.lang===cur); });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', wire); else wire();
@@ -31776,7 +31796,10 @@ window.xtAPI = (function(){
    Solo explica — no toca el estado del juego, seguro para que lo use cualquiera. */
 (function(){
   if(window.TwinPresent) return;
-  function L(){ try{ return localStorage.getItem('xtanco_lang')==='es'?'es':'en'; }catch(e){ return 'en'; } }
+  function L(){
+    if(window.XPACE_LANG_OVERRIDE==='es'||window.XPACE_LANG_OVERRIDE==='en') return window.XPACE_LANG_OVERRIDE;
+    try{ return localStorage.getItem('xtanco_lang')==='es'?'es':'en'; }catch(e){ return 'en'; }
+  }
   var T={
     es:{ swipe:'Desliza o toca los lados · Esc para salir', of:'de', auto:'Auto', cta:'Pide la demo', close:'Cerrar' },
     en:{ swipe:'Swipe or tap the sides · Esc to exit', of:'of', auto:'Auto', cta:'Book the demo', close:'Close' }
