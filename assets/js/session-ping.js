@@ -65,7 +65,7 @@
 
   async function sendTelegram(text){
     const endpoints=[
-      'https://admira-telegram-bridge.csilvasantin.workers.dev/telegram/send',
+      'https://bridge.admira.store/telegram/send',
       'https://macmini.tail48b61c.ts.net/admira/telegram/send',
     ];
     for(const url of endpoints){

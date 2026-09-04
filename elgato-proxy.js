@@ -43,13 +43,15 @@ const DEFAULT_CONFIG = {
     chatId: '',
     allowedChatIds: [],
     polling: true,
-    proxyUrl: 'https://admira-telegram-bridge.csilvasantin.workers.dev',
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    proxyUrl: 'https://bridge.admira.store',
   },
   grok: {
     apiKey: '',
     baseUrl: 'https://api.x.ai/v1',
     model: 'grok-4-latest',
-    proxyUrl: 'https://admira-grok-proxy.csilvasantin.workers.dev',
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    proxyUrl: 'https://grok.admira.store',
     systemPrompt: 'Eres AdmiraXPBot dentro del juego Admira XP. Responde de forma útil y breve en el idioma indicado por el contexto o por el usuario. Si recibes estado del juego, úsalo como contexto. No antepongas nombres de rol ni estados internos como "Unitree Bot:" o "Scan in progress".',
   },
 };
@@ -1257,7 +1259,8 @@ function tubeStartJob(url, fmt) {
 // ─── Import vía Telegram: descarga un job y lo publica en el Stock de admira.studio ──
 // Lo usa el webhook del worker (POST /tube/import-to-stock). El worker ya notifica al
 // chat cuando /stock/publish recibe el asset, así que aquí solo descargamos y subimos.
-const STOCK_PUBLISH_URL = process.env.STOCK_PUBLISH_URL || 'https://pixer-eleven.csilvasantin.workers.dev/stock/publish';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const STOCK_PUBLISH_URL = process.env.STOCK_PUBLISH_URL || 'https://api.admira.store/stock/publish';
 function tubeYtThumb(u) {
   const m = String(u).match(/(?:youtube\.com\/.*[?&]v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/);
   return m ? `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg` : null;

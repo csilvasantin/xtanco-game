@@ -13,8 +13,8 @@
     "kind": "video",
     "file": "assets/videos/signage_freedom_90_160x90.mp4",
     "variants": [
-      { "h": 480, "src": "https://pixer-eleven.csilvasantin.workers.dev/signage/media/freedom90_480.mp4" },
-      { "h": 720, "src": "https://pixer-eleven.csilvasantin.workers.dev/signage/media/freedom90_720.mp4" }
+      { "h": 480, "src": "https://api.admira.store/signage/media/freedom90_480.mp4" },
+      { "h": 720, "src": "https://api.admira.store/signage/media/freedom90_720.mp4" }
     ]
   }
 ]

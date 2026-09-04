@@ -11,8 +11,10 @@
 //      grabable como WebM via MediaRecorder.
 
 (() => {
-  const GROK_API  = 'https://admira-grok-proxy.csilvasantin.workers.dev/grok/ask';
-  const TUNES_API = 'https://admira-tunes.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const GROK_API  = 'https://grok.admira.store/grok/ask';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const TUNES_API = 'https://tunes.admira.store';
   const DRAWTHINGS_API = 'http://127.0.0.1:7869';
   const SUNO_POLL_MS = 5_000;
   const SUNO_MAX_WAIT_MS = 5 * 60_000;

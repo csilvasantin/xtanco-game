@@ -18,13 +18,13 @@
     "chatId": "replace-with-chat-id",
     "allowedChatIds": ["replace-with-chat-id"],
     "polling": true,
-    "proxyUrl": "https://admira-telegram-bridge.csilvasantin.workers.dev"
+    "proxyUrl": "https://bridge.admira.store"
   },
   "grok": {
     "apiKey": "replace-with-xai-api-key",
     "baseUrl": "https://api.x.ai/v1",
     "model": "grok-4-latest",
-    "proxyUrl": "https://admira-grok-proxy.csilvasantin.workers.dev",
+    "proxyUrl": "https://grok.admira.store",
     "systemPrompt": "Eres AdmiraXPBot dentro del juego Admira XP. Responde de forma útil y breve en el idioma indicado por el contexto o por el usuario. Si recibes estado del juego, úsalo como contexto. No antepongas nombres de rol ni estados internos como \"Unitree Bot:\" o \"Scan in progress\"."
   }
 }

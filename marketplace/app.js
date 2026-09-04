@@ -1,6 +1,7 @@
 // Admira XP Marketplace — pujas + countdown + cuadro de inventario.
 (() => {
-  const API = 'https://admira-marketplace.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const API = 'https://marketplace.admira.store';
   const POLL_MS = 15_000;
   const $ = sel => document.querySelector(sel);
   const $$ = sel => Array.from(document.querySelectorAll(sel));

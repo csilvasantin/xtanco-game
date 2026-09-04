@@ -26,7 +26,9 @@ function isEnvironmentalNoise(text) {
       || /ERR_CONNECTION_REFUSED/i.test(text)
       || /Failed to load resource/i.test(text)
       || /workers\.dev/i.test(text)
-      || /admira-telegram-bridge|admira-loyalty|admira-marketplace|pixer-eleven|elgato/i.test(text);
+      || /admira-telegram-bridge|admira-loyalty|admira-marketplace|pixer-eleven|elgato/i.test(text)
+      // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+      || /admira\.store|yokup\.com|digitalavatar\.ai|admira\.live/i.test(text);
 }
 
 page.on('console', (msg) => {

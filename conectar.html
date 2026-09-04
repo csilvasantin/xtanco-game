@@ -101,7 +101,8 @@
 <script>
 (() => {
   'use strict';
-  const WORKER = 'https://pixer-eleven.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const WORKER = 'https://api.admira.store';
   const qrBox = document.getElementById('qr');
   const urlEl = document.getElementById('url');
   const screenEl = document.getElementById('screen');

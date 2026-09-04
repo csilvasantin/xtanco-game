@@ -2,7 +2,8 @@
 // Exposes a small global `LoyaltyBridge` that the game's spawn + checkout
 // hooks consult. Pure browser ES2017+, no deps beyond qrcode.min.js for the QR.
 (function(){
-  const API='https://admira-loyalty.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const API='https://loyalty.admira.store';
   const JOIN_CODE='XTANCO26';
   const PWA_PATH='loyalty-app/';
   const POLL_MS=12000;

@@ -100,7 +100,8 @@
 <script>
 (() => {
   'use strict';
-  const WORKER = 'https://admira-telegram-bridge.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const WORKER = 'https://bridge.admira.store';
   const KEY_LS = 'xpace_remote_key';
 
   const statusEl = document.getElementById('status');

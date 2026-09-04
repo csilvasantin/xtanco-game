@@ -87,8 +87,8 @@ Admira XP v9.16 incluye puente bidireccional con Telegram via Cloudflare Worker 
 - `/grok` y `/ask` conectan AdmiraXPBot con Grok via el proxy local o via Cloudflare Worker, sin exponer la API key al navegador.
 - La ficha Unitree Intelligence permite dictar preguntas con **Voz** y escuchar respuestas con **Audio ON/OFF** usando las APIs locales del navegador.
 - **Wake OFF/ON** activa la palabra clave **OK Admira**: `OK Admira cuántos clientes han entrado hoy` transcribe, pregunta a Grok y responde por audio si está activo.
-- En GitHub Pages, Grok usa `https://admira-grok-proxy.csilvasantin.workers.dev`.
-- En GitHub Pages, Telegram usa `https://admira-telegram-bridge.csilvasantin.workers.dev`; el token del bot vive como secret de Cloudflare.
+- En GitHub Pages, Grok usa `https://grok.admira.store`.
+- En GitHub Pages, Telegram usa `https://bridge.admira.store`; el token del bot vive como secret de Cloudflare.
 
 Configuracion local:
 
@@ -104,7 +104,7 @@ Configuracion local:
   "chatId": "CHAT_ID_O_GRUPO",
   "allowedChatIds": ["CHAT_ID_O_GRUPO"],
   "polling": true,
-  "proxyUrl": "https://admira-telegram-bridge.csilvasantin.workers.dev"
+  "proxyUrl": "https://bridge.admira.store"
 }
 ```
 
@@ -124,7 +124,7 @@ Para activar Grok añade tambien:
   "apiKey": "XAI_API_KEY",
   "baseUrl": "https://api.x.ai/v1",
   "model": "grok-4-latest",
-  "proxyUrl": "https://admira-grok-proxy.csilvasantin.workers.dev"
+  "proxyUrl": "https://grok.admira.store"
 }
 ```
 
@@ -136,7 +136,7 @@ export XAI_API_KEY="tu-api-key-de-xai"
 
 Grok en la version publica:
 
-- El navegador llama a `https://admira-grok-proxy.csilvasantin.workers.dev/grok/ask`.
+- El navegador llama a `https://grok.admira.store/grok/ask`.
 - La API key de xAI vive como secret `XAI_API_KEY` en Cloudflare Workers.
 - El worker se define en `workers/admira-grok-proxy` y expone `GET /health` para verificar configuracion.
 - Para actualizar el secret: `wrangler secret put XAI_API_KEY --config workers/admira-grok-proxy/wrangler.toml`.
@@ -144,7 +144,7 @@ Grok en la version publica:
 
 Telegram en la version publica:
 
-- El navegador llama a `https://admira-telegram-bridge.csilvasantin.workers.dev/telegram/send`, `/telegram/reply` y `/telegram/commands`.
+- El navegador llama a `https://bridge.admira.store/telegram/send`, `/telegram/reply` y `/telegram/commands`.
 - Telegram entrega mensajes al webhook seguro del Worker y el Worker los guarda en una cola Durable Object.
 - Los secrets de Cloudflare son `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_ALLOWED_CHAT_IDS` y `TELEGRAM_WEBHOOK_SECRET`.
 - Para publicar el worker: `wrangler deploy --config workers/admira-telegram-bridge/wrangler.toml`.

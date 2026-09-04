@@ -1,6 +1,7 @@
 (() => {
   const APP_VERSION = '1.0.0';
-  const API = 'https://admira-loyalty.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const API = 'https://loyalty.admira.store';
   const STORAGE_KEY = 'xtancoclub.v1';
   const POLL_MS = 12_000;
 

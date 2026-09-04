@@ -19,14 +19,16 @@
     telegram: {
       proxyPort: 9124,
       enabled: true,
-      proxyUrl: 'https://admira-telegram-bridge.csilvasantin.workers.dev',
+      // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+      proxyUrl: 'https://bridge.admira.store',
       polling: true,
       defaultChatId: '',
     },
     grok: {
       proxyPort: 9124,
       enabled: true,
-      proxyUrl: 'https://admira-grok-proxy.csilvasantin.workers.dev',
+      // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+      proxyUrl: 'https://grok.admira.store',
       // The worker auto-picks Gemini (free) when GEMINI_API_KEY is set, and falls
       // back to xAI Grok otherwise. The model name shown in the UI reflects the
       // free-tier default; the actual model used is reported via /health.
@@ -49,7 +51,8 @@
       // Worker proxy (CORS) que re-sirve ieu.ai/api/ocuppancy. El navegador no
       // puede leer ieu.ai directo (no es zona Cloudflare, sin Access-Control-*),
       // así que el aforo-proxy lo expone con CORS desde *.workers.dev.
-      url: 'https://aforo-proxy.csilvasantin.workers.dev/',
+      // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+      url: 'https://aforo.admira.store/',
       pollMs: 5000,
       // Modo de arranque (conmutable en caliente con /aforo real|exacto|fake):
       //   'real'   → la cámara marca el objetivo de clientes (ambiente).

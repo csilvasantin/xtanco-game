@@ -67,7 +67,8 @@
 <script>
 (() => {
   'use strict';
-  const WORKER = 'https://pixer-eleven.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const WORKER = 'https://api.admira.store';
   const params = new URLSearchParams(location.search);
   const SCREEN = (params.get('screen') || 'escaparate').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || 'escaparate';
   const POLL_MS = 1500;   // poll del puntero /now (1.5s = menos latencia al cambiar contenido)

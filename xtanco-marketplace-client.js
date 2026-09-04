@@ -3,7 +3,8 @@
 // individual surfaces (ds1, ds2, escaparate, metahuman, hilo, posters,
 // gondola, flyer) and the global "takeover" can apply branded overlays.
 (function () {
-  const API = 'https://admira-marketplace.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const API = 'https://marketplace.admira.store';
   const POLL_MS = 30_000;
   const STATE = {
     bySurface: {},   // surface_ref -> campaign payload (e.g. ds1, hilo, poster-a, all)
