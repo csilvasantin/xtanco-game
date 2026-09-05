@@ -22,6 +22,11 @@
     // 3. Skip localhost / dev
     const host=window.location.hostname;
     if(host==='localhost' || host==='127.0.0.1' || host.endsWith('.local')) return;
+    // 4. Rastreadores y navegadores automatizados (FLT-1779, 5-sep-2026): Googlebot renderiza la
+    //    página y disparaba «NUEVA SESIÓN» en Telegram por cada rastreo (IP 66.249.x). No son
+    //    visitas: no se avisa.
+    if(navigator.webdriver) return;
+    if(/bot|crawl|spider|slurp|bingpreview|headless|lighthouse|pagespeed|facebookexternalhit|whatsapp|telegrambot|linkedinbot|twitterbot|applebot|petalbot|semrush|ahrefs|mj12|dataforseo|python-requests|curl\//i.test(navigator.userAgent||'')) return;
   } catch(_){ return; }
 
   // Parse simple UA → {browser, os}
